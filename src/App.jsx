@@ -48,8 +48,10 @@ function App() {
       <h1 className="text-3xl font-bold text-red-700 mb-4">
         Arby’s Performance App
       </h1>
-      <p className="text-lg text-gray-700 mb-6">
-        Ready to build! 🚀
+      <p className="text-gray-800 text-lg mb-4">
+          Welcome, <span className="font-semibold">{profile?.full_name ?? 'Employee'}</span>!
+      <br />
+          Role: <span className="font-medium">{profile?.role ?? 'Unknown'}</span>
       </p>
       <button
         className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700"
