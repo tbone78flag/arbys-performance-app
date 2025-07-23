@@ -10,15 +10,32 @@ function App() {
   const navigate = useNavigate()
 
   useEffect(() => {
-    const checkSession = async () => {
-      const { data } = await supabase.auth.getSession()
-      if (!data.session) {
+    const loadSessionAndProfile = async () => {
+      const { data: sessionData } = await supabase.auth.getSession()
+      const session = sessionData?.session
+
+      if (!session) {
         navigate('/')
+        return
       }
+
+      // Fetch user profile from Supabase
+      const { data: profileData, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', session.user.id)
+        .single()
+
+      if (error) {
+        console.error('Failed to load profile:', error.message)
+      } else {
+        setProfile(profileData)
+      }
+
       setLoading(false)
     }
 
-    checkSession()
+    loadSessionAndProfile()
   }, [navigate])
 
   if (loading) {
