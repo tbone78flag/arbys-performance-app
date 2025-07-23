@@ -13,7 +13,7 @@ export default function SalesPage({ profile }) {
   }, [profile, navigate])
 
   return (
-    <div className="p-6">
+      <div className="w-full max-w-3xl bg-white shadow p-6 rounded">
       <h1 className="text-2xl font-bold mb-4 text-red-700">Sales Dashboard</h1>
 
       {/* Accessible to all team members */}
