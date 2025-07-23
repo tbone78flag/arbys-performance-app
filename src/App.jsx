@@ -68,7 +68,7 @@ function App() {
         Arby’s Performance App
       </h1>
 
-      <p>
+      <p className="text-3xl font-bold text-center text-red-700 mb-6">
         Welcome, <strong>{profile?.full_name ?? 'Employee'}</strong>!
         <br />
         Role: <strong>{profile?.role ?? 'Unknown'}</strong>
