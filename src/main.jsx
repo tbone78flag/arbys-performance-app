@@ -1,17 +1,18 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
-import App from './App.jsx'
-import LoginPage from './pages/LoginPage.jsx'
-import './index.css'
+import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import App from './App'
+import LoginPage from './pages/LoginPage'
+import SalesPage from './pages/SalesPage'
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
-    <Router>
+    <BrowserRouter>
       <Routes>
         <Route path="/" element={<LoginPage />} />
         <Route path="/app" element={<App />} />
+        <Route path="/sales" element={<SalesPageWrapper />} />
       </Routes>
-    </Router>
-  </React.StrictMode>
+    </BrowserRouter>
+  </React.StrictMode>,
 )

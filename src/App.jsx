@@ -52,7 +52,14 @@ function App() {
           Welcome, <span className="font-semibold">{profile?.full_name ?? 'Employee'}</span>!
       <br />
           Role: <span className="font-medium">{profile?.role ?? 'Unknown'}</span>
-</p>
+      </p>
+
+    <button
+      className="bg-white text-red-600 border border-red-600 px-4 py-2 rounded hover:bg-red-50 mt-4"
+      onClick={() => navigate('/sales')}
+    >
+      Go to Sales Page
+    </button>
 
       <button
         className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700"
