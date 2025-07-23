@@ -68,12 +68,6 @@ function App() {
         Arby’s Performance App
       </h1>
 
-      <p className="text-3xl font-bold text-center text-red-700 mb-6">
-        Welcome, <strong>{profile?.full_name ?? 'Employee'}</strong>!
-        <br />
-        Role: <strong>{profile?.role ?? 'Unknown'}</strong>
-      </p>
-
       <Routes>
         <Route path="/app" element={<Dashboard profile={profile} />} />
         <Route path="/sales" element={<SalesPage profile={profile} />} />
