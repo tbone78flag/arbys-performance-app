@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
 import SalesPage from './SalesPage'
+import Layout from '../components/Layout'
 
 export default function SalesPageWrapper() {
   const [profile, setProfile] = useState(null)
@@ -39,5 +40,9 @@ export default function SalesPageWrapper() {
 
   if (loading) return <p className="p-4">Loading...</p>
 
-  return <SalesPage profile={profile} />
+  return (
+  <Layout>
+    <SalesPage profile={profile} />
+  </Layout>
+)
 }
