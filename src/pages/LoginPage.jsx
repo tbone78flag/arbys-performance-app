@@ -49,7 +49,7 @@ export default function LoginPage() {
         <input
           type="employeeID"
           placeholder="Employee ID"
-          className="border border-gray-300 p-2 w-full mb-3 rounded"
+          className="border border-gray-300 p-2 w-full mb-3 rounded text-black"
           value={employeeID}
           onChange={(e) => setEmployeeID(e.target.value)}
           required
@@ -58,7 +58,7 @@ export default function LoginPage() {
         <input
           type="password"
           placeholder="Password"
-          className="border border-gray-300 p-2 w-full mb-3 rounded"
+          className="border border-gray-300 p-2 w-full mb-3 rounded text-black"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           required
@@ -68,7 +68,7 @@ export default function LoginPage() {
 
         <button
           type="submit"
-          className="bg-red-600 text-black px-4 py-2 rounded w-full hover:bg-red-700"
+          className="bg-red-600 text-white px-4 py-2 rounded w-full hover:bg-red-700 text-white"
         >
           Log In
         </button>
