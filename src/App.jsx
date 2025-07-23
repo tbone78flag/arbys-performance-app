@@ -7,6 +7,7 @@ import './App.css'
 
 function App() {
   const [loading, setLoading] = useState(true)
+  const [profile, setProfile] = useState(null)
   const navigate = useNavigate()
 
   useEffect(() => {
