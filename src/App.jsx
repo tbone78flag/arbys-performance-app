@@ -52,7 +52,7 @@ function App() {
       <p className="text-gray-800 text-lg mb-4">
           Welcome, <span className="font-semibold">{profile?.full_name ?? 'Employee'}</span>!
       <br />
-          Role: <span className="font-medium">{profile?.title ?? 'Unknown'}</span>
+          Title: <span className="font-medium">{profile?.title ?? 'Unknown'}</span>
       </p>
 
     <button
