@@ -13,6 +13,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(
         <Route path="/" element={<LoginPage />} />
         <Route path="/app" element={<App />} />
         <Route path="/sales" element={<SalesPageWrapper />} />
+        <Route path="/food" element={<FoodPageWrapper />} />
       </Routes>
     </BrowserRouter>
   </React.StrictMode>,
