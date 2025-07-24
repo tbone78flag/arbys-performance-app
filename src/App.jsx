@@ -68,6 +68,13 @@ function App() {
     >
       Go to Food Page
     </button>
+
+    <button
+      className="bg-white text-red-600 border border-red-600 px-4 py-2 rounded hover:bg-red-50 mt-4"
+      onClick={() => navigate('/speed')}
+    >
+      Go to Speed Page
+    </button>
   
     <button
         className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700 mt-4"

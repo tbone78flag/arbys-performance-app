@@ -5,6 +5,7 @@ import App from './App'
 import LoginPage from './pages/LoginPage'
 import SalesPageWrapper from './pages/SalesPageWrapper'
 import FoodPageWrapper from './pages/FoodPageWrapper'
+import SpeedPageWrapper from './pages/SpeedPageWrapper'
 import './index.css';
 
 ReactDOM.createRoot(document.getElementById('root')).render(
@@ -15,6 +16,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(
         <Route path="/app" element={<App />} />
         <Route path="/sales" element={<SalesPageWrapper />} />
         <Route path="/food" element={<FoodPageWrapper />} />
+        <Route path="/speed" element={<SpeedPageWrapper />} />
       </Routes>
     </BrowserRouter>
   </React.StrictMode>,
