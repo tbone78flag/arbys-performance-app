@@ -98,7 +98,7 @@ export default function BingoGame() {
     <div className="my-6">
       <h2 className="text-xl font-bold mb-2">Team Sales Bingo</h2>
 
-      <div className="grid grid-cols-5 gap-5 w-max mx-auto">
+      <div className="grid grid-cols-5 gap-2 w-max mx-auto">
         {card.map((row, r) =>
           row.map((val, c) => {
             const isMarked = marked[r][c];
