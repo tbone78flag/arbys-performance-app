@@ -98,7 +98,7 @@ export default function BingoGame() {
     <div className="my-6">
       <h2 className="text-xl font-bold mb-2">Team Sales Bingo</h2>
 
-      <div className="grid grid-cols-5 gap-2 w-max mx-auto">
+      <div className="grid grid-cols-5 gap-3 w-max mx-auto">
         {card.map((row, r) =>
           row.map((val, c) => {
             const isMarked = marked[r][c];
@@ -108,7 +108,7 @@ export default function BingoGame() {
                 onClick={() => toggle(r, c)}
                 className={`
                   flex items-center justify-center
-                  h-16 w-16 border-2 cursor-pointer select-none
+                  h-18 w-18 border-2 cursor-pointer select-none
                   px-1 text-center break-words
                   ${isMarked
                     ? "bg-green-400 text-white"
