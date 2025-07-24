@@ -51,7 +51,7 @@ function App() {
       <br />
           Title: <span className="font-medium">{profile?.title ?? 'Unknown'}</span>
       </p>
-      
+
       <h1 className="text-3xl font-bold text-red-700 mb-4">
         Arby’s Performance App
       </h1>
@@ -75,6 +75,13 @@ function App() {
       onClick={() => navigate('/speed')}
     >
       Go to Speed Page
+    </button>
+
+    <button
+      className="bg-white text-red-600 border border-red-600 px-4 py-2 rounded hover:bg-red-50 mt-4"
+      onClick={() => navigate('/experience')}
+    >
+      Go to Guest Experience Page
     </button>
 
     <button
