@@ -73,12 +73,6 @@ export default function LoginPage() {
           Log In
         </button>
       </form>
-
-      <form onSubmit={signOut} className='bg-white p-6 rounded shadow-md w-full max-w-sm'>
-        <button type="submit" className='bg-red-600 text-white px-4 py-2 rounded w-full hover:bg-red-700 text-white'>
-            Sign Out
-        </button>
-      </form>
     </div>
   )
 }
