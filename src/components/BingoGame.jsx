@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 
-// === YOUR WORD LIST HERE ===
+// === CONFIGURE YOUR SPACE VALUES HERE ===
+// Must have at least 24 entries (center is "FREE")
 const SPACE_VALUES = [
   "Apple Turnover","Cherry Turnover","Mozzarella Sticks","Upsize Meal","Add drink",
   "Add fries","Jalapeno Bites","Shake","LTO Sandwich","LTO Side",
@@ -20,96 +21,84 @@ function shuffle(array) {
   return arr;
 }
 
-export default function BingoGame() {
-  // 1) determine grid size N
-  const totalWords = SPACE_VALUES.length;
-  // add 1 for FREE cell only if grid will be odd
-  const tentativeSize = Math.ceil(Math.sqrt(totalWords + 1));
-  const gridSize = tentativeSize % 2 === 1
-    ? tentativeSize
-    : Math.ceil(Math.sqrt(totalWords)); // even case: no FREE
-  const hasFree = gridSize % 2 === 1;
-
-  // 2) generate the card data
-  function generateCard() {
-    const cellsNeeded = gridSize * gridSize - (hasFree ? 1 : 0);
-    let pool = shuffle(SPACE_VALUES);
-
-    // trim or pad to exactly cellsNeeded
-    if (pool.length > cellsNeeded) {
-      pool = pool.slice(0, cellsNeeded);
-    } else {
-      while (pool.length < cellsNeeded) pool.push("");
-    }
-
-    let idx = 0;
-    return Array.from({ length: gridSize }, (_, r) =>
-      Array.from({ length: gridSize }, (_, c) =>
-        hasFree && r === Math.floor(gridSize / 2) && c === Math.floor(gridSize / 2)
-          ? "FREE"
-          : pool[idx++]
-      )
-    );
+function generateCard() {
+  if (SPACE_VALUES.length < 24) {
+    throw new Error("Need at least 24 space values for the Bingo card.");
   }
+  const pool = shuffle(SPACE_VALUES).slice(0, 24);
+  let idx = 0;
 
-  // 3) state for card & marks
-  const makeEmptyMarks = () => {
-    const m = Array.from({ length: gridSize }, () => Array(gridSize).fill(false));
-    if (hasFree) m[Math.floor(gridSize / 2)][Math.floor(gridSize / 2)] = true;
+  // build a 5×5 grid, placing "FREE" in center [2][2]
+  return Array.from({ length: 5 }, (_, r) =>
+    Array.from({ length: 5 }, (_, c) =>
+      r === 2 && c === 2
+        ? "FREE"
+        : pool[idx++]
+    )
+  );
+}
+
+export default function BingoGame() {
+  // initialize marked grid with free center marked
+  const makeEmpty = () => {
+    const m = Array.from({ length: 5 }, () => Array(5).fill(false));
+    m[2][2] = true;
     return m;
   };
 
-  const [card, setCard]     = useState(generateCard);
-  const [marked, setMarked] = useState(makeEmptyMarks);
+  const [card,   setCard]   = useState(generateCard);
+  const [marked, setMarked] = useState(makeEmpty);
 
-  // 4) scoring: 1pt per mark + 5pt per line
+  // Count base marks + 5 pts per completed line
   const calcScore = useCallback(() => {
+    // base = all true marks
     let base = marked.flat().filter(Boolean).length;
+
+    // count full rows
     let lines = 0;
-
-    // rows
-    for (let r = 0; r < gridSize; r++)
+    for (let r = 0; r < 5; r++) {
       if (marked[r].every(Boolean)) lines++;
-
-    // cols
-    for (let c = 0; c < gridSize; c++)
+    }
+    // count full columns
+    for (let c = 0; c < 5; c++) {
       if (marked.every(row => row[c])) lines++;
-
-    // diags (only if square)
-    if ([...Array(gridSize)].every((_, i) => marked[i][i]))     lines++;
-    if ([...Array(gridSize)].every((_, i) => marked[i][gridSize - 1 - i])) lines++;
+    }
+    // two diagonals
+    if ([0,1,2,3,4].every(i => marked[i][i]))       lines++;
+    if ([0,1,2,3,4].every(i => marked[i][4 - i]))   lines++;
 
     return base + lines * 5;
-  }, [marked, gridSize]);
+  }, [marked]);
 
   const [score, setScore] = useState(calcScore);
-  useEffect(() => setScore(calcScore()), [marked, calcScore]);
 
-  // toggle marks (never unmark FREE)
+  useEffect(() => {
+    setScore(calcScore());
+  }, [marked, calcScore]);
+
+  // toggle—but never unmark FREE
   const toggle = (r, c) => {
-    if (hasFree && r === Math.floor(gridSize/2) && c === Math.floor(gridSize/2))
-      return;
+    if (r === 2 && c === 2) return;
     setMarked(m =>
       m.map((row, ri) =>
-        row.map((cell, ci) => (ri === r && ci === c ? !cell : cell))
+        row.map((cell, ci) =>
+          ri === r && ci === c ? !cell : cell
+        )
       )
     );
   };
 
-  // reshuffle
+  // reshuffle card & reset marks
   const newCard = () => {
     setCard(generateCard());
-    setMarked(makeEmptyMarks());
+    setMarked(makeEmpty());
   };
 
   return (
     <div className="my-6">
       <h2 className="text-xl font-bold mb-2">Team Sales Bingo</h2>
 
-      <div
-        className="grid gap-1 mx-auto"
-        style={{ gridTemplateColumns: `repeat(${gridSize}, 4rem)` }}
-      >
+      <div className="grid grid-cols-5 gap-2 w-max mx-auto">
         {card.map((row, r) =>
           row.map((val, c) => {
             const isMarked = marked[r][c];
@@ -119,7 +108,8 @@ export default function BingoGame() {
                 onClick={() => toggle(r, c)}
                 className={`
                   flex items-center justify-center
-                  h-12 border-2 cursor-pointer select-none px-1 text-center break-words
+                  h-16 w-16 border-2 cursor-pointer select-none
+                  px-1 text-center break-words
                   ${isMarked
                     ? "bg-green-400 text-white"
                     : "bg-white hover:bg-gray-100"}
