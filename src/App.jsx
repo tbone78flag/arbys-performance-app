@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import { supabase } from './supabaseClient'
 import reactLogo from './assets/react.svg'
 import viteLogo from '/vite.svg'
@@ -91,16 +91,17 @@ function App() {
       Go to Points Page
     </button>
 
+
     {profile?.title === 'Assistant Manager' && (
-+        <div className="mt-4">
-+          <Link to="/goals">
-+            <button className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
-+              Go to Goals Page
-+            </button>
-+          </Link>
-+        </div>
-+      )
-    }
+      <div className="mt-4">
+        <Link to="/goals">
+          <button className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+            Go to Goals Page
+          </button>
+        </Link>
+      </div>
+    )}
+
   
     <button
         className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700 mt-4"
