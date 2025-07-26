@@ -95,7 +95,7 @@ function App() {
     {profile?.title === 'Assistant Manager' && (
       <div className="mt-4">
         <Link to="/goals">
-          <button classname="bg-white text-red-600 border border-red-600 px-4 py-2 rounded hover:bg-red-50 mt-4">
+          <button className="px-4 py-2 bg-white text-red-600 border border-red-600 px-4 py-2 rounded hover:bg-red-50 mt-4">
             Go to Goals Page
           </button>
         </Link>
