@@ -111,7 +111,7 @@ export default function BingoGame() {
                   h-22 w-22 border-2 cursor-pointer select-none
                   px-1 text-center break-words
                   ${isMarked
-                    ? "bg-green-400 text-white"
+                    ? "bg-red-600 text-white"
                     : "bg-white hover:bg-gray-100"}
                 `}
               >
