@@ -1,4 +1,4 @@
-// src/pages/GoalssPage.jsx
+// src/pages/GoalsPage.jsx
 import { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
@@ -15,8 +15,6 @@ export default function GoalsPage({ profile }) {
   return (
       <div className="w-full max-w-3xl bg-white shadow p-6 rounded">
       <h1 className="text-2xl font-bold mb-4 text-red-700">Sales Dashboard</h1>
-
-      <BingoGame />
 
       {/* Accessible to all team members */}
       <div className="mb-4">
