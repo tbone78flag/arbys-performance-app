@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { supabase } from './supabaseClient'
 import reactLogo from './assets/react.svg'
 import viteLogo from '/vite.svg'
