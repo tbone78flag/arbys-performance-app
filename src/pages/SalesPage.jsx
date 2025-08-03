@@ -21,8 +21,9 @@ export default function SalesPage({ profile }) {
 
       {/* Accessible to all team members */}
       <div className="mb-4">
-        <h2 className="text-lg font-semibold">Daily Sales Submission</h2>
-        <p>Team members can enter sales data here.</p>
+        <h2 className="text-lg font-semibold">Understanding Sales</h2>
+        <p>The average check at our location is $_____. Imagine that we raised that by just ____. Then if we get 200 transactions a day this would add an additional $_____ per year to our profits.</p>
+        <p>Upselling can help increase the average check by little increments that really add up. Think about that as you complete various games.</p>
         {/* Later: form or button */}
       </div>
 
