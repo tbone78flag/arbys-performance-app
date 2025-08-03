@@ -65,6 +65,10 @@ function WhatIfCalculator({ profile, locationId = 'default' }) {
         </strong>{' '}
         per year to our profits.
       </p>
+      <p>Best way to look at this calculator is to think of realistic amount of transactions you think you could upsell to in a day (ie. 10 transactions).
+        Then type in the amount you think you could add on (ie. $2.59 for just adding one turnover to those 10 people) 
+        and see how that affects our sales for the year (ie. adds $9,453.50 per year to sales).
+      </p>
       <p className="text-lg italic">*Check out the speed page to see what could happen by just increasing the amount of transactions with the current average check.</p>
       <button
       className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700 mt-4"
