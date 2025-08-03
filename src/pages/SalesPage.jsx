@@ -68,7 +68,7 @@ function WhatIfCalculator({ profile, locationId = 'default' }) {
       <br/>
       <p className="text-lg italic">*Check out the speed page to see what could happen by just increases the amount of transactions with the current average check.</p>
       <button
-      className="bg-white text-red-600 border border-red-600 px-4 py-2 rounded hover:bg-red-50 mt-4"
+      className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700 mt-4"
       onClick={() => navigate('/speed')}
     >
       Speed Page
