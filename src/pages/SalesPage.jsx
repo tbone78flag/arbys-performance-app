@@ -1,8 +1,73 @@
 // src/pages/SalesPage.jsx
-import { useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
 import BingoGame from '../components/BingoGame'
+
+
+function WhatIfCalculator({ profile, locationId = 'default' }) {
+  const [averageCheck, setAverageCheck] = useState(0)
+  const [raise, setRaise] = useState(0)
+  const [transactionsPerDay, setTransactionsPerDay] = useState(200)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    if (!profile) return
+    const load = async () => {
+      const { data: avgData, error } = await supabase
+        .from('location_settings')
+        .select('value')
+        .eq('location_id', locationId)
+        .eq('key', 'average_check')
+        .single()
+
+      if (!error && avgData) {
+        setAverageCheck(Number(avgData.value))
+      }
+      setLoading(false)
+    }
+    load()
+  }, [profile, locationId])
+
+  if (loading) return <div className="p-4">Loading calculator…</div>
+
+  const additionalPerYear = raise * transactionsPerDay * 365
+
+  return (
+    <div className="bg-white shadow rounded p-4 mb-6">
+      <h2 className="text-lg font-semibold mb-2">What If Calculator</h2>
+
+      <p className="mb-2">
+        The average check at our location is{' '}
+        <strong>${averageCheck.toFixed(2)}</strong>. Imagine we raised that by{' '}
+        <input
+          type="number"
+          step="0.01"
+          value={raise}
+          onChange={e => setRaise(Number(e.target.value))}
+          className="inline w-24 border px-2 py-1 rounded"
+          placeholder="0.50"
+        />{' '}
+        dollars. Then if we get{' '}
+        <input
+          type="number"
+          value={transactionsPerDay}
+          onChange={e => setTransactionsPerDay(Number(e.target.value))}
+          className="inline w-20 border px-2 py-1 rounded"
+        />{' '}
+        transactions a day this would add an additional{' '}
+        <strong>
+          $
+          {additionalPerYear.toLocaleString(undefined, {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+          })}
+        </strong>{' '}
+        per year to our profits.
+      </p>
+    </div>
+  )
+}
 
 export default function SalesPage({ profile }) {
   const navigate = useNavigate()
@@ -14,24 +79,21 @@ export default function SalesPage({ profile }) {
   }, [profile, navigate])
 
   return (
-      <div className="w-full max-w-3xl bg-white shadow p-6 rounded">
+    <div className="w-full max-w-3xl bg-white shadow p-6 rounded">
       <h1 className="text-2xl font-bold mb-4 text-red-700">Sales Dashboard</h1>
 
       <BingoGame />
 
-      {/* Accessible to all team members */}
-      <div className="mb-4">
-        <h2 className="text-lg font-semibold">Understanding Sales</h2>
-        <p>The average check at our location is $_____. Imagine that we raised that by just ____. Then if we get 200 transactions a day this would add an additional $_____ per year to our profits.</p>
-        <p>Upselling can help increase the average check by little increments that really add up. Think about that as you complete various games.</p>
-        {/* Later: form or button */}
-      </div>
+      {/* What-if calculator visible to all (will show loading if average_check is restricted) */}
+      <WhatIfCalculator profile={profile} />
 
       {/* Manager-only section */}
       {profile?.role === 'manager' && (
         <div className="border-t pt-4 mt-4">
           <h2 className="text-lg font-semibold text-red-600">Manager Tools</h2>
-          <p>Only visible to managers — e.g. target goals, override entries, etc.</p>
+          <p>
+            Only visible to managers — e.g. target goals, override entries, etc.
+          </p>
         </div>
       )}
     </div>
