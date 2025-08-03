@@ -134,7 +134,7 @@ export default function BingoGame() {
         </button>
       </div>
       <br/>
-      <h3><bold>Rules:</bold></h3>
+      <h3 className="text-lg font-bold">Rules:</h3>
       <ul style={{ listStyleType: 'disc' }}>
         <li>Everytime you are able to ask a guest to add or change something about their meal that they didn't say on their own then click the related square.</li>
         <li>Every square is 1 point. Getting 5 in a row will add an addidtiona; 5 points on top of the points awarded for each square.</li>
