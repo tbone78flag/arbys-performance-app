@@ -141,12 +141,12 @@ export default function BingoGame() {
         <li>If there are two of the same square then choose one and click that one. Click the other square of that type the next time you get that same upsell</li>
         <li>You can unclick squares if you click the incorrect one.</li>
         <li>Click new card to wipe out all clicked squares (FREE will remain red) and to shuffle the BINGO card.</li>
-        <li>*2x Sandwich refers to adding an additional of the same sandwich in a way that increases the total cost of the order. 
-            <ul style={{ listStyleType: 'disc' }}>
-                <li>Valid: Getting someone a 2 for $7 ham melt if they originally asked only for one ham melt. </li>
-                <li>Not applicable: Getting someone to get the 4 for $12 instead of three roast beefs as three roast beefs as this decrease the total cost of the order.</li>
-            </ul>
-        </li>
+        <dl>
+            <dt className="text-lg italic">*2x Sandwich refers to adding an additional of the same sandwich in a way that increases the total cost of the order.
+                <dd>Valid: Getting someone a 2 for $7 ham melt if they originally asked only for one ham melt. </dd>
+                <dd>Not applicable: Getting someone to get the 4 for $12 instead of three roast beefs as three roast beefs as this decrease the total cost of the order.</dd>
+            </dt>
+        </dl>
       </ul>
     </div>
   );
