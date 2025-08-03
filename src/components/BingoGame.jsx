@@ -97,6 +97,20 @@ export default function BingoGame() {
   return (
     <div className="my-6">
       <h2 className="text-xl font-bold mb-2">Team Sales Bingo</h2>
+      <h4>Rules:</h4>
+      <ul>
+        <li>Everytime you are able to ask a guest to add or change something about their meal that they didn't say on their own then click the related square.</li>
+        <li>Every square is 1 point. Getting 5 in a row will add an addidtiona; 5 points on top of the points awarded for each square.</li>
+        <li>If there are two of the same square then choose one and click that one. Click the other square of that type the next time you get that same upsell</li>
+        <li>You can unclick squares if you click the incorrect one.</li>
+        <li>Click new card to wipe out all clicked squares (FREE will remain red) and to shuffle the BINGO card.</li>
+        <li>*2x Sandwich refers to adding an additional of the same sandwich in a way that increases the total cost of the order. 
+            <ul>
+                <li>Ex. Getting someone a 2 for $7 ham melt if they originally asked only for one ham melt. </li>
+                <li>Not applicable: Getting someone to get the 4 for $12 instead of three roast beefs as three roast beefs as this decrease the total cost of the order.</li>
+            </ul>
+        </li>
+      </ul>
 
       <div className="grid grid-cols-5 gap-2 w-max mx-auto">
         {card.map((row, r) =>
