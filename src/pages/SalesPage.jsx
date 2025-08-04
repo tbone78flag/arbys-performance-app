@@ -10,6 +10,7 @@ function WhatIfCalculator({ profile, locationId = 'default' }) {
   const [raise, setRaise] = useState(0)
   const [transactionsPerDay, setTransactionsPerDay] = useState(200)
   const [loading, setLoading] = useState(true)
+  const navigate = useNavigate()
 
   useEffect(() => {
     if (!profile) return
