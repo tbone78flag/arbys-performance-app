@@ -90,7 +90,18 @@ export default function GoalsPage({ profile }) {
 
   return (
     <div className="p-6 max-w-2xl mx-auto space-y-6">
-      <h1 className="text-2xl font-bold">Goals & Settings</h1>
+      {/* Header row */}
+      <div className="mb-4 sm:mb-6 flex items-center justify-between gap-3">
+        <h1 className="text-2xl font-bold text-red-700">Goals & Settings</h1>
+
+        <button
+          className="bg-red-600 text-white px-3 sm:px-4 py-2 rounded hover:bg-red-700 shrink-0"
+          onClick={() => navigate('/App')}
+          aria-label="Go back"
+        >
+          Go Back
+        </button>
+      </div>
 
       {/* Average Check Editor (only AM/GM) */}
       {isEditor && (
