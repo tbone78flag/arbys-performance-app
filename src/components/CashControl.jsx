@@ -52,22 +52,22 @@ function DenomInputs({ title, state, setState }) {
           <legend className="text-sm text-gray-600 mb-2">Coin rolls (enter # of rolls)</legend>
           <div className="space-y-2">
             {DENOMS.rolls.map((d) => (
-              <div key={d.key} className="flex items-center gap-2">
-                <label className="w-40 sm:w-44 text-sm">{d.label}</label>
+              <div key={d.key} className="grid grid-cols-[minmax(8rem,auto),1fr] items-center gap-2">
+                <label className="text-sm whitespace-nowrap">{d.label}</label>
                 <input
-                  type="number"
-                  min="0"
-                  value={state[d.key] ?? ''}
-                  onChange={(e) =>
+                type="number"
+                min="0"
+                value={state[d.key] ?? ''}
+                onChange={(e) =>
                     setState((s) => ({ ...s, [d.key]: e.target.value.replace(/[^\d]/g, '') }))
-                  }
-                  onFocus={(e) => e.target.select()}
-                  inputMode="numeric"
-                  pattern="[0-9]*"
-                  className="w-full border px-3 py-2 rounded"
-                  placeholder="0"
+                }
+                onFocus={(e) => e.target.select()}
+                inputMode="numeric"
+                pattern="[0-9]*"
+                className="w-full min-w-0 border px-3 py-2 rounded"
+                placeholder="0"
                 />
-              </div>
++ </div>
             ))}
           </div>
         </fieldset>
@@ -76,22 +76,22 @@ function DenomInputs({ title, state, setState }) {
           <legend className="text-sm text-gray-600 mb-2">Bills (enter # of bills)</legend>
           <div className="space-y-2">
             {DENOMS.bills.map((d) => (
-              <div key={d.key} className="flex items-center gap-2">
-                <label className="w-40 sm:w-44 text-sm">{d.label}</label>
+              <div key={d.key} className="grid grid-cols-[minmax(8rem,auto),1fr] items-center gap-2">
+                <label className="text-sm whitespace-nowrap">{d.label}</label>
                 <input
-                  type="number"
-                  min="0"
-                  value={state[d.key] ?? ''}
-                  onChange={(e) =>
+                type="number"
+                min="0"
+                value={state[d.key] ?? ''}
+                onChange={(e) =>
                     setState((s) => ({ ...s, [d.key]: e.target.value.replace(/[^\d]/g, '') }))
-                  }
-                  onFocus={(e) => e.target.select()}
-                  inputMode="numeric"
-                  pattern="[0-9]*"
-                  className="w-full border px-3 py-2 rounded"
-                  placeholder="0"
+                }
+                onFocus={(e) => e.target.select()}
+                inputMode="numeric"
+                pattern="[0-9]*"
+                className="w-full min-w-0 border px-3 py-2 rounded"
+                placeholder="0"
                 />
-              </div>
++ </div>
             ))}
           </div>
         </fieldset>
@@ -130,10 +130,10 @@ export default function CashControl() {
   const grandTotal = dropTotal + vaultTotal + tillsTotal + changeOrderTotal;
 
   return (
-    <div className="bg-white shadow rounded p-4 sm:p-6 mt-6">
+    <div className="bg-white shadow rounded p-4 sm:p-6 mt-6 overflow-hidden">
       <h3 className="text-lg font-semibold text-red-600 mb-4">Cash Control</h3>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
         <DenomInputs title="Drop / Lock Safe" state={drop} setState={setDrop} />
         <DenomInputs title="Storage Vault" state={vault} setState={setVault} />
       </div>
