@@ -113,6 +113,13 @@ export default function SalesPage({ profile }) {
     // mx-auto centers, px-* protects on phones, max-w keeps it readable
     <div className="w-full max-w-3xl mx-auto bg-white shadow p-4 sm:p-6 rounded px-4 sm:px-6">
       <h1 className="text-2xl font-bold mb-4 text-red-700">Sales Dashboard</h1>
+      
+      <button
+        className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700 mt-4"
+        onClick={() => navigate('/App')}
+      >
+        Go Back
+      </button>
 
       <BingoGame />
 
