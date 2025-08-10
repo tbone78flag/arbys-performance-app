@@ -67,7 +67,7 @@ function DenomInputs({ title, state, setState }) {
                 className="w-full min-w-0 border px-3 py-2 rounded"
                 placeholder="0"
                 />
-+ </div>
+            </div>
             ))}
           </div>
         </fieldset>
@@ -91,7 +91,7 @@ function DenomInputs({ title, state, setState }) {
                 className="w-full min-w-0 border px-3 py-2 rounded"
                 placeholder="0"
                 />
-+ </div>
+            </div>
             ))}
           </div>
         </fieldset>
