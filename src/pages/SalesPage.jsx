@@ -6,7 +6,7 @@ import BingoGame from '../components/BingoGame'
 
 function WhatIfCalculator({ profile, locationId = 'default' }) {
   const [averageCheck, setAverageCheck] = useState(0)
-  const [raise, setRaise] = useState(0)
+  const [raise, setRaise] = useState('')
   const [transactionsPerDay, setTransactionsPerDay] = useState(200)
   const [loading, setLoading] = useState(true)
   const navigate = useNavigate()
@@ -29,7 +29,9 @@ function WhatIfCalculator({ profile, locationId = 'default' }) {
 
   if (loading) return <div className="p-4">Loading calculator…</div>
 
-  const additionalPerYear = raise * transactionsPerDay * 365
+  const r = parseFloat(raise) || 0
+  const t = Number(transactionsPerDay) || 0
+  const additionalPerYear = r * t * 365
 
   return (
     <div className="bg-white shadow rounded p-4 sm:p-6 mb-6">
@@ -55,7 +57,9 @@ function WhatIfCalculator({ profile, locationId = 'default' }) {
             type="number"
             step="0.01"
             value={raise}
-            onChange={e => setRaise(Number(e.target.value))}
+            onChange={e => setRaise(e.target.value)}
+            onFocus={e => e.target.select()}
+            inputMode="decimal"
             className="w-full border px-3 py-2 rounded"
             placeholder="0.50"
           />
