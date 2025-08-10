@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
 import BingoGame from '../components/BingoGame'
+import CashControl from '../components/CashControl';
 
 function WhatIfCalculator({ profile, locationId = 'default' }) {
   const [averageCheck, setAverageCheck] = useState(0)
@@ -143,7 +144,7 @@ export default function SalesPage({ profile }) {
           <p>Only visible to managers — e.g. target goals, override entries, etc.</p>
           
           <CashControl />
-          
+
         </div>
       )}
     </div>
