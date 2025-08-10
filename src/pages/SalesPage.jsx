@@ -141,6 +141,9 @@ export default function SalesPage({ profile }) {
         <div className="border-t pt-4 mt-4">
           <h2 className="text-lg font-semibold text-red-600">Manager Tools</h2>
           <p>Only visible to managers — e.g. target goals, override entries, etc.</p>
+          
+          <CashControl />
+          
         </div>
       )}
     </div>
