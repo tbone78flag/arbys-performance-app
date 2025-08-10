@@ -98,7 +98,8 @@ export default function BingoGame() {
     <div className="my-6">
       <h2 className="text-xl font-bold mb-2">Team Sales Bingo</h2>
 
-      <div className="grid grid-cols-5 gap-2 w-max mx-auto">
+      <div className="max-w-full">
+       <div className="grid grid-cols-5 gap-1 sm:gap-2 max-w-full mx-auto">
         {card.map((row, r) =>
           row.map((val, c) => {
             const isMarked = marked[r][c];
@@ -107,19 +108,19 @@ export default function BingoGame() {
                 key={`${r}-${c}`}
                 onClick={() => toggle(r, c)}
                 className={`
-                  flex items-center justify-center
-                  h-22 w-22 border-2 cursor-pointer select-none
-                  px-1 text-center break-words
-                  ${isMarked
-                    ? "bg-red-600 text-white"
-                    : "bg-white hover:bg-gray-100"}
-                `}
+                    flex items-center justify-center
+                    aspect-square w-full min-w-0 border-2 cursor-pointer select-none
+                    p-1 sm:p-2 text-center break-words
+                    text-[10px] sm:text-xs md:text-sm
+                    ${isMarked ? "bg-red-600 text-white" : "bg-white hover:bg-gray-100"}
+                    `}
               >
                 {val}
               </div>
             );
           })
         )}
+        </div>
       </div>
 
       <div className="mt-4 text-center">
