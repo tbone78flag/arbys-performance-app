@@ -1,6 +1,7 @@
 // src/pages/GoalsPage.jsx
 import { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
+import { useNavigate } from 'react-router-dom';
 
 export default function GoalsPage({ profile }) {
   const [averageCheck, setAverageCheck] = useState('');
@@ -10,6 +11,7 @@ export default function GoalsPage({ profile }) {
   const [savingGoal, setSavingGoal] = useState(false);
   const [savingAvg, setSavingAvg] = useState(false);
   const isEditor = ['Assistant Manager', 'General Manager'].includes(profile?.title);
+  const navigate = useNavigate()
 
   // load existing average check and goals
   useEffect(() => {
