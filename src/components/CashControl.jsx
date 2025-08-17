@@ -1,5 +1,5 @@
-import { useMemo, useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
+import { useMemo, useState, useEffect, useRef } from 'react';
 
 const STORAGE_KEY = 'cash_control_log_v1';
 
@@ -385,6 +385,7 @@ function DenomInputs({ title, state, setState, coinWraps = true }) {
 }
 
 export default function CashControl({ locationId = 'holladay-3900s' }) {
+    const logRef = useRef(null);
   const [drop, setDrop] = useState({});
   const [vault, setVault] = useState({});
   const [tills, setTills] = useState(['', '', '', '', '']); // 5 tills ($ strings)
@@ -420,7 +421,10 @@ export default function CashControl({ locationId = 'holladay-3900s' }) {
      useEffect(() => {
      try {
      const raw = localStorage.getItem(STORAGE_KEY);
-     if (raw) setLogEntries(JSON.parse(raw));
+     if (raw) {
+     const parsed = JSON.parse(raw);
+     if (Array.isArray(parsed)) setLogEntries(parsed);
+    }
      } catch { /* ignore */ }
     }, []);
     useEffect(() => {
@@ -444,6 +448,8 @@ export default function CashControl({ locationId = 'holladay-3900s' }) {
     // Local first (always)
     setLogEntries((prev) => [entry, ...prev].slice(0, 500));
     setNotes('');
+    // keep the newest row in view
+    requestAnimationFrame(() => logRef.current?.scrollTo({ top: 0, behavior: 'smooth' }));
 
     // Then Supabase (best-effort)
     try {
@@ -466,8 +472,14 @@ export default function CashControl({ locationId = 'holladay-3900s' }) {
         setSaving(false);
     }
     };
-    const removeEntry = (id) => setLogEntries((prev) => prev.filter((e) => e.id !== id));
-    const clearLog = () => setLogEntries([]);
+    const removeEntry = (id) => {
+    if (!window.confirm('Delete this snapshot?')) return;
+        setLogEntries((prev) => prev.filter((e) => e.id !== id));
+    };
+    const clearLog = () => {
+        if (!window.confirm('Clear all snapshots? This cannot be undone.')) return;
+        setLogEntries([]);
+    };
     const fmtWhen = (e) =>
     new Date(e.atISO).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' });
 
@@ -642,7 +654,7 @@ export default function CashControl({ locationId = 'holladay-3900s' }) {
    </div>
    {logEntries.length > 0 && (
      <div className="flex items-center gap-4">
-       <button type="button" className="text-sm underline" onClick={() => downloadCSV(logEntries)}>
+       <button type="button" className="text-sm underline" onClick={() => logEntries.length && downloadCSV(logEntries)}>
          Download CSV
        </button>
     <button type="button" className="text-sm underline" onClick={clearLog}>
@@ -654,11 +666,17 @@ export default function CashControl({ locationId = 'holladay-3900s' }) {
 
   {logEntries.length === 0 ? (
     <p className="text-sm text-gray-500 mt-3">No snapshots yet.</p>
-  ) : (
+) : (
     <div className="mt-3 overflow-x-auto">
-      <table className="min-w-full text-sm">
+        {/* This div creates a vertical scroll area just for the log */}
+        <div
+        ref={logRef}
+        className="max-h-[50vh] overflow-y-auto border rounded"
+        aria-label="Cash control snapshots"
+        >
+        <table className="min-w-full text-sm">
         <thead className="text-gray-600">
-          <tr className="border-b">
+          <tr className="border-b sticky top-0 bg-white z-10">
             <th className="text-left py-2 pr-3">When</th>
             <th className="text-right py-2 px-3">Drop / Lock</th>
             <th className="text-right py-2 px-3">Storage Vault</th>
@@ -670,7 +688,9 @@ export default function CashControl({ locationId = 'holladay-3900s' }) {
           </tr>
         </thead>
         <tbody>
-          {logEntries.map((e) => (
+          {[...logEntries]
+          .sort((a, b) => new Date(b.atISO) - new Date(a.atISO))
+          .map((e) => (
             <tr key={e.id} className="border-b last:border-0">
               <td className="py-2 pr-3">{fmtWhen(e)}</td>
               <td className="py-2 px-3 text-right">{formatMoney(e.drop)}</td>
@@ -685,9 +705,10 @@ export default function CashControl({ locationId = 'holladay-3900s' }) {
             </td>
               <td className="py-2 pl-3 text-right">
                 <button
-                  type="button"
-                  className="text-xs underline"
-                  onClick={() => removeEntry(e.id)}
+                type="button"
+                className="text-xs underline"
+                aria-label={`Delete snapshot from ${fmtWhen(e)}`}
+                onClick={() => removeEntry(e.id)}
                 >
                   Delete
                 </button>
@@ -695,7 +716,8 @@ export default function CashControl({ locationId = 'holladay-3900s' }) {
             </tr>
           ))}
         </tbody>
-      </table>
+       </table>
+      </div>
     </div>
   )}
   </div>
