@@ -160,7 +160,7 @@ function RowSingleInput({
   );
 }
 
-function DenomInputs({ title, state, setState }) {
+function DenomInputs({ title, state, setState, coinWraps = true }) {
   const sum = useMemo(() => computeSectionCents(state), [state]);
 
   return (
@@ -198,56 +198,105 @@ function DenomInputs({ title, state, setState }) {
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         {/* Coin rolls */}
         <fieldset>
-          <legend className="text-sm text-gray-600 mb-2">Coin rolls</legend>
-          <div className="space-y-2">
-            {/* Rolls with wraps */}
-            <RowWrapInputs
-              label="Pennies (roll $0.50)"
-              wrapKey="roll_pennies"
-              wrapValueLabel="($5 per wrap)"
-              state={state}
-              setState={setState}
-              looseKey="roll_pennies"
-            />
-            <RowWrapInputs
-              label="Nickels (roll $2)"
-              wrapKey="roll_nickels"
-              wrapValueLabel="($20 per wrap)"
-              state={state}
-              setState={setState}
-              looseKey="roll_nickels"
-            />
-            <RowWrapInputs
-              label="Dimes (roll $5)"
-              wrapKey="roll_dimes"
-              wrapValueLabel="($50 per wrap)"
-              state={state}
-              setState={setState}
-              looseKey="roll_dimes"
-            />
-            <RowWrapInputs
-              label="Quarters (roll $10)"
-              wrapKey="roll_quarters"
-              wrapValueLabel="($100 per wrap)"
-              state={state}
-              setState={setState}
-              looseKey="roll_quarters"
-            />
-            {/* Rolls without wraps */}
+  <legend className="text-sm text-gray-600 mb-2">Coin rolls</legend>
+  {!coinWraps && (
+    <p className="text-xs text-gray-500 mb-2">
+      Coin wraps disabled in this section — enter loose roll counts only.
+    </p>
+  )}
+  <div className="space-y-2">
+    {/* Pennies */}
+    {coinWraps ? (
+      <RowWrapInputs
+        label="Pennies (roll $0.50)"
+        wrapKey="roll_pennies"
+        wrapValueLabel="($5 per wrap)"
+        state={state}
+        setState={setState}
+        looseKey="roll_pennies"
+      />
+    ) : (
+      <RowSingleInput
+        label="Pennies (roll $0.50)"
+        state={state}
+        setState={setState}
+        keyName="roll_pennies"
+      />
+    )}
+
+    {/* Nickels */}
+    {coinWraps ? (
+      <RowWrapInputs
+        label="Nickels (roll $2)"
+        wrapKey="roll_nickels"
+        wrapValueLabel="($20 per wrap)"
+        state={state}
+        setState={setState}
+        looseKey="roll_nickels"
+      />
+    ) : (
+      <RowSingleInput
+        label="Nickels (roll $2)"
+        state={state}
+        setState={setState}
+        keyName="roll_nickels"
+      />
+    )}
+
+    {/* Dimes */}
+    {coinWraps ? (
+      <RowWrapInputs
+        label="Dimes (roll $5)"
+        wrapKey="roll_dimes"
+        wrapValueLabel="($50 per wrap)"
+        state={state}
+        setState={setState}
+        looseKey="roll_dimes"
+        />
+        ) : (
+      <RowSingleInput
+        label="Dimes (roll $5)"
+        state={state}
+        setState={setState}
+        keyName="roll_dimes"
+        />
+        )}
+
+        {/* Quarters */}
+        {coinWraps ? (
+        <RowWrapInputs
+            label="Quarters (roll $10)"
+            wrapKey="roll_quarters"
+            wrapValueLabel="($100 per wrap)"
+            state={state}
+            setState={setState}
+            looseKey="roll_quarters"
+        />
+        ) : (
             <RowSingleInput
-              label="Half Dollars (roll $10)"
-              state={state}
-              setState={setState}
-              keyName="roll_halves"
+            label="Quarters (roll $10)"
+            state={state}
+            setState={setState}
+            keyName="roll_quarters"
+            />
+            )}
+
+            {/* Rolls without wraps (unchanged) */}
+            <RowSingleInput
+            label="Half Dollars (roll $10)"
+            state={state}
+            setState={setState}
+            keyName="roll_halves"
             />
             <RowSingleInput
-              label="$1 Coins (roll $25)"
-              state={state}
-              setState={setState}
-              keyName="roll_dollars"
+            label="$1 Coins (roll $25)"
+            state={state}
+            setState={setState}
+            keyName="roll_dollars"
             />
-          </div>
+        </div>
         </fieldset>
+
 
         {/* Bills */}
         <fieldset>
@@ -314,7 +363,7 @@ export default function CashControl() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
         <DenomInputs title="Drop / Lock Safe" state={drop} setState={setDrop} />
-        <DenomInputs title="Storage Vault" state={vault} setState={setVault} />
+        <DenomInputs title="Storage Vault" state={vault} setState={setVault} coinWraps={false} />
       </div>
 
       <div className="bg-white shadow rounded p-4 sm:p-6 mt-4">
