@@ -1,4 +1,43 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
+import { supabase } from '../supabaseClient';
+
+const STORAGE_KEY = 'cash_control_log_v1';
+
+function toLocalDatetimeValue(dateLike) {
+  const d = new Date(dateLike);
+  const pad = (n) => String(n).padStart(2, '0');
+  const yyyy = d.getFullYear();
+  const mm = pad(d.getMonth() + 1);
+  const dd = pad(d.getDate());
+  const hh = pad(d.getHours());
+  const mi = pad(d.getMinutes());
+  return `${yyyy}-${mm}-${dd}T${hh}:${mi}`;
+}
+
+const csvEscape = (s) => `"${String(s ?? '').replace(/"/g, '""')}"`;
+
+const toCSV = (rows) => {
+  const header = ['When','Drop','Vault','Tills','ChangeOrder','Grand','Notes'];
+  const body = rows.map(e => [
+    new Date(e.atISO).toISOString(),
+    (e.drop/100).toFixed(2),
+    (e.vault/100).toFixed(2),
+    (e.tills/100).toFixed(2),
+    (e.changeOrder/100).toFixed(2),
+    (e.grand/100).toFixed(2),
+    e.notes ?? ''
+  ].map(csvEscape).join(','));
+  return [header.join(','), ...body].join('\n');
+};
+
+const downloadCSV = (logEntries) => {
+  const blob = new Blob([toCSV(logEntries)], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const ymd = new Date().toISOString().slice(0,10);
+  a.href = url; a.download = `cash_control_log_${ymd}.csv`; a.click();
+  URL.revokeObjectURL(url);
+};
 
 const DENOMS = {
   // value is in cents
@@ -46,7 +85,7 @@ function formatMoney(cents) {
 }
 
 // ---- Compute a section (safe) total in cents from its state map
-function computeSectionCents(map) {
+function computeSectionCents(map, { allowCoinWraps = true, allowBillWraps = true } = {}) {
   let total = 0;
 
   // Slip amount ($)
@@ -62,26 +101,30 @@ function computeSectionCents(map) {
   }
 
   // Coin roll wraps
-  for (const key of Object.keys(WRAPS.rolls)) {
-    const wrapCount = parseInt(map[`wrap_${key}`] ?? '', 10);
-    if (Number.isFinite(wrapCount) && wrapCount > 0) {
-      total += wrapCount * WRAPS.rolls[key];
+  if (allowCoinWraps) {
+    for (const key of Object.keys(WRAPS.rolls)) {
+        const wrapCount = parseInt(map[`wrap_${key}`] ?? '', 10);
+        if (Number.isFinite(wrapCount) && wrapCount > 0) {
+            total += wrapCount * WRAPS.rolls[key];
+        }
     }
-  }
+}
 
-  // Loose bills
-  for (const d of DENOMS.bills) {
-    const n = parseInt(map[d.key] ?? '', 10);
-    if (Number.isFinite(n) && n > 0) total += n * d.cents;
-  }
-
-  // Bill wraps ($1 and $5)
-  for (const key of Object.keys(WRAPS.bills)) {
-    const wrapCount = parseInt(map[`wrap_${key}`] ?? '', 10);
-    if (Number.isFinite(wrapCount) && wrapCount > 0) {
-      total += wrapCount * WRAPS.bills[key];
+  // Loose bills (always count)
+    for (const d of DENOMS.bills) {
+        const n = parseInt(map[d.key] ?? '', 10);
+        if (Number.isFinite(n) && n > 0) total += n * d.cents;
+     }
+     
+     // Bill wraps ($1 and $5) (optional)
+  if (allowBillWraps) {
+    for (const key of Object.keys(WRAPS.bills)) {
+        const wrapCount = parseInt(map[`wrap_${key}`] ?? '', 10);
+        if (Number.isFinite(wrapCount) && wrapCount > 0) {
+            total += wrapCount * WRAPS.bills[key];
+        }
     }
-  }
+}
 
   return total;
 }
@@ -161,7 +204,10 @@ function RowSingleInput({
 }
 
 function DenomInputs({ title, state, setState, coinWraps = true }) {
-  const sum = useMemo(() => computeSectionCents(state), [state]);
+  const sum = useMemo(
+    () => computeSectionCents(state, { allowCoinWraps: coinWraps, allowBillWraps: true }),
+    [state, coinWraps]
+);
 
   return (
     <div className="bg-white shadow rounded p-4 sm:p-6">
@@ -338,14 +384,25 @@ function DenomInputs({ title, state, setState, coinWraps = true }) {
   );
 }
 
-export default function CashControl() {
+export default function CashControl({ locationId = 'holladay-3900s' }) {
   const [drop, setDrop] = useState({});
   const [vault, setVault] = useState({});
   const [tills, setTills] = useState(['', '', '', '', '']); // 5 tills ($ strings)
-  const [changeOrder, setChangeOrder] = useState('');        // $ string
+  const [changeOrder, setChangeOrder] = useState('');
+  const [notes, setNotes] = useState('');      // $ string
+  const [snapshotAt, setSnapshotAt] = useState(toLocalDatetimeValue(Date.now()));
+  const [logEntries, setLogEntries] = useState([]);
+  const [saving, setSaving] = useState(false);
+  const [saveMsg, setSaveMsg] = useState(null);
 
-  const dropTotal = useMemo(() => computeSectionCents(drop), [drop]);
-  const vaultTotal = useMemo(() => computeSectionCents(vault), [vault]);
+  useEffect(() => {
+    if (!saveMsg) return;
+    const t = setTimeout(() => setSaveMsg(null), 4000);
+    return () => clearTimeout(t);
+  }, [saveMsg]);
+
+  const dropTotal  = useMemo(() => computeSectionCents(drop,  { allowCoinWraps: true }),  [drop]);
+  const vaultTotal = useMemo(() => computeSectionCents(vault, { allowCoinWraps: false }), [vault]);
   const tillsTotal = useMemo(
     () => tills.reduce((acc, s) => acc + Math.round((parseFloat(s) || 0) * 100), 0),
     [tills]
@@ -356,6 +413,63 @@ export default function CashControl() {
   );
 
   const grandTotal = dropTotal + vaultTotal + tillsTotal + changeOrderTotal;
+  const nothingToSave = grandTotal === 0;
+  const isFuture = new Date(snapshotAt) > new Date();
+
+  // Load/save log to localStorage
+     useEffect(() => {
+     try {
+     const raw = localStorage.getItem(STORAGE_KEY);
+     if (raw) setLogEntries(JSON.parse(raw));
+     } catch { /* ignore */ }
+    }, []);
+    useEffect(() => {
+        try {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(logEntries));
+        } catch { /* ignore */ }
+    }, [logEntries]);
+
+    const saveSnapshot = async () => {
+    const at = snapshotAt ? new Date(snapshotAt) : new Date();
+    const entry = {
+        id: Date.now(), // simple unique id
+        atISO: at.toISOString(),
+        drop: dropTotal,
+        vault: vaultTotal,
+        tills: tillsTotal,
+        changeOrder: changeOrderTotal,
+        grand: grandTotal,
+        notes: notes.trim(),
+    };
+    // Local first (always)
+    setLogEntries((prev) => [entry, ...prev].slice(0, 500));
+    setNotes('');
+
+    // Then Supabase (best-effort)
+    try {
+    setSaving(true); setSaveMsg(null);
+    const { error } = await supabase.from('cash_snapshots').insert({
+        location_id: locationId,
+        at: entry.atISO,
+        drop_cents: entry.drop,
+        vault_cents: entry.vault,
+        tills_cents: entry.tills,
+        change_order_cents: entry.changeOrder,
+        grand_cents: entry.grand,
+        notes: entry.notes,
+    });
+    if (error) throw error;
+        setSaveMsg('Saved to Supabase.');
+    } catch (err) {
+        setSaveMsg(`Saved locally. Supabase failed: ${err.message || err}`);
+    } finally {
+        setSaving(false);
+    }
+    };
+    const removeEntry = (id) => setLogEntries((prev) => prev.filter((e) => e.id !== id));
+    const clearLog = () => setLogEntries([]);
+    const fmtWhen = (e) =>
+    new Date(e.atISO).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' });
 
   return (
     <div className="bg-white shadow rounded p-4 sm:p-6 mt-6 overflow-hidden">
@@ -454,11 +568,137 @@ export default function CashControl() {
             setVault({});
             setTills(['', '', '', '', '']);
             setChangeOrder('');
+            setNotes('');
           }}
         >
           Reset All
         </button>
       </div>
+      {/* Snapshot + Log */}
+<div className="bg-white shadow rounded p-4 sm:p-6 mt-6">
+  <h4 className="font-semibold mb-3">Cash Control Log</h4>
+
+  {/* Save controls */}
+  <div className="flex flex-wrap items-end gap-3">
+    <div className="grow">
+      <label className="block text-sm text-gray-600 mb-1">Snapshot date & time</label>
+      <input
+        type="datetime-local"
+        value={snapshotAt}
+        onChange={(e) => setSnapshotAt(e.target.value)}
+        className="w-full border px-3 py-2 rounded"
+      />
+      {isFuture && (
+    <p className="text-xs text-amber-700 mt-1" aria-live="polite">
+        Snapshot time is in the future.
+    </p>
+    )}
+      <p className="text-xs text-gray-500 mt-1">
+        Adjust if recording a past count. Click <button
+          type="button"
+          className="underline"
+          onClick={() => setSnapshotAt(toLocalDatetimeValue(Date.now()))}
+        >Now</button> to reset.
+      </p>
+    </div>
+
+    <div className="grow min-w-[16rem]">
+  <label className="block text-sm text-gray-600 mb-1">Notes (optional)</label>
+  <textarea
+    rows={2}
+    maxLength={250}
+    value={notes}
+    onChange={(e) => setNotes(e.target.value)}
+    className="w-full border px-3 py-2 rounded"
+    placeholder="e.g., Pre-EOD count, change order placed, variance note…"
+  />
+  <div className="text-xs text-gray-500 mt-1">
+    {notes.length}/250
+    </div>
+    </div>
+
+    <button
+      type="button"
+      className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700"
+      onClick={saveSnapshot}
+      disabled={saving || nothingToSave || isFuture}
+      aria-label="Save totals to log"
+    >
+      {saving ? 'Saving…' : 'Save to log'}
+    </button>
+    
+    {saveMsg && (
+        <div aria-live="polite"
+        className={`text-sm ${saveMsg.startsWith('Saved to Supabase') ? 'text-green-700' : 'text-amber-700'}`}>
+            {saveMsg}
+        </div>
+    )}
+  </div>
+
+  {/* Entries */}
+  <div className="mt-4 flex items-center justify-between">
+   <div className="text-sm text-gray-600">
+     Saved snapshots: <span className="font-medium">{logEntries.length}</span>
+   </div>
+   {logEntries.length > 0 && (
+     <div className="flex items-center gap-4">
+       <button type="button" className="text-sm underline" onClick={() => downloadCSV(logEntries)}>
+         Download CSV
+       </button>
+    <button type="button" className="text-sm underline" onClick={clearLog}>
+        Clear all
+    </button>
+    </div>
+    )}
+    </div>
+
+  {logEntries.length === 0 ? (
+    <p className="text-sm text-gray-500 mt-3">No snapshots yet.</p>
+  ) : (
+    <div className="mt-3 overflow-x-auto">
+      <table className="min-w-full text-sm">
+        <thead className="text-gray-600">
+          <tr className="border-b">
+            <th className="text-left py-2 pr-3">When</th>
+            <th className="text-right py-2 px-3">Drop / Lock</th>
+            <th className="text-right py-2 px-3">Storage Vault</th>
+            <th className="text-right py-2 px-3">Tills</th>
+            <th className="text-right py-2 px-3">Change Order</th>
+            <th className="text-right py-2 pl-3">Grand Total</th>
+            <th className="text-left py-2 px-3">Notes</th>
+            <th className="py-2 pl-3"></th>
+          </tr>
+        </thead>
+        <tbody>
+          {logEntries.map((e) => (
+            <tr key={e.id} className="border-b last:border-0">
+              <td className="py-2 pr-3">{fmtWhen(e)}</td>
+              <td className="py-2 px-3 text-right">{formatMoney(e.drop)}</td>
+              <td className="py-2 px-3 text-right">{formatMoney(e.vault)}</td>
+              <td className="py-2 px-3 text-right">{formatMoney(e.tills)}</td>
+              <td className="py-2 px-3 text-right">{formatMoney(e.changeOrder)}</td>
+              <td className="py-2 pl-3 text-right font-semibold">{formatMoney(e.grand)}</td>
+              <td className="py-2 px-3 align-top">
+                <div className="max-w-[16rem] truncate" title={e.notes || ''}>
+                    {e.notes || ''}
+                </div>
+            </td>
+              <td className="py-2 pl-3 text-right">
+                <button
+                  type="button"
+                  className="text-xs underline"
+                  onClick={() => removeEntry(e.id)}
+                >
+                  Delete
+                </button>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  )}
+  </div>
     </div>
   );
 }
