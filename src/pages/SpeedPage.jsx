@@ -11,40 +11,46 @@ const DAYPARTS = [
   { key: 'dinner',     label: 'Dinner (5p–8p)' },
   { key: 'late_night', label: 'Late Night (8p–close)' },
 ];
-const DOW = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+const DOW = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
 
 // --- date helpers (local, Sunday-start) ---
 function startOfWeekLocal(d = new Date()) {
-  const day = d.getDay(); // 0=Sun..6=Sat
-  const start = new Date(d);
-  start.setHours(0,0,0,0);
-  start.setDate(start.getDate() - day);
-  return start;
-}
+    // Monday start: subtract (Mon=1 -> 0, Tue=2 -> 1, ..., Sun=0 -> 6)
+    const day = d.getDay(); // 0=Sun..6=Sat
+    const diff = (day + 6) % 7;
+    const start = new Date(d);
+    start.setHours(0,0,0,0);
+    start.setDate(start.getDate() - diff);
+    return start;
+  }
 function addDays(date, n) { const d = new Date(date); d.setDate(d.getDate() + n); return d; }
 function ymd(date) { return date.toISOString().slice(0,10); }
 
 // Shape rows -> { daypart: [{dow, seconds|null}...] }
 function toSeries(rows, weekStart) {
-  const labelByYMD = {};
-  for (let i = 0; i < 7; i++) {
-    const d = addDays(weekStart, i);
-    labelByYMD[ymd(d)] = DOW[d.getDay()];
+    // Build Monday→Sunday labels tied to this week
+    const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
+    const labelByYMD = Object.fromEntries(
+      weekDays.map(d => [ymd(d), DOW[(d.getDay() + 6) % 7]]) // map to Mon-first labels
+    );
+    // Seed with zeros but mark as missing
+    const seed = DOW.map(dow => ({ dow, seconds: 0, missing: true }));
+    const by = {
+      lunch: seed.map(x => ({ ...x })), afternoon: seed.map(x => ({ ...x })),
+      dinner: seed.map(x => ({ ...x })), late_night: seed.map(x => ({ ...x })),
+    };
+    for (const r of rows) {
+      const dow = labelByYMD[r.day];
+      const arr = by[r.daypart];
+      if (!dow || !arr) continue;
+      const idx = arr.findIndex(x => x.dow === dow);
+      if (idx >= 0) {
+        arr[idx].seconds = r.avg_time_seconds ?? 0;
+        arr[idx].missing = !(Number.isFinite(r.avg_time_seconds));
+      }
+    }
+   return by;
   }
-  const seed = DOW.map(dow => ({ dow, seconds: null }));
-  const by = {
-    lunch: seed.map(x => ({ ...x })), afternoon: seed.map(x => ({ ...x })),
-    dinner: seed.map(x => ({ ...x })), late_night: seed.map(x => ({ ...x })),
-  };
-  for (const r of rows) {
-    const dow = labelByYMD[r.day];
-    const arr = by[r.daypart];
-    if (!dow || !arr) continue;
-    const idx = arr.findIndex(x => x.dow === dow);
-    if (idx >= 0) arr[idx].seconds = r.avg_time_seconds ?? null;
-  }
-  return by;
-}
 
 function DaypartCard({ title, data, targetSeconds }) {
   return (
@@ -61,7 +67,12 @@ function DaypartCard({ title, data, targetSeconds }) {
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis dataKey="dow" />
             <YAxis unit="s" allowDecimals={false} domain={[0, 'auto']} />
-            <Tooltip formatter={(v) => [`${v} s`, 'Avg time']} />
+            <Tooltip
+            formatter={(v, _name, props) => {
+              const miss = props?.payload?.missing;
+              return [`${v} s${miss ? ' (no entry)' : ''}`, 'Avg time'];
+            }}
+            />
             {Number.isFinite(targetSeconds) && (
               <ReferenceLine y={targetSeconds} strokeDasharray="4 4" />
             )}
@@ -149,7 +160,7 @@ export default function SpeedPage({ profile, targets = {} }) {
               <DaypartCard
                 key={key}
                 title={label}
-                data={seriesByPart[key] ?? DOW.map(dow => ({ dow, seconds: null }))}
+                data={seriesByPart[key] ?? DOW.map(dow => ({ dow, seconds: 0, missing: true }))}
                 targetSeconds={targets[key]} // e.g., { lunch:220, afternoon:230, dinner:240, late_night:260 }
               />
             ))}

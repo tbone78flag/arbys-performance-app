@@ -9,14 +9,15 @@ const DAYPARTS = [
   { key: 'dinner',     label: 'Dinner (5p–8p)' },
   { key: 'late_night', label: 'Late Night (8p–close)' },
 ];
-const DOW = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+const DOW = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
 
 // --- date helpers (Sunday start, aligned with SpeedPage) ---
 function startOfWeekLocal(d = new Date()) {
-  const day = d.getDay(); // 0=Sun..6=Sat
+  const day = d.getDay();           // 0..6 (Sun..Sat)
+  const diff = (day + 6) % 7;       // Mon=0, Tue=1, …, Sun=6
   const start = new Date(d);
   start.setHours(0,0,0,0);
-  start.setDate(start.getDate() - day);
+  start.setDate(start.getDate() - diff);
   return start;
 }
 function addDays(date, n) { const d = new Date(date); d.setDate(d.getDate() + n); return d; }
