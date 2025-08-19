@@ -473,7 +473,8 @@ export default function SpeedPage({ profile, targets = {} }) {
  
        <p className="text-xs text-gray-500 mt-3">
          Assumes an uninterrupted queue (no gaps) and that speed is the binding constraint.
-         Real throughput also depends on order-taking and kitchen capacity.
+         Real throughput also depends on order-taking and kitchen capacity. <br/>
+         Margin % calculates the profit gain after food/packaging costs. Margin = ((Avg Check-Variable Cost per Car)/Avg Check)*100
        </p>
      </div>
 
