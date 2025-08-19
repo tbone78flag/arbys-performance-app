@@ -479,12 +479,16 @@ export default function SpeedPage({ profile, targets = {} }) {
      </div>
 
      <h3>Using the What-If Calculator</h3>
-     <p>The average check is auto-set by what we currently do. You are able to change it if you'd like to see what a higher check would od with a faster/slower speed. <br/>
-           The baseline speed is where you'll want to input what speed we currently do to compare the target speed to.<br/>
-           The hours x days is where you'll inout how many hours per day you'll shoot to do this new day. It is a good spot to test the hours in the day we are in
-           a specific daypart. <br/>
-           On the right, you'll see what we do gross profit as a baseline expecting the average check. Then the amount we'd make at the target speed. Below those you'll
-           see the excess we'd make per hour and then during the alotted time you've typed for hours x days.
+     <p>
+      <ul style={{ listStyleType: 'disc' }}>
+          <li>The average check is auto-set by what we currently do. You are able to change it if you'd like to see what a higher 
+            check would do with a faster/slower speed.</li>
+           <li>The baseline speed is where you'll want to input what speed we currently do to compare the target speed to.</li>
+           <li>The hours x days is where you'll inout how many hours per day you'll shoot to do this new day. It is a good spot to test the hours in the day we are in
+           a specific daypart.</li>
+           <li>On the right, you'll see what we do gross profit as a baseline expecting the average check. Then the amount we'd make at the target speed. Below those you'll
+           see the excess we'd make per hour and then during the alotted time you've typed for hours x days.</li>
+           </ul>
      </p>
 
         {/* manager-only tools area remains available to extend */}
