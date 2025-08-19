@@ -67,7 +67,7 @@ function toSeries(rows, weekStart) {
     return s > 0 ? 3600 / s : 0;
   }
 
-  const FULL_DOW = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+  const FULL_DOW = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
   function toLocalDateFromYMD(ymd) {
     // Parse YYYY-MM-DD as local time (avoids UTC off-by-one)
     const [y,m,d] = ymd.split('-').map(Number);
@@ -163,31 +163,40 @@ export default function SpeedPage({ profile, targets = {} }) {
   );
  
   useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      const promises = DAYPARTS.map(({ key }) =>
-        supabase
-          .from('speed_dayparts')
-          .select('day, avg_time_seconds')
-          .eq('location_id', locationId)
-          .eq('service', 'drive_thru')
-          .eq('daypart', key)
-          .order('avg_time_seconds', { ascending: true })
-          .order('day', { ascending: true })
-          .limit(1)
-      );
-      const results = await Promise.all(promises);
-      if (cancelled) return;
-      const next = {};
-      results.forEach((res, i) => {
-        const key = DAYPARTS[i].key;
-        const row = Array.isArray(res.data) ? res.data[0] : undefined;
-        next[key] = row ? { seconds: row.avg_time_seconds, day: row.day } : null;
-      });
-      setAllTimeBest(next);
+  let cancelled = false;
+  (async () => {
+    const viewRes = await supabase
+      .from('speed_dayparts_best_alltime')
+     .select('daypart, day, avg_time_seconds')
+     .eq('location_id', locationId);
+   if (!cancelled && !viewRes.error && Array.isArray(viewRes.data)) {
+     const next = Object.fromEntries(DAYPARTS.map(({ key }) => [key, null]));
+     for (const r of viewRes.data) next[r.daypart] = { seconds: r.avg_time_seconds, day: r.day };
+     setAllTimeBest(next);
+      return;
+    }
+    // Fallback: 4 tiny queries (one per daypart)
+   const results = await Promise.all(DAYPARTS.map(({ key }) =>
+      supabase.from('speed_dayparts')
+        .select('day, avg_time_seconds')
+        .eq('location_id', locationId)
+        .eq('service', 'drive_thru')
+        .eq('daypart', key)
+        .order('avg_time_seconds', { ascending: true })
+        .order('day', { ascending: true })
+        .limit(1)
+    ));
+    if (cancelled) return;
+    const next = {};
+    results.forEach((res, i) => {
+      const key = DAYPARTS[i].key;
+      const row = Array.isArray(res.data) ? res.data[0] : undefined;
+      next[key] = row ? { seconds: row.avg_time_seconds, day: row.day } : null;
+    });
+    setAllTimeBest(next);
     })();
-   return () => { cancelled = true; };
-  }, [locationId]);
+  return () => { cancelled = true; };
+}, [locationId]);
 
   const seriesByPart = useMemo(() => toSeries(rows, weekStart), [rows, weekStart]);
   const weeklyStats = useMemo(() => {
