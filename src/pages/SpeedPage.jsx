@@ -13,7 +13,7 @@ const DAYPARTS = [
 ];
 const DOW = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
 
-// --- date helpers (local, Sunday-start) ---
+// --- date helpers (local, Monday-start) ---
 function startOfWeekLocal(d = new Date()) {
     // Monday start: subtract (Mon=1 -> 0, Tue=2 -> 1, ..., Sun=0 -> 6)
     const day = d.getDay(); // 0=Sun..6=Sat
@@ -24,7 +24,12 @@ function startOfWeekLocal(d = new Date()) {
     return start;
   }
 function addDays(date, n) { const d = new Date(date); d.setDate(d.getDate() + n); return d; }
-function ymd(date) { return date.toISOString().slice(0,10); }
+function ymd(date) {
+   const y = date.getFullYear();
+   const m = String(date.getMonth() + 1).padStart(2, '0');
+   const d = String(date.getDate()).padStart(2, '0');
+   return `${y}-${m}-${d}`; // local date, no UTC shift
+ }
 
 // Shape rows -> { daypart: [{dow, seconds|null}...] }
 function toSeries(rows, weekStart) {
@@ -52,7 +57,17 @@ function toSeries(rows, weekStart) {
    return by;
   }
 
-  const FULL_DOW = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  //Money based on drive thru speed
+  function formatMoney(n) {
+    if (!Number.isFinite(n)) return '—';
+    return n.toLocaleString(undefined, { style: 'currency', currency: 'USD', maximumFractionDigits: 0 });
+  }
+  function carsPerHour(secondsPerCar) {
+    const s = Number(secondsPerCar);
+    return s > 0 ? 3600 / s : 0;
+  }
+
+  const FULL_DOW = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
   function toLocalDateFromYMD(ymd) {
     // Parse YYYY-MM-DD as local time (avoids UTC off-by-one)
     const [y,m,d] = ymd.split('-').map(Number);
@@ -63,7 +78,7 @@ function toSeries(rows, weekStart) {
     const d = toLocalDateFromYMD(ymd);
     return `${FULL_DOW[d.getDay()]} ${d.getMonth() + 1}/${d.getDate()}`;
   }
-  
+
 function DaypartCard({ title, data, targetSeconds }) {
   return (
     <div className="bg-white shadow rounded p-4 sm:p-6 overflow-hidden">
@@ -113,7 +128,7 @@ export default function SpeedPage({ profile, targets = {} }) {
 
   const locationId = profile?.location_id ?? 'holladay-3900s';
 
-  // week selector (Sunday–Saturday)
+  // week selector (Monday-Sunday)
   const [weekAnchor, setWeekAnchor] = useState(() => new Date());
   const weekStart = useMemo(() => startOfWeekLocal(weekAnchor), [weekAnchor]);
   const weekEnd   = useMemo(() => addDays(weekStart, 6), [weekStart]);
@@ -189,6 +204,59 @@ export default function SpeedPage({ profile, targets = {} }) {
     }
     return out;
   }, [rows]);
+
+  // ---------- What-If: Average Check + Baseline ----------
+  // Average Check (pulled from the same place your Goals page writes to)
+  const [avgCheck, setAvgCheck] = useState(12);
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const { data, error } = await supabase
+        .from('location_settings')
+        .select('value')
+        .eq('location_id', 'default')
+        .eq('key', 'average_check')
+        .single();
+      if (!cancelled && !error && data?.value != null) {
+        const v = Number(data.value);
+        if (Number.isFinite(v) && v > 0) setAvgCheck(v);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+ 
+  // Baseline seconds = average of this week's saved rows (ignore "no entry" zeros)
+  const baselineSec = useMemo(() => {
+    const vals = rows?.map(r => r?.avg_time_seconds).filter(x => Number.isFinite(x)) ?? [];
+    if (!vals.length) return 60; // sensible default when week is empty
+    return Math.round(vals.reduce((a, b) => a + b, 0) / vals.length);
+  }, [rows]);
+ 
+  // What-If inputs
+  const [targetSec, setTargetSec] = useState(45);
+  const [manualBaseline, setManualBaseline] = useState('');
+  const [hours, setHours] = useState(3);
+  const [daysPerWeek, setDaysPerWeek] = useState(7);
+  const [marginPct, setMarginPct] = useState(''); // optional
+ 
+  const effBaseline = manualBaseline !== '' && Number.isFinite(Number(manualBaseline))
+    ? Number(manualBaseline)
+    : baselineSec;
+ 
+  const baseCph   = carsPerHour(effBaseline);
+  const targetCph = carsPerHour(targetSec);
+  const baseRevHr   = baseCph   * avgCheck;
+  const targetRevHr = targetCph * avgCheck;
+  const deltaHr     = targetRevHr - baseRevHr;
+ 
+  const totalHours  = Number(hours) * Number(daysPerWeek);
+  const deltaPeriod = deltaHr * totalHours;
+ 
+  const margin = Number(marginPct);
+  const hasMargin = Number.isFinite(margin) && margin > 0;
+  const deltaProfitHr     = hasMargin ? deltaHr * (margin / 100) : null;
+  const deltaProfitPeriod = hasMargin ? deltaPeriod * (margin / 100) : null;
+
   const weekLabel = `${weekStart.toLocaleDateString()} – ${weekEnd.toLocaleDateString()}`;
 
   return (
@@ -269,6 +337,136 @@ export default function SpeedPage({ profile, targets = {} }) {
         </p>
         </div>
       )}
+
+      {/* What-If Calculator */}
+     <div className="mt-6 bg-white/50 rounded border p-4 sm:p-6">
+       <h3 className="font-semibold mb-3">What-If: Faster Speed → More Throughput</h3>
+ 
+       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+         {/* Inputs */}
+         <div className="space-y-3">
+           <div className="grid grid-cols-[12rem_1fr] items-center gap-2">
+             <label className="text-sm text-gray-600">Average check ($)</label>
+             <input
+               type="number" step="0.01" min="0"
+               value={avgCheck}
+               onChange={e => setAvgCheck(Number(e.target.value))}
+               className="border rounded px-2 py-1 w-32"
+             />
+           </div>
+ 
+           <div className="grid grid-cols-[12rem_1fr] items-center gap-2">
+            <label className="text-sm text-gray-600">Baseline speed (s/order)</label>
+             <div className="flex items-center gap-2">
+               <input
+                 type="number" min="1" step="1" placeholder={`${baselineSec}`}
+                 value={manualBaseline}
+                 onChange={e => setManualBaseline(e.target.value)}
+                 className="border rounded px-2 py-1 w-28"
+               />
+               <span className="text-xs text-gray-500">(auto: {baselineSec}s this week)</span>
+             </div>
+           </div>
+ 
+           <div className="grid grid-cols-[12rem_1fr] items-center gap-2">
+             <label className="text-sm text-gray-600">Target speed (s/order)</label>
+             <input
+               type="number" min="1" step="1"
+               value={targetSec}
+               onChange={e => setTargetSec(Number(e.target.value))}
+               className="border rounded px-2 py-1 w-28"
+            />
+           </div>
+ 
+           <div className="grid grid-cols-[12rem_1fr] items-center gap-2">
+             <label className="text-sm text-gray-600">Hours × Days</label>
+             <div className="flex items-center gap-2">
+               <input
+                 type="number" min="0" step="0.5"
+                 value={hours}
+                 onChange={e => setHours(Number(e.target.value))}
+                 className="border rounded px-2 py-1 w-20"
+                 aria-label="Hours per day"
+               />
+               <span className="text-sm text-gray-600">hours ×</span>
+               <input
+                 type="number" min="1" max="7" step="1"
+                 value={daysPerWeek}
+                 onChange={e => setDaysPerWeek(Number(e.target.value))}
+                 className="border rounded px-2 py-1 w-16"
+                 aria-label="Days per week"
+               />
+               <span className="text-sm text-gray-600">days</span>
+             </div>
+           </div>
+ 
+           <div className="grid grid-cols-[12rem_1fr] items-center gap-2">
+             <label className="text-sm text-gray-600">Margin % (optional)</label>
+             <input
+               type="number" min="0" max="100" step="1" placeholder="e.g., 28"
+               value={marginPct}
+               onChange={e => setMarginPct(e.target.value)}
+               className="border rounded px-2 py-1 w-24"
+             />
+           </div>
+         </div>
+ 
+         {/* Outputs */}
+         <div className="space-y-2">
+           <div className="text-sm">Throughput</div>
+           <div className="grid grid-cols-2 gap-2 text-sm">
+             <div className="bg-gray-50 rounded p-2">
+               <div className="text-gray-600">Baseline cars/hour</div>
+               <div className="font-semibold">{baseCph.toFixed(1)}</div>
+             </div>
+             <div className="bg-gray-50 rounded p-2">
+               <div className="text-gray-600">Target cars/hour</div>
+               <div className="font-semibold">{targetCph.toFixed(1)}</div>
+             </div>
+           </div>
+ 
+           <div className="text-sm mt-2">Revenue</div>
+           <div className="grid grid-cols-2 gap-2 text-sm">
+             <div className="bg-gray-50 rounded p-2">
+               <div className="text-gray-600">Baseline / hour</div>
+               <div className="font-semibold">{formatMoney(baseRevHr)}</div>
+             </div>
+             <div className="bg-gray-50 rounded p-2">
+               <div className="text-gray-600">Target / hour</div>
+               <div className="font-semibold">{formatMoney(targetRevHr)}</div>
+             </div>
+           </div>
+ 
+           <div className="bg-green-50 rounded p-2 text-sm mt-2">
+             <div className="text-gray-700">Gain per hour (revenue)</div>
+             <div className="font-semibold">{formatMoney(deltaHr)}</div>
+           </div>
+ 
+           <div className="bg-green-50 rounded p-2 text-sm">
+             <div className="text-gray-700">Gain for {hours}h × {daysPerWeek}d</div>
+             <div className="font-semibold">{formatMoney(deltaPeriod)}</div>
+           </div>
+ 
+           {hasMargin && (
+             <>
+               <div className="bg-blue-50 rounded p-2 text-sm">
+                 <div className="text-gray-700">Profit gain per hour (at {margin}% margin)</div>
+                 <div className="font-semibold">{formatMoney(deltaProfitHr)}</div>
+               </div>
+               <div className="bg-blue-50 rounded p-2 text-sm">
+                 <div className="text-gray-700">Profit gain for {hours}h × {daysPerWeek}d</div>
+                 <div className="font-semibold">{formatMoney(deltaProfitPeriod)}</div>
+               </div>
+             </>
+           )}
+         </div>
+       </div>
+ 
+       <p className="text-xs text-gray-500 mt-3">
+         Assumes an uninterrupted queue (no gaps) and that speed is the binding constraint.
+         Real throughput also depends on order-taking and kitchen capacity.
+       </p>
+     </div>
 
         {/* manager-only tools area remains available to extend */}
         {profile?.role === 'manager' && (
