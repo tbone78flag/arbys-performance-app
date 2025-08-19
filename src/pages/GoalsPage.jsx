@@ -11,6 +11,11 @@ const DAYPARTS = [
 ];
 const DOW = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 
+const hasData = useMemo(
+  () => DAYPARTS.some(({ key }) => form[key].some(v => v !== '')),
+    [form]
+   );
+
 // --- date helpers (Sunday start, aligned with SpeedPage) ---
 function startOfWeekLocal(d = new Date()) {
   const day = d.getDay(); // 0=Sun..6=Sat
@@ -42,13 +47,13 @@ export default function GoalsPage({ profile }) {
   const weekLabel = `${weekStart.toLocaleDateString()} – ${weekEnd.toLocaleDateString()}`;
 
   // form = { lunch:[7], afternoon:[7], dinner:[7], late_night:[7] } (strings)
-  const emptyRow = Array(7).fill('');
+  const emptyRow = useMemo(() => Array(7).fill(''), []);
   const emptyForm = useMemo(() => ({
-    lunch: [...emptyRow],
-    afternoon: [...emptyRow],
-    dinner: [...emptyRow],
-    late_night: [...emptyRow],
-  }), []); // stable
+    lunch: Array(7).fill(''),
+    afternoon: Array(7).fill(''),
+    dinner: Array(7).fill(''),
+    late_night: Array(7).fill(''),
+  }), []);
 
   const [form, setForm] = useState(emptyForm);
   const [loadingSpeed, setLoadingSpeed] = useState(false);
@@ -94,8 +99,7 @@ export default function GoalsPage({ profile }) {
 
       if (cancelled) return;
       if (error) {
-        setSpeedMsg(`Load failed: ${error.message}`);
-        setForm(emptyForm);
+      setSpeedMsg(`Load failed: ${error.message}`);
       } else {
         // Build label map YYYY-MM-DD -> dow index
         const dowIndexByYMD = {};
@@ -120,7 +124,7 @@ export default function GoalsPage({ profile }) {
     };
     loadWeek();
     return () => { cancelled = true; };
-  }, [locationId, weekStart, weekEnd, emptyForm, emptyRow]);
+  }, [locationId, weekStart, weekEnd]);
 
   // --- handlers ---
   const handleChange = (partKey, dowIdx, value) => {
@@ -243,10 +247,11 @@ export default function GoalsPage({ profile }) {
           </div>
         </div>
 
-        {loadingSpeed ? (
-          <div className="text-sm text-gray-600">Loading week…</div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+        <div className="flex items-center justify-between mb-2">
+        <span className="text-sm text-gray-600">Enter average seconds for each daypart</span>
+      {loadingSpeed && <span className="text-xs text-gray-500" aria-live="polite">Syncing…</span>}
+        </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6" aria-busy={loadingSpeed ? 'true' : 'false'}>
             {DAYPARTS.map(({ key, label }) => (
               <fieldset key={key} className="border rounded p-3">
                 <legend className="text-sm font-medium">{label}</legend>
@@ -261,6 +266,7 @@ export default function GoalsPage({ profile }) {
                       key={i}
                       type="number"
                       min="0"
+                      step="1"
                       inputMode="numeric"
                       value={form[key][i]}
                       onChange={(e) => handleChange(key, i, e.target.value)}
@@ -272,14 +278,13 @@ export default function GoalsPage({ profile }) {
                 </div>
               </fieldset>
             ))}
-          </div>
-        )}
+            </div>
 
         <div className="mt-3 flex items-center gap-3">
           <button
             type="button"
             onClick={saveSpeedWeek}
-            disabled={savingSpeed}
+            disabled={savingSpeed || !hasData}
             className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700 disabled:opacity-50"
           >
             {savingSpeed ? 'Saving…' : 'Save Week'}
@@ -362,3 +367,4 @@ export default function GoalsPage({ profile }) {
     </div>
   );
 }
+location
