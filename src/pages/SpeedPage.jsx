@@ -140,6 +140,14 @@ export default function SpeedPage({ profile, targets = {} }) {
         {/* header + week nav */}
         <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
           <h1 className="text-2xl font-bold text-red-700">Speed — Drive-Thru</h1>
+          <button
+          className="bg-red-600 text-white px-3 sm:px-4 py-2 rounded hover:bg-red-700 shrink-0"
+          onClick={() => navigate('/App')}
+          aria-label="Go back"
+        >
+          Go Back
+        </button>
+        </div>
           <div className="flex items-center gap-2">
             <button className="px-3 py-2 rounded border" onClick={() => setWeekAnchor(addDays(weekStart, -1))}>
               ← Prev
@@ -149,7 +157,6 @@ export default function SpeedPage({ profile, targets = {} }) {
               Next →
             </button>
           </div>
-        </div>
 
         {err && <div className="text-amber-700 mb-2 text-sm">Error: {err}</div>}
         {loading ? (
