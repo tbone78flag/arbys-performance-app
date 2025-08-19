@@ -282,7 +282,7 @@ export default function SpeedPage({ profile, targets = {} }) {
           Go Back
         </button>
         </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 min-w-0">
             <button className="px-3 py-2 rounded border" onClick={() => setWeekAnchor(addDays(weekStart, -1))}>
               ← Prev
             </button>
@@ -351,20 +351,24 @@ export default function SpeedPage({ profile, targets = {} }) {
      <div className="mt-6 bg-white/50 rounded border p-4 sm:p-6">
        <h3 className="font-semibold mb-3">What-If: Faster Speed → More Throughput</h3>
  
-       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 overflow-x-hidden">
          {/* Inputs */}
          <div className="space-y-3">
-           <div className="grid grid-cols-[12rem_1fr] items-center gap-2">
+           <div className="grid grid-cols-1 sm:grid-cols-[12rem_1fr] items-center gap-2">
              <label className="text-sm text-gray-600">Average check ($)</label>
              <input
-               type="number" step="0.01" min="0"
-               value={avgCheck}
-               onChange={e => setAvgCheck(Number(e.target.value))}
-               className="border rounded px-2 py-1 w-32"
-             />
+              type="number" step="0.01" min="0"
+              value={avgCheck === 0 ? '' : avgCheck}
+              onChange={(e) => {
+                const v = e.target.value.replace(/[^\d.]/g, '');
+                setAvgCheck(v === '' ? 0 : Number(v));
+              }}
+              onFocus={(e) => e.target.select()}
+              className="border rounded px-2 py-1 w-32"
+              />
            </div>
  
-           <div className="grid grid-cols-[12rem_1fr] items-center gap-2">
+           <div className="grid grid-cols-1 sm:grid-cols-[12rem_1fr] items-center gap-2">
             <label className="text-sm text-gray-600">Baseline speed (s/order)</label>
              <div className="flex items-center gap-2">
                <input
@@ -377,39 +381,51 @@ export default function SpeedPage({ profile, targets = {} }) {
              </div>
            </div>
  
-           <div className="grid grid-cols-[12rem_1fr] items-center gap-2">
+           <div className="grid grid-cols-1 sm:grid-cols-[12rem_1fr] items-center gap-2">
              <label className="text-sm text-gray-600">Target speed (s/order)</label>
              <input
-               type="number" min="1" step="1"
-               value={targetSec}
-               onChange={e => setTargetSec(Number(e.target.value))}
-               className="border rounded px-2 py-1 w-28"
-            />
+                type="number" min="1" step="1"
+                value={targetSec === 0 ? '' : targetSec}
+                onChange={(e) => {
+                  const v = e.target.value.replace(/[^\d]/g, '').replace(/^0+(?=\d)/, '');
+                  setTargetSec(v === '' ? 0 : Number(v));
+                }}
+                onFocus={(e) => e.target.select()}
+                className="border rounded px-2 py-1 w-28"
+                />
            </div>
  
-           <div className="grid grid-cols-[12rem_1fr] items-center gap-2">
+           <div className="grid grid-cols-1 sm:grid-cols-[12rem_1fr] items-center gap-2">
              <label className="text-sm text-gray-600">Hours × Days</label>
              <div className="flex items-center gap-2">
                <input
-                 type="number" min="0" step="0.5"
-                 value={hours}
-                 onChange={e => setHours(Number(e.target.value))}
-                 className="border rounded px-2 py-1 w-20"
-                 aria-label="Hours per day"
-               />
+                type="number" min="0" step="0.5"
+                value={hours === 0 ? '' : hours}
+                onChange={(e) => {
+                  const v = e.target.value.replace(/[^\d.]/g, '').replace(/^0+(?=\d)/, '');
+                  setHours(v === '' ? 0 : Number(v));
+                }}
+                onFocus={(e) => e.target.select()}
+                className="border rounded px-2 py-1 w-20"
+                aria-label="Hours per day"
+                />
                <span className="text-sm text-gray-600">hours ×</span>
                <input
-                 type="number" min="1" max="7" step="1"
-                 value={daysPerWeek}
-                 onChange={e => setDaysPerWeek(Number(e.target.value))}
-                 className="border rounded px-2 py-1 w-16"
-                 aria-label="Days per week"
-               />
+                type="number" min="1" max="7" step="1"
+                value={daysPerWeek === 0 ? '' : daysPerWeek}
+                onChange={(e) => {
+                  const v = e.target.value.replace(/[^\d]/g, '').replace(/^0+(?=\d)/, '');
+                  setDaysPerWeek(v === '' ? 0 : Number(v));
+                }}
+                onFocus={(e) => e.target.select()}
+                className="border rounded px-2 py-1 w-16"
+                aria-label="Days per week"
+                />
                <span className="text-sm text-gray-600">days</span>
              </div>
            </div>
  
-           <div className="grid grid-cols-[12rem_1fr] items-center gap-2">
+           <div className="grid grid-cols-1 sm:grid-cols-[12rem_1fr] items-center gap-2">
              <label className="text-sm text-gray-600">Margin % (optional)</label>
              <input
                type="number" min="0" max="100" step="1" placeholder="e.g., 28"
@@ -478,18 +494,16 @@ export default function SpeedPage({ profile, targets = {} }) {
        </p>
      </div>
 
-     <h3 className="text-lg font-bold">Using the What-If Calculator</h3><br/>
-     <p>
-      <ul style={{ listStyleType: 'disc' }}>
+     <h3 className="text-lg font-bold mt-6">Using the What-If Calculator</h3>
+     <ul className="list-disc pl-6 space-y-1">
           <li>The average check is auto-set by what we currently do. You are able to change it if you'd like to see what a higher 
             check would do with a faster/slower speed.</li>
            <li>The baseline speed is where you'll want to input what speed we currently do to compare the target speed to.</li>
-           <li>The hours x days is where you'll inout how many hours per day you'll shoot to do this new day. It is a good spot to test the hours in the day we are in
+           <li>The hours x days is where you'll input how many hours per day you'll shoot to do this new target speed. It is a good spot to test the hours in the day we are in
            a specific daypart.</li>
            <li>On the right, you'll see what we do gross profit as a baseline expecting the average check. Then the amount we'd make at the target speed. Below those you'll
            see the excess we'd make per hour and then during the alotted time you've typed for hours x days.</li>
            </ul>
-     </p>
 
         {/* manager-only tools area remains available to extend */}
         {profile?.role === 'manager' && (
