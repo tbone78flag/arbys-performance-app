@@ -11,11 +11,6 @@ const DAYPARTS = [
 ];
 const DOW = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 
-const hasData = useMemo(
-  () => DAYPARTS.some(({ key }) => form[key].some(v => v !== '')),
-    [form]
-   );
-
 // --- date helpers (Sunday start, aligned with SpeedPage) ---
 function startOfWeekLocal(d = new Date()) {
   const day = d.getDay(); // 0=Sun..6=Sat
@@ -56,6 +51,10 @@ export default function GoalsPage({ profile }) {
   }), []);
 
   const [form, setForm] = useState(emptyForm);
+  const hasData = useMemo(
+  () => DAYPARTS.some(({ key }) => form[key].some(v => v !== '')),
+    [form]
+   );
   const [loadingSpeed, setLoadingSpeed] = useState(false);
   const [savingSpeed, setSavingSpeed] = useState(false);
   const [speedMsg, setSpeedMsg] = useState(null);
@@ -172,6 +171,12 @@ export default function GoalsPage({ profile }) {
       setSavingSpeed(false);
     }
   };
+
+  useEffect(() => {
+  if (!speedMsg) return;
+  const t = setTimeout(() => setSpeedMsg(null), 4000);
+  return () => clearTimeout(t);
+}, [speedMsg]);
 
   const saveAverage = async () => {
     if (!isEditor) return;
@@ -367,4 +372,3 @@ export default function GoalsPage({ profile }) {
     </div>
   );
 }
-location
