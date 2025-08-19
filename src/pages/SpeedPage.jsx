@@ -478,7 +478,7 @@ export default function SpeedPage({ profile, targets = {} }) {
        </p>
      </div>
 
-     <h3>Using the What-If Calculator</h3>
+     <h3 className="text-lg font-bold">Using the What-If Calculator</h3><br/>
      <p>
       <ul style={{ listStyleType: 'disc' }}>
           <li>The average check is auto-set by what we currently do. You are able to change it if you'd like to see what a higher 
