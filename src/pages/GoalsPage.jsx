@@ -11,9 +11,9 @@ const DAYPARTS = [
 ];
 const DOW = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
 
-// --- date helpers (Sunday start, aligned with SpeedPage) ---
+// --- date helpers (Monday start, aligned with SpeedPage) ---
 function startOfWeekLocal(d = new Date()) {
-  const day = d.getDay();           // 0..6 (Sun..Sat)
+  const day = d.getDay();           // 0..6 (Mon...Sun)
   const diff = (day + 6) % 7;       // Mon=0, Tue=1, …, Sun=6
   const start = new Date(d);
   start.setHours(0,0,0,0);
@@ -22,6 +22,11 @@ function startOfWeekLocal(d = new Date()) {
 }
 function addDays(date, n) { const d = new Date(date); d.setDate(d.getDate() + n); return d; }
 function ymd(date) { return date.toISOString().slice(0,10); }
+
+function ymdLocal(date) {
+  const y = date.getFullYear(), m = `${date.getMonth()+1}`.padStart(2,'0'), d = `${date.getDate()}`.padStart(2,'0');
+  return `${y}-${m}-${d}`;
+}
 
 export default function GoalsPage({ profile }) {
   const navigate = useNavigate();
@@ -41,6 +46,18 @@ export default function GoalsPage({ profile }) {
   const weekStart = useMemo(() => startOfWeekLocal(weekAnchor), [weekAnchor]);
   const weekEnd   = useMemo(() => addDays(weekStart, 6), [weekStart]);
   const weekLabel = `${weekStart.toLocaleDateString()} – ${weekEnd.toLocaleDateString()}`;
+
+  const [beefLbs, setBeefLbs] = useState('');      // string input, e.g., "-16.5"
+  const [beefPct, setBeefPct] = useState('');
+  const [savingBeef, setSavingBeef] = useState(false);
+  const [beefMsg, setBeefMsg] = useState(null);
+
+  // Pricing settings (location_settings)
+  const [beefCost, setBeefCost] = useState('');     // $/lb
+  const [pClassic, setPClassic] = useState('');     // profit per classic RB
+  const [pDouble,  setPDouble]  = useState('');     // profit per double RB
+  const [pHalf,    setPHalf]    = useState('');     // profit per half-pound RB
+  const [savingBeefPricing, setSavingBeefPricing] = useState(false);
 
   // form = { lunch:[7], afternoon:[7], dinner:[7], late_night:[7] } (strings)
   const emptyRow = useMemo(() => Array(7).fill(''), []);
@@ -84,6 +101,162 @@ export default function GoalsPage({ profile }) {
     load();
   }, [profile]);
 
+  <div className="bg-white shadow rounded p-4 sm:p-6">
+  <h2 className="font-semibold text-red-700 mb-3">Beef Variance & Pricing</h2>
+
+  <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+    <div className="text-sm text-gray-700">{weekLabel}</div>
+    <div className="flex items-center gap-2">
+      <button className="px-3 py-1.5 rounded border" onClick={() => setWeekAnchor(addDays(weekStart, -1))}>← Prev</button>
+      <button className="px-3 py-1.5 rounded border" onClick={() => setWeekAnchor(addDays(weekEnd, 1))}>Next →</button>
+    </div>
+  </div>
+
+  {/* Weekly variance */}
+  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+    <div>
+      <label className="block text-sm text-gray-600 mb-1">Beef variance (lbs)</label>
+      <input
+        type="number" step="0.1" inputMode="decimal"
+        value={beefLbs}
+        onChange={e => setBeefLbs(e.target.value)}
+        className="border rounded px-2 py-1 w-36"
+        placeholder="-16.5"
+      />
+      <p className="text-xs text-gray-500 mt-1">Negative = short; Positive = over.</p>
+    </div>
+    <div>
+      <label className="block text-sm text-gray-600 mb-1">Beef variance (%)</label>
+      <input
+        type="number" step="0.1" inputMode="decimal"
+        value={beefPct}
+        onChange={e => setBeefPct(e.target.value)}
+        className="border rounded px-2 py-1 w-28"
+        placeholder="-3.2"
+      />
+    </div>
+  </div>
+  <button
+    onClick={saveBeefVariance}
+    disabled={savingBeef}
+    className="px-4 py-2 bg-red-600 text-white rounded disabled:opacity-50"
+  >{savingBeef ? 'Saving…' : 'Save Week Variance'}</button>
+  {beefMsg && <span className="ml-3 text-sm text-gray-700">{beefMsg}</span>}
+
+  <hr className="my-5"/>
+
+  {/* Pricing keys */}
+  <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+    <div>
+      <label className="block text-sm text-gray-600 mb-1">Beef cost ($/lb)</label>
+      <input type="number" step="0.01" inputMode="decimal" className="border rounded px-2 py-1 w-28"
+        value={beefCost} onChange={e => setBeefCost(e.target.value)} />
+    </div>
+    <div>
+      <label className="block text-sm text-gray-600 mb-1">Profit / Classic RB</label>
+      <input type="number" step="0.01" inputMode="decimal" className="border rounded px-2 py-1 w-28"
+        value={pClassic} onChange={e => setPClassic(e.target.value)} />
+    </div>
+    <div>
+      <label className="block text-sm text-gray-600 mb-1">Profit / Double RB</label>
+      <input type="number" step="0.01" inputMode="decimal" className="border rounded px-2 py-1 w-28"
+        value={pDouble} onChange={e => setPDouble(e.target.value)} />
+    </div>
+    <div>
+      <label className="block text-sm text-gray-600 mb-1">Profit / Half-Pound RB</label>
+      <input type="number" step="0.01" inputMode="decimal" className="border rounded px-2 py-1 w-28"
+        value={pHalf} onChange={e => setPHalf(e.target.value)} />
+    </div>
+  </div>
+  <button
+    onClick={saveBeefPricing}
+    disabled={savingBeefPricing}
+    className="mt-3 px-4 py-2 bg-blue-600 text-white rounded disabled:opacity-50"
+  >{savingBeefPricing ? 'Saving…' : 'Save Pricing'}</button>
+</div>
+
+// Load this week's variance row
+useEffect(() => {
+  let cancelled = false;
+  (async () => {
+    const ws = ymdLocal(weekStart);
+    const { data, error } = await supabase
+      .from('beef_variance_weekly')
+      .select('lbs_delta, pct_delta')
+      .eq('location_id', locationId)
+      .eq('week_start', ws)
+      .single();
+    if (cancelled) return;
+    if (!error && data) {
+      setBeefLbs(String(data.lbs_delta ?? ''));
+      setBeefPct(String(data.pct_delta ?? ''));
+    } else {
+      setBeefLbs(''); setBeefPct('');
+    }
+  })();
+  return () => { cancelled = true; };
+}, [locationId, weekStart]);
+
+// Load pricing keys
+useEffect(() => {
+  let cancelled = false;
+  (async () => {
+    const keys = ['beef_cost_per_lb','profit_rb_classic','profit_rb_double','profit_rb_half'];
+    const { data } = await supabase
+      .from('location_settings')
+      .select('key, value')
+      .eq('location_id', 'default')
+      .in('key', keys);
+    if (cancelled) return;
+    const map = Object.fromEntries((data ?? []).map(r => [r.key, r.value]));
+    if (map.beef_cost_per_lb != null) setBeefCost(String(map.beef_cost_per_lb));
+    if (map.profit_rb_classic  != null) setPClassic(String(map.profit_rb_classic));
+    if (map.profit_rb_double   != null) setPDouble(String(map.profit_rb_double));
+    if (map.profit_rb_half     != null) setPHalf(String(map.profit_rb_half));
+  })();
+  return () => { cancelled = true; };
+}, []);
+async function saveBeefVariance() {
+  if (!['General Manager','Assistant Manager'].includes(profile?.title)) return;
+  setSavingBeef(true); setBeefMsg(null);
+  try {
+    const ws = ymdLocal(weekStart);
+    const payload = {
+      location_id: locationId,
+      week_start: ws,
+      lbs_delta: beefLbs === '' ? 0 : Number(beefLbs),
+      pct_delta: beefPct === '' ? null : Number(beefPct),
+      updated_by: profile.id,
+    };
+    const { error } = await supabase
+      .from('beef_variance_weekly')
+      .upsert(payload, { onConflict: ['location_id','week_start'] });
+    if (error) throw error;
+    setBeefMsg('Saved beef variance for this week.');
+  } catch (e) {
+    setBeefMsg(`Save failed: ${e.message || e}`);
+  } finally {
+    setSavingBeef(false);
+  }
+}
+
+async function saveBeefPricing() {
+  if (!['General Manager','Assistant Manager'].includes(profile?.title)) return;
+  setSavingBeefPricing(true);
+  const rows = [
+    { key: 'beef_cost_per_lb',   value: Number(beefCost || 0) },
+    { key: 'profit_rb_classic',  value: Number(pClassic || 0) },
+    { key: 'profit_rb_double',   value: Number(pDouble  || 0) },
+    { key: 'profit_rb_half',     value: Number(pHalf    || 0) },
+  ].map(r => ({ location_id:'default', ...r, updated_by: profile.id }));
+
+  const { error } = await supabase
+    .from('location_settings')
+    .upsert(rows, { onConflict: ['location_id','key'] });
+  if (error) console.error(error);
+  setSavingBeefPricing(false);
+}
+
   // Load current week of speed_dayparts → prefill the form
   useEffect(() => {
     let cancelled = false;
@@ -94,8 +267,8 @@ export default function GoalsPage({ profile }) {
         .select('day, daypart, avg_time_seconds')
         .eq('location_id', locationId)
         .eq('service', 'drive_thru')
-        .gte('day', ymd(weekStart))
-        .lte('day', ymd(weekEnd));
+        .gte('day', ymdLocal(weekStart))
+        .lte('day', ymdLocal(weekEnd));
 
       if (cancelled) return;
       if (error) {
@@ -104,9 +277,9 @@ export default function GoalsPage({ profile }) {
         // Build label map YYYY-MM-DD -> dow index
         const dowIndexByYMD = {};
         for (let i = 0; i < 7; i++) {
-          const d = addDays(weekStart, i);
-          dowIndexByYMD[ymd(d)] = d.getDay(); // 0..6
-        }
+        const d = addDays(weekStart, i);
+        dowIndexByYMD[ymdLocal(d)] = i;     // 0..6 (Mon..Sun) ✅
+      }
         const next = {
           lunch: [...emptyRow],
           afternoon: [...emptyRow],
@@ -140,7 +313,7 @@ export default function GoalsPage({ profile }) {
     try {
       const payload = [];
       for (let i = 0; i < 7; i++) {
-        const dayStr = ymd(addDays(weekStart, i));
+        const dayStr = ymdLocal(addDays(weekStart, i));
         for (const { key } of DAYPARTS) {
           const raw = form[key][i];
           if (raw === '' || raw == null) continue;
@@ -265,7 +438,7 @@ export default function GoalsPage({ profile }) {
                 <div className="grid grid-cols-7 gap-2 text-xs text-gray-500 mt-2">
                   {DOW.map((d) => <div key={d} className="text-center">{d}</div>)}
                 </div>
-                {/* Inputs Sun..Sat */}
+                {/* Inputs Mon..Sun */}
                 <div className="grid grid-cols-7 gap-2 mt-1">
                   {DOW.map((_, i) => (
                     <input
