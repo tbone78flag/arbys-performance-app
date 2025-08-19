@@ -52,6 +52,18 @@ function toSeries(rows, weekStart) {
    return by;
   }
 
+  const FULL_DOW = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  function toLocalDateFromYMD(ymd) {
+    // Parse YYYY-MM-DD as local time (avoids UTC off-by-one)
+    const [y,m,d] = ymd.split('-').map(Number);
+    return new Date(y, m - 1, d);
+  }
+  function fmtDayLabel(ymd) {
+    if (!ymd) return '—';
+    const d = toLocalDateFromYMD(ymd);
+    return `${FULL_DOW[d.getDay()]} ${d.getMonth() + 1}/${d.getDate()}`;
+  }
+  
 function DaypartCard({ title, data, targetSeconds }) {
   return (
     <div className="bg-white shadow rounded p-4 sm:p-6 overflow-hidden">
@@ -131,7 +143,52 @@ export default function SpeedPage({ profile, targets = {} }) {
     return () => { cancelled = true; };
   }, [locationId, weekStart, weekEnd]);
 
+  const [allTimeBest, setAllTimeBest] = useState(() =>
+    Object.fromEntries(DAYPARTS.map(({ key }) => [key, null]))
+  );
+ 
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const promises = DAYPARTS.map(({ key }) =>
+        supabase
+          .from('speed_dayparts')
+          .select('day, avg_time_seconds')
+          .eq('location_id', locationId)
+          .eq('service', 'drive_thru')
+          .eq('daypart', key)
+          .order('avg_time_seconds', { ascending: true })
+          .order('day', { ascending: true })
+          .limit(1)
+      );
+      const results = await Promise.all(promises);
+      if (cancelled) return;
+      const next = {};
+      results.forEach((res, i) => {
+        const key = DAYPARTS[i].key;
+        const row = Array.isArray(res.data) ? res.data[0] : undefined;
+        next[key] = row ? { seconds: row.avg_time_seconds, day: row.day } : null;
+      });
+      setAllTimeBest(next);
+    })();
+   return () => { cancelled = true; };
+  }, [locationId]);
+
   const seriesByPart = useMemo(() => toSeries(rows, weekStart), [rows, weekStart]);
+  const weeklyStats = useMemo(() => {
+    // Initialize result per daypart
+    const out = Object.fromEntries(DAYPARTS.map(({ key }) => [key, { best: null, bestDay: null, worst: null, worstDay: null }]));
+    for (const r of rows) {
+      if (!Number.isFinite(r?.avg_time_seconds)) continue;
+      const dp = r.daypart;
+      const s  = r.avg_time_seconds;
+      const cur = out[dp];
+      if (!cur) continue;
+      if (cur.best == null || s < cur.best)  { cur.best = s;  cur.bestDay  = r.day; }
+      if (cur.worst == null || s > cur.worst){ cur.worst = s; cur.worstDay = r.day; }
+    }
+    return out;
+  }, [rows]);
   const weekLabel = `${weekStart.toLocaleDateString()} – ${weekEnd.toLocaleDateString()}`;
 
   return (
@@ -173,6 +230,45 @@ export default function SpeedPage({ profile, targets = {} }) {
             ))}
           </div>
         )}
+
+        {/* Highlights */}
+        {!loading && (
+          <div className="mt-6 bg-white/50 rounded border p-4 sm:p-6">
+            <h3 className="font-semibold mb-3">Week Highlights</h3>
+            <div className="overflow-x-auto">
+              <table className="min-w-full text-sm">
+                <thead className="text-gray-600">
+                  <tr className="border-b">
+                    <th className="text-left py-2 pr-3">Daypart</th>
+                    <th className="text-left py-2 px-3">Best (Week)</th>
+                    <th className="text-left py-2 px-3">Worst (Week)</th>
+                    <th className="text-left py-2 pl-3">Best of All Time</th>
+                  </tr>
+                </thead>
+            <tbody>
+              {DAYPARTS.map(({ key, label }) => {
+                const w = weeklyStats[key] || {};
+                const bestW = Number.isFinite(w.best) ? `${w.best}s — ${fmtDayLabel(w.bestDay)}` : '—';
+                const worstW = Number.isFinite(w.worst) ? `${w.worst}s — ${fmtDayLabel(w.worstDay)}` : '—';
+                const at = allTimeBest[key];
+                const bestAT = at ? `${at.seconds}s — ${fmtDayLabel(at.day)}` : '—';
+                return (
+                <tr key={key} className="border-b last:border-0">
+                  <td className="py-2 pr-3">{label}</td>
+                  <td className="py-2 px-3">{bestW}</td>
+                  <td className="py-2 px-3">{worstW}</td>
+                  <td className="py-2 pl-3">{bestAT}</td>
+                </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+        <p className="text-xs text-gray-500 mt-2">
+          Week stats reflect only days with entries (zeros from “no entry” don’t count).
+        </p>
+        </div>
+      )}
 
         {/* manager-only tools area remains available to extend */}
         {profile?.role === 'manager' && (
