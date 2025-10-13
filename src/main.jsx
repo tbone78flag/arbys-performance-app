@@ -8,6 +8,7 @@ import FoodPageWrapper from './pages/FoodPageWrapper'
 import SpeedPageWrapper from './pages/SpeedPageWrapper'
 import PointsPageWrapper from './pages/PointsPageWrapper'
 import ExperiencePageWrapper from './pages/ExperiencePageWrapper'
+import ManagerPageWrapper from './pages/ManagerPageWrapper'
 import GoalsPageWrapper from './pages/GoalsPageWrapper'
 import './index.css';
 
@@ -23,6 +24,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(
         <Route path="/points" element={<PointsPageWrapper />} />
         <Route path="/experience" element={<ExperiencePageWrapper />} />
         <Route path="/goals" element={<GoalsPageWrapper />} />
+        <Route path="/manager" element={<ManagerPageWrapper />} />
       </Routes>
     </BrowserRouter>
   </React.StrictMode>,
