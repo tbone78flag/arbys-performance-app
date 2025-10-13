@@ -94,7 +94,7 @@ function App() {
     {profile?.role === 'manager' && (
       <button 
       className="bg-white text-red-600 border border-red-600 px-4 py-2 rounded hover:bg-red-50 mt-4"
-      onClick={() => navigate('/goals')}
+      onClick={() => navigate('/manager')}
     >
       Go to Manager Page
       </button>
