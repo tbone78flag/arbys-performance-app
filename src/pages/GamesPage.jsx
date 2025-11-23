@@ -1,9 +1,9 @@
-// src/pages/ManagerPage.jsx
+// src/pages/GamesPage.jsx
 import { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
 
-export default function ManagerPage({ profile }) {
+export default function GamesPage({ profile }) {
   const navigate = useNavigate()
 
   useEffect(() => {

@@ -10,6 +10,7 @@ import PointsPageWrapper from './pages/PointsPageWrapper'
 import ExperiencePageWrapper from './pages/ExperiencePageWrapper'
 import ManagerPageWrapper from './pages/ManagerPageWrapper'
 import GoalsPageWrapper from './pages/GoalsPageWrapper'
+import GamesPageWrapper from './pages/GamesPageWrapper'
 import './index.css';
 
 ReactDOM.createRoot(document.getElementById('root')).render(
@@ -25,6 +26,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(
         <Route path="/experience" element={<ExperiencePageWrapper />} />
         <Route path="/goals" element={<GoalsPageWrapper />} />
         <Route path="/manager" element={<ManagerPageWrapper />} />
+        <Route path="/games" element={<GamesPageWrapper />} />
       </Routes>
     </BrowserRouter>
   </React.StrictMode>,
