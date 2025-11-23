@@ -17,7 +17,7 @@ export default function ManagerPage({ profile }) {
       <div className="w-full max-w-3xl mx-auto bg-white shadow p-4 sm:p-6 rounded px-4 sm:px-6">
       {/* Header row */}
       <div className="mb-4 sm:mb-6 flex items-center justify-between gap-3">
-        <h1 className="text-2xl font-bold text-red-700">Games Hub</h1>
+        <h1 className="text-2xl font-bold text-red-700">Sales Dashboard</h1>
 
         <button
           className="bg-red-600 text-white px-3 sm:px-4 py-2 rounded hover:bg-red-700 shrink-0"
