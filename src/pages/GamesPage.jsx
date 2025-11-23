@@ -2,6 +2,7 @@
 import { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
+import BingoGame from '../components/BingoGame'
 
 export default function GamesPage({ profile }) {
   const navigate = useNavigate()
@@ -22,6 +23,11 @@ export default function GamesPage({ profile }) {
         <p>Team members can redeem points here:</p>
         {/* Later: form or button */}
       </div>
+
+      <section>
+        <h3>Mini Games</h3>
+        <summary><strong>Bingo</strong></summary>
+      </section>
 
       {/* Manager-only section */}
       {profile?.role === 'manager' && (
