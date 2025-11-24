@@ -17,9 +17,9 @@ export default function GamesPage({ profile }) {
   const games = [
     {
       id: 'bingo',
-      title: 'Cleaning Bingo',
+      title: 'Sales Bingo',
       summary:
-        'Bingo-style game to encourage completing different cleaning tasks during the shift.',
+        'Bingo-style game to encourage upselling menu items and meals.',
     },
     {
       id: 'speed-board',
@@ -121,52 +121,6 @@ export default function GamesPage({ profile }) {
           <p>Only visible to managers — e.g. target goals, override entries, etc.</p>
         </div>
       )}
-    </div>
-  )
-}
-
-/* ---------- Mini game inline content components ---------- */
-
-function CleaningBingoContent() {
-  const tasks = [
-    'Sweep lobby',
-    'Wipe sauce station',
-    'Check trash cans',
-    'Clean soda nozzles',
-    'Sanitize door handles',
-    'Restock napkins',
-    'Wipe headset area',
-    'Spot mop kitchen',
-    'Clean drive-thru window',
-  ]
-
-  return (
-    <div>
-      <h3 className="font-semibold mb-1">How to Play</h3>
-      <ol className="list-decimal list-inside text-gray-700 mb-3 space-y-1">
-        <li>Print or draw a 3×3 or 5×5 bingo card with cleaning tasks.</li>
-        <li>Team member picks a card at the start of their shift.</li>
-        <li>
-          Each time they complete a task, they mark that square (manager can
-          initial or verify).
-        </li>
-        <li>
-          First to get a line (row, column, or diagonal) gets a small reward
-          (points, candy, etc.).
-        </li>
-      </ol>
-
-      <h4 className="font-semibold mb-1">Example 3×3 Card</h4>
-      <div className="grid grid-cols-3 gap-1 max-w-xs text-center text-xs">
-        {tasks.slice(0, 9).map((task, i) => (
-          <div
-            key={i}
-            className="border border-gray-300 bg-white px-2 py-3 rounded"
-          >
-            {task}
-          </div>
-        ))}
-      </div>
     </div>
   )
 }
