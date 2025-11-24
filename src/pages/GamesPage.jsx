@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
+import BingoGame from '../components/BingoGame'
 
 export default function GamesPage({ profile }) {
   const navigate = useNavigate()
@@ -102,7 +103,7 @@ export default function GamesPage({ profile }) {
                     id={`game-panel-${game.id}`}
                     className="px-4 pb-4 pt-2 bg-gray-50 border-t text-sm"
                   >
-                    {game.id === 'bingo' && <CleaningBingoContent />}
+                    {game.id === 'bingo' && <BingoGame />}
                     {game.id === 'speed-board' && <SpeedBoardContent />}
                     {game.id === 'trivia' && <TriviaContent />}
                   </div>
