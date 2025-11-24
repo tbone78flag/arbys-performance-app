@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
-import ManagerPage from './GamesPage'
+import GamesPage from './GamesPage'
 import Layout from '../components/Layout'
 
 export default function GamesPageWrapper() {
