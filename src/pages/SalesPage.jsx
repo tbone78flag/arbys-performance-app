@@ -134,8 +134,6 @@ export default function SalesPage({ profile }) {
         </button>
       </div>
 
-      <BingoGame />
-
       <WhatIfCalculator profile={profile} />
 
       {profile?.role === 'manager' && (
