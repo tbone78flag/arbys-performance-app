@@ -66,7 +66,7 @@ function formatDayLabel(dateStr) {
 
 // --- Weekly Sales (YoY) charts + summary ---
 function SalesTrendsSection({ profile }) {
-  const locationId = profile?.location_id ?? 'default'
+  const locationId = profile?.location_id ?? 'holladay-3900s'
 
   const [weekAnchor, setWeekAnchor] = useState(() => new Date())
   const weekStart = useMemo(() => startOfWeekLocal(weekAnchor), [weekAnchor])
