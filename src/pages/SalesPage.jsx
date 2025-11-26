@@ -267,18 +267,21 @@ function SalesTrendsSection({ profile }) {
                 type="monotone"
                 dataKey="thisYear"
                 name="This Year"
-                strokeWidth={2}
+                stroke="#dc2626"          // 🔴 red (Arby’s theme)
+                strokeWidth={3}
                 dot={{ r: 3 }}
-                activeDot={{ r: 5 }}
+                activeDot={{ r: 6 }}
                 connectNulls
               />
+
               <Line
                 type="monotone"
                 dataKey="lastYear"
                 name="Last Year"
-                strokeWidth={2}
-                strokeDasharray="5 5"
+                stroke="#6b7280"          // ⚪ gray (neutral)
+                strokeWidth={3}
                 dot={{ r: 3 }}
+                activeDot={{ r: 6 }}
                 connectNulls
               />
             </LineChart>
