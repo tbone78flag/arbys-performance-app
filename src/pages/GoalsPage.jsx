@@ -570,7 +570,7 @@ async function saveBeefPricing() {
               />
             </div>
             <p className="text-xs text-gray-500 mt-1">
-              Use net sales after discounts/voids so YoY is meaningful.
+              Use BI to get the current year and previous year daily sales.
             </p>
           </div>
         </div>
@@ -625,7 +625,7 @@ async function saveBeefPricing() {
 
         <p className="text-xs text-gray-500 mt-1">
           This table will feed the Sales page chart later (current year vs last
-          year, by day).
+          year, by day). Percent change will calculate on the Sales page.
         </p>
       </div>
 
