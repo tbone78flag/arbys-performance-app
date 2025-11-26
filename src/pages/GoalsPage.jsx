@@ -430,80 +430,6 @@ async function saveBeefPricing() {
         </button>
       </div>
 
-      <div className="bg-white shadow rounded p-4 sm:p-6">
-  <h2 className="font-semibold text-red-700 mb-3">Beef Variance & Pricing</h2>
-
-  <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
-    <div className="text-sm text-gray-700">{weekLabel}</div>
-    <div className="flex items-center gap-2">
-      <button className="px-3 py-1.5 rounded border" onClick={() => setWeekAnchor(addDays(weekStart, -1))}>← Prev</button>
-      <button className="px-3 py-1.5 rounded border" onClick={() => setWeekAnchor(addDays(weekEnd, 1))}>Next →</button>
-    </div>
-  </div>
-
-  {/* Weekly variance */}
-  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
-    <div>
-      <label className="block text-sm text-gray-600 mb-1">Beef variance (lbs)</label>
-      <input
-        type="number" step="0.1" inputMode="decimal"
-        value={beefLbs}
-        onChange={e => setBeefLbs(e.target.value)}
-        className="border rounded px-2 py-1 w-36"
-        placeholder="-16.5"
-      />
-      <p className="text-xs text-gray-500 mt-1">Negative = short; Positive = over.</p>
-    </div>
-    <div>
-      <label className="block text-sm text-gray-600 mb-1">Beef variance (%)</label>
-      <input
-        type="number" step="0.1" inputMode="decimal"
-        value={beefPct}
-        onChange={e => setBeefPct(e.target.value)}
-        className="border rounded px-2 py-1 w-28"
-        placeholder="-3.2"
-      />
-    </div>
-  </div>
-  <button
-    onClick={saveBeefVariance}
-    disabled={savingBeef}
-    className="px-4 py-2 bg-red-600 text-white rounded disabled:opacity-50"
-  >{savingBeef ? 'Saving…' : 'Save Week Variance'}</button>
-  {beefMsg && <span className="ml-3 text-sm text-gray-700">{beefMsg}</span>}
-
-  <hr className="my-5"/>
-
-  {/* Pricing keys */}
-  <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
-    <div>
-      <label className="block text-sm text-gray-600 mb-1">Beef cost ($/lb)</label>
-      <input type="number" step="0.01" inputMode="decimal" className="border rounded px-2 py-1 w-28"
-        value={beefCost} onChange={e => setBeefCost(e.target.value)} />
-    </div>
-    <div>
-      <label className="block text-sm text-gray-600 mb-1">Profit / Classic RB</label>
-      <input type="number" step="0.01" inputMode="decimal" className="border rounded px-2 py-1 w-28"
-        value={pClassic} onChange={e => setPClassic(e.target.value)} />
-    </div>
-    <div>
-      <label className="block text-sm text-gray-600 mb-1">Profit / Double RB</label>
-      <input type="number" step="0.01" inputMode="decimal" className="border rounded px-2 py-1 w-28"
-        value={pDouble} onChange={e => setPDouble(e.target.value)} />
-    </div>
-    <div>
-      <label className="block text-sm text-gray-600 mb-1">Profit / Half-Pound RB</label>
-      <input type="number" step="0.01" inputMode="decimal" className="border rounded px-2 py-1 w-28"
-        value={pHalf} onChange={e => setPHalf(e.target.value)} />
-    </div>
-  </div>
-  <button
-    onClick={saveBeefPricing}
-    disabled={savingBeefPricing}
-    className="mt-3 px-4 py-2 bg-blue-600 text-white rounded disabled:opacity-50"
-  >{savingBeefPricing ? 'Saving…' : 'Save Pricing'}</button>
-</div>
-
       {/* Daily Sales YoY */}
       <div className="bg-white shadow rounded p-4 sm:p-6">
         <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
@@ -703,6 +629,80 @@ async function saveBeefPricing() {
           Tip: Enter whole-second averages. The Speed page reads this table by week and location and updates automatically after save.
         </p>
       </div>
+
+      <div className="bg-white shadow rounded p-4 sm:p-6">
+  <h2 className="font-semibold text-red-700 mb-3">Beef Variance & Pricing</h2>
+
+  <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+    <div className="text-sm text-gray-700">{weekLabel}</div>
+    <div className="flex items-center gap-2">
+      <button className="px-3 py-1.5 rounded border" onClick={() => setWeekAnchor(addDays(weekStart, -1))}>← Prev</button>
+      <button className="px-3 py-1.5 rounded border" onClick={() => setWeekAnchor(addDays(weekEnd, 1))}>Next →</button>
+    </div>
+  </div>
+
+  {/* Weekly variance */}
+  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+    <div>
+      <label className="block text-sm text-gray-600 mb-1">Beef variance (lbs)</label>
+      <input
+        type="number" step="0.1" inputMode="decimal"
+        value={beefLbs}
+        onChange={e => setBeefLbs(e.target.value)}
+        className="border rounded px-2 py-1 w-36"
+        placeholder="-16.5"
+      />
+      <p className="text-xs text-gray-500 mt-1">Negative = short; Positive = over.</p>
+    </div>
+    <div>
+      <label className="block text-sm text-gray-600 mb-1">Beef variance (%)</label>
+      <input
+        type="number" step="0.1" inputMode="decimal"
+        value={beefPct}
+        onChange={e => setBeefPct(e.target.value)}
+        className="border rounded px-2 py-1 w-28"
+        placeholder="-3.2"
+      />
+    </div>
+  </div>
+  <button
+    onClick={saveBeefVariance}
+    disabled={savingBeef}
+    className="px-4 py-2 bg-red-600 text-white rounded disabled:opacity-50"
+  >{savingBeef ? 'Saving…' : 'Save Week Variance'}</button>
+  {beefMsg && <span className="ml-3 text-sm text-gray-700">{beefMsg}</span>}
+
+  <hr className="my-5"/>
+
+  {/* Pricing keys */}
+  <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+    <div>
+      <label className="block text-sm text-gray-600 mb-1">Beef cost ($/lb)</label>
+      <input type="number" step="0.01" inputMode="decimal" className="border rounded px-2 py-1 w-28"
+        value={beefCost} onChange={e => setBeefCost(e.target.value)} />
+    </div>
+    <div>
+      <label className="block text-sm text-gray-600 mb-1">Profit / Classic RB</label>
+      <input type="number" step="0.01" inputMode="decimal" className="border rounded px-2 py-1 w-28"
+        value={pClassic} onChange={e => setPClassic(e.target.value)} />
+    </div>
+    <div>
+      <label className="block text-sm text-gray-600 mb-1">Profit / Double RB</label>
+      <input type="number" step="0.01" inputMode="decimal" className="border rounded px-2 py-1 w-28"
+        value={pDouble} onChange={e => setPDouble(e.target.value)} />
+    </div>
+    <div>
+      <label className="block text-sm text-gray-600 mb-1">Profit / Half-Pound RB</label>
+      <input type="number" step="0.01" inputMode="decimal" className="border rounded px-2 py-1 w-28"
+        value={pHalf} onChange={e => setPHalf(e.target.value)} />
+    </div>
+  </div>
+  <button
+    onClick={saveBeefPricing}
+    disabled={savingBeefPricing}
+    className="mt-3 px-4 py-2 bg-blue-600 text-white rounded disabled:opacity-50"
+  >{savingBeefPricing ? 'Saving…' : 'Save Pricing'}</button>
+</div>
 
       {/* Average Check Editor (existing) */}
       {isEditor && (
