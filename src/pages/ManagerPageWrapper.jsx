@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
-import GamesPage from './GamesPage'
+import ManagerPage from './ManagerPage'
 import Layout from '../components/Layout'
 
-export default function GamesPageWrapper() {
+export default function ManagerPageWrapper() {
   const [profile, setProfile] = useState(null)
   const [loading, setLoading] = useState(true)
   const navigate = useNavigate()
@@ -42,7 +42,7 @@ export default function GamesPageWrapper() {
 
   return (
   <Layout>
-    <GamesrPage profile={profile} />
+    <ManagerPage profile={profile} />
   </Layout>
 )
 }
