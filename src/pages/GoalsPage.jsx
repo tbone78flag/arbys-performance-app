@@ -28,6 +28,14 @@ function ymdLocal(date) {
   return `${y}-${m}-${d}`;
 }
 
+  //Shift sales date helper
+  const shiftSalesDate = (days) => {
+    const d = new Date(salesDate);
+    if (Number.isNaN(d.getTime())) return;
+    const shifted = addDays(d, days);
+    setSalesDate(ymdLocal(shifted));
+  };
+
 export default function GoalsPage({ profile }) {
   const navigate = useNavigate();
   const isEditor = ['Assistant Manager', 'General Manager'].includes(profile?.title);
@@ -59,6 +67,21 @@ export default function GoalsPage({ profile }) {
   const [pHalf,    setPHalf]    = useState('');     // profit per half-pound RB
   const [savingBeefPricing, setSavingBeefPricing] = useState(false);
 
+    // --- Daily Sales YoY (manager-only) ---
+  const [salesDate, setSalesDate] = useState(() => ymdLocal(new Date())); // 'YYYY-MM-DD'
+  const [salesThisYear, setSalesThisYear] = useState('');
+  const [salesLastYear, setSalesLastYear] = useState('');
+  const [savingSales, setSavingSales] = useState(false);
+  const [salesMsg, setSalesMsg] = useState(null);
+
+  const yoyPct = useMemo(() => {
+    const thisY = Number(salesThisYear);
+    const lastY = Number(salesLastYear);
+    if (!Number.isFinite(thisY) || !Number.isFinite(lastY) || lastY === 0) return null;
+    return ((thisY - lastY) / lastY) * 100;
+  }, [salesThisYear, salesLastYear]);
+
+
   // form = { lunch:[7], afternoon:[7], dinner:[7], late_night:[7] } (strings)
   const emptyRow = useMemo(() => Array(7).fill(''), []);
   const emptyForm = useMemo(() => ({
@@ -76,6 +99,40 @@ export default function GoalsPage({ profile }) {
   const [loadingSpeed, setLoadingSpeed] = useState(false);
   const [savingSpeed, setSavingSpeed] = useState(false);
   const [speedMsg, setSpeedMsg] = useState(null);
+
+    // Load existing daily sales for selected date
+  useEffect(() => {
+    let cancelled = false;
+
+    (async () => {
+      if (!locationId || !salesDate) return;
+
+      const { data, error } = await supabase
+        .from('daily_sales_yoy')
+        .select('net_sales_this_year, net_sales_last_year')
+        .eq('location_id', locationId)
+        .eq('sales_date', salesDate)
+        .single();
+
+      if (cancelled) return;
+
+      if (!error && data) {
+        setSalesThisYear(
+          data.net_sales_this_year != null ? String(data.net_sales_this_year) : ''
+        );
+        setSalesLastYear(
+          data.net_sales_last_year != null ? String(data.net_sales_last_year) : ''
+        );
+      } else {
+        // No row yet for this date: clear fields
+        setSalesThisYear('');
+        setSalesLastYear('');
+      }
+    })();
+
+    return () => { cancelled = true; };
+  }, [locationId, salesDate]);
+
 
   // Load existing average check + your goals (unchanged)
   useEffect(() => {
@@ -185,6 +242,36 @@ async function saveBeefPricing() {
   setSavingBeefPricing(false);
 }
 
+  async function saveDailySales() {
+    if (!isEditor) return;
+    setSavingSales(true);
+    setSalesMsg(null);
+
+    try {
+      const payload = {
+        location_id: locationId,
+        sales_date: salesDate,
+        net_sales_this_year: Number(salesThisYear || 0),
+        net_sales_last_year:
+          salesLastYear === '' ? null : Number(salesLastYear),
+        updated_by: profile.id,
+      };
+
+      const { error } = await supabase
+        .from('daily_sales_yoy')
+        .upsert(payload, {
+          onConflict: ['location_id', 'sales_date'],
+        });
+
+      if (error) throw error;
+      setSalesMsg('Saved daily sales for this date.');
+    } catch (e) {
+      setSalesMsg(`Save failed: ${e.message || e}`);
+    } finally {
+      setSavingSales(false);
+    }
+  }
+
   // Load current week of speed_dayparts → prefill the form
   useEffect(() => {
     let cancelled = false;
@@ -274,11 +361,19 @@ async function saveBeefPricing() {
     }
   };
 
+  //Speed Timeout Effect
   useEffect(() => {
   if (!speedMsg) return;
   const t = setTimeout(() => setSpeedMsg(null), 4000);
   return () => clearTimeout(t);
 }, [speedMsg]);
+
+  //Sales Timeout Effect
+  useEffect(() => {
+    if (!salesMsg) return;
+    const t = setTimeout(() => setSalesMsg(null), 4000);
+    return () => clearTimeout(t);
+  }, [salesMsg]);
 
   const saveAverage = async () => {
     if (!isEditor) return;
@@ -408,6 +503,131 @@ async function saveBeefPricing() {
     className="mt-3 px-4 py-2 bg-blue-600 text-white rounded disabled:opacity-50"
   >{savingBeefPricing ? 'Saving…' : 'Save Pricing'}</button>
 </div>
+
+      {/* Daily Sales YoY */}
+      <div className="bg-white shadow rounded p-4 sm:p-6">
+        <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
+          <h2 className="font-semibold text-red-700">
+            Daily Sales — Year over Year
+          </h2>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              className="px-3 py-1.5 rounded border text-sm"
+              onClick={() => shiftSalesDate(-1)}
+            >
+              ← Prev Day
+            </button>
+            <input
+              type="date"
+              value={salesDate}
+              onChange={(e) => setSalesDate(e.target.value)}
+              className="border rounded px-2 py-1 text-sm"
+            />
+            <button
+              type="button"
+              className="px-3 py-1.5 rounded border text-sm"
+              onClick={() => shiftSalesDate(1)}
+            >
+              Next Day →
+            </button>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-3">
+          <div>
+            <label className="block text-sm text-gray-600 mb-1">
+              Net sales (this year)
+            </label>
+            <div className="flex items-center gap-1">
+              <span className="text-sm text-gray-500">$</span>
+              <input
+                type="number"
+                step="0.01"
+                inputMode="decimal"
+                value={salesThisYear}
+                onChange={(e) => setSalesThisYear(e.target.value)}
+                className="border rounded px-2 py-1 w-32"
+                placeholder="e.g. 5400.25"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm text-gray-600 mb-1">
+              Net sales (last year same day)
+            </label>
+            <div className="flex items-center gap-1">
+              <span className="text-sm text-gray-500">$</span>
+              <input
+                type="number"
+                step="0.01"
+                inputMode="decimal"
+                value={salesLastYear}
+                onChange={(e) => setSalesLastYear(e.target.value)}
+                className="border rounded px-2 py-1 w-32"
+                placeholder="e.g. 5100.00"
+              />
+            </div>
+            <p className="text-xs text-gray-500 mt-1">
+              Use net sales after discounts/voids so YoY is meaningful.
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between gap-3 mb-2">
+          {yoyPct != null ? (
+            <div className="text-sm">
+              <span className="text-gray-600">YoY change:&nbsp;</span>
+              <span
+                className={
+                  yoyPct > 0
+                    ? 'font-semibold text-green-700'
+                    : yoyPct < 0
+                    ? 'font-semibold text-red-700'
+                    : 'font-semibold text-gray-700'
+                }
+              >
+                {yoyPct > 0 ? '+' : ''}
+                {yoyPct.toFixed(1)}%
+              </span>
+              <span className="text-gray-500">&nbsp;vs last year</span>
+            </div>
+          ) : (
+            <div className="text-xs text-gray-500">
+              Enter both values (and non-zero last year) to see YoY %.
+            </div>
+          )}
+
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={saveDailySales}
+              disabled={savingSales}
+              className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700 disabled:opacity-50 text-sm"
+            >
+              {savingSales ? 'Saving…' : 'Save Day'}
+            </button>
+            {salesMsg && (
+              <span
+                aria-live="polite"
+                className={`text-xs ${
+                  salesMsg.startsWith('Saved')
+                    ? 'text-green-700'
+                    : 'text-amber-700'
+                }`}
+              >
+                {salesMsg}
+              </span>
+            )}
+          </div>
+        </div>
+
+        <p className="text-xs text-gray-500 mt-1">
+          This table will feed the Sales page chart later (current year vs last
+          year, by day).
+        </p>
+      </div>
 
       {/* NEW: Drive-Thru Speed Week Entry */}
       <div className="bg-white shadow rounded p-4 sm:p-6">

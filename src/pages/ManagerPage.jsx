@@ -17,7 +17,7 @@ export default function ManagerPage({ profile }) {
       <div className="w-full max-w-3xl mx-auto bg-white shadow p-4 sm:p-6 rounded px-4 sm:px-6">
       {/* Header row */}
       <div className="mb-4 sm:mb-6 flex items-center justify-between gap-3">
-        <h1 className="text-2xl font-bold text-red-700">Sales Dashboard</h1>
+        <h1 className="text-2xl font-bold text-red-700">Manager Control Center</h1>
 
         <button
           className="bg-red-600 text-white px-3 sm:px-4 py-2 rounded hover:bg-red-700 shrink-0"
@@ -30,8 +30,10 @@ export default function ManagerPage({ profile }) {
 
       {/* Accessible to all team members */}
       <div className="mb-4">
-        <h2 className="text-lg font-semibold">Total Points</h2>
-        <p>Team members can redeem points here:</p>
+        <h2 className="text-lg font-semibold">Point Awarding:</h2>
+        <p>Managers can add poins to team members they feel go above and beyond.<br/>
+        Type in the name of the employee you would like to add points to and then select a points option. Extra points can be added twice per day.
+        </p>
         {/* Later: form or button */}
       </div>
 
