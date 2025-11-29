@@ -9,6 +9,14 @@ export function startOfWeekLocal(d = new Date()) {
   return start
 }
 
+export function parseYmdLocal(ymdStr) {
+  if (!ymdStr) return new Date();
+  const [y, m, d] = ymdStr.split('-').map(Number);
+  const dt = new Date(y, m - 1, d);
+  dt.setHours(0, 0, 0, 0);
+  return dt;
+}
+
 export function addDays(date, n) {
   const d = new Date(date)
   d.setDate(d.getDate() + n)
