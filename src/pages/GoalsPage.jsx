@@ -28,6 +28,14 @@ function ymdLocal(date) {
   return `${y}-${m}-${d}`;
 }
 
+function parseYmdLocal(ymdStr) {
+  if (!ymdStr) return new Date();
+  const [y, m, d] = ymdStr.split('-').map(Number);
+  if (!y || !m || !d) return new Date();
+  const dt = new Date(y, m - 1, d);
+  dt.setHours(0, 0, 0, 0);
+  return dt;
+}
 
 export default function GoalsPage({ profile }) {
   const navigate = useNavigate();
@@ -69,11 +77,11 @@ export default function GoalsPage({ profile }) {
 
   //Shift sales date helper
   const shiftSalesDate = (days) => {
-    const d = new Date(salesDate);
+    const d = parseYmdLocal(salesDate);
     if (Number.isNaN(d.getTime())) return;
     const shifted = addDays(d, days);
     setSalesDate(ymdLocal(shifted));
-  };
+  }; 
 
   const yoyPct = useMemo(() => {
     const thisY = Number(salesThisYear);
@@ -434,29 +442,35 @@ async function saveBeefPricing() {
       {/* Daily Sales YoY */}
       <div className="bg-white shadow rounded p-4 sm:p-6">
         <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
-          <h2 className="font-semibold text-red-700">
-            Daily Sales — Year over Year
-          </h2>
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              className="px-3 py-1.5 rounded border text-sm"
-              onClick={() => shiftSalesDate(-1)}
-            >
-              ← Prev Day
-            </button>
-            <span className="text-sm text-gray-700 min-w-[10ch] text-center">
-              {salesDate}
-            </span>
-            <button
-              type="button"
-              className="px-3 py-1.5 rounded border text-sm"
-              onClick={() => shiftSalesDate(1)}
-            >
-              Next Day →
-            </button>
-          </div>
+        <h2 className="font-semibold text-red-700">
+          Daily Sales — Year over Year
+        </h2>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            className="px-3 py-1.5 rounded border text-sm"
+            onClick={() => shiftSalesDate(-1)}
+          >
+            ← Prev Day
+          </button>
+
+          <input
+            type="date"
+            value={salesDate}
+            onChange={(e) => setSalesDate(e.target.value)}
+            className="border rounded px-2 py-1 text-sm"
+            aria-label="Sales date"
+          />
+
+          <button
+            type="button"
+            className="px-3 py-1.5 rounded border text-sm"
+            onClick={() => shiftSalesDate(1)}
+          >
+            Next Day →
+          </button>
         </div>
+      </div>
         
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-3">
