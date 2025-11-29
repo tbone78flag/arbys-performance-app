@@ -28,13 +28,6 @@ function ymdLocal(date) {
   return `${y}-${m}-${d}`;
 }
 
-  //Shift sales date helper
-  const shiftSalesDate = (days) => {
-    const d = new Date(salesDate);
-    if (Number.isNaN(d.getTime())) return;
-    const shifted = addDays(d, days);
-    setSalesDate(ymdLocal(shifted));
-  };
 
 export default function GoalsPage({ profile }) {
   const navigate = useNavigate();
@@ -73,6 +66,14 @@ export default function GoalsPage({ profile }) {
   const [salesLastYear, setSalesLastYear] = useState('');
   const [savingSales, setSavingSales] = useState(false);
   const [salesMsg, setSalesMsg] = useState(null);
+
+  //Shift sales date helper
+  const shiftSalesDate = (days) => {
+    const d = new Date(salesDate);
+    if (Number.isNaN(d.getTime())) return;
+    const shifted = addDays(d, days);
+    setSalesDate(ymdLocal(shifted));
+  };
 
   const yoyPct = useMemo(() => {
     const thisY = Number(salesThisYear);
@@ -444,12 +445,9 @@ async function saveBeefPricing() {
             >
               ← Prev Day
             </button>
-            <input
-              type="date"
-              value={salesDate}
-              onChange={(e) => setSalesDate(e.target.value)}
-              className="border rounded px-2 py-1 text-sm"
-            />
+            <span className="text-sm text-gray-700 min-w-[10ch] text-center">
+              {salesDate}
+            </span>
             <button
               type="button"
               className="px-3 py-1.5 rounded border text-sm"
@@ -459,6 +457,7 @@ async function saveBeefPricing() {
             </button>
           </div>
         </div>
+        
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-3">
           <div>
