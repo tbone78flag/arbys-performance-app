@@ -1,7 +1,7 @@
-const DOW = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+const DOW = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
 export function startOfWeekLocal(d = new Date()) {
-  const day = d.getDay() // 0..6 (Sun..Sat)
+  const day = d.getDay() // 0..6 (Mon...Sun)
   const diff = (day + 6) % 7 // Mon=0, Tue=1, …, Sun=6
   const start = new Date(d)
   start.setHours(0, 0, 0, 0)
