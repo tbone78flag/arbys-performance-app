@@ -17,6 +17,15 @@ export function parseYmdLocal(ymdStr) {
   return dt;
 }
 
+export function formatDayLabel(ymdStr) {
+  const d = parseYmdLocal(ymdStr)
+  return d.toLocaleDateString(undefined, {
+    weekday: 'long',
+    month: 'short',
+    day: 'numeric',
+  })
+}
+
 export function addDays(date, n) {
   const d = new Date(date)
   d.setDate(d.getDate() + n)
