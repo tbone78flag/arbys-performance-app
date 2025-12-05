@@ -2,6 +2,7 @@
 import { useSate, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
+import CashControl from '../components/CashControl'
 
 export default function ManagerPage({ profile }) {
   const navigate = useNavigate()
@@ -30,11 +31,10 @@ export default function ManagerPage({ profile }) {
 
       {/* Accessible to all team members */}
       <div className="mb-4">
-        <h2 className="text-lg font-semibold">Point Awarding:</h2>
-        <p>Managers can add poins to team members they feel go above and beyond.<br/>
-        Type in the name of the employee you would like to add points to and then select a points option. Extra points can be added twice per day.
-        </p>
-        {/* Later: form or button */}
+
+        {/* Existing cash control section */}
+        <CashControl />
+
       </div>
 
       {/* Manager-only section */}
