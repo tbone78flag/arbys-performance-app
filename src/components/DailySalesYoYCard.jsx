@@ -1,24 +1,7 @@
 // src/components/DailySalesYoYCard.jsx
 import { useState, useEffect, useMemo } from 'react'
 import { supabase } from '../supabaseClient'
-import { addDays } from 'date-fns'
-
-// reuse your helpers
-function ymdLocal(date) {
-  const y = date.getFullYear()
-  const m = `${date.getMonth() + 1}`.padStart(2, '0')
-  const d = `${date.getDate()}`.padStart(2, '0')
-  return `${y}-${m}-${d}`
-}
-
-function parseYmdLocal(ymdStr) {
-  if (!ymdStr) return new Date()
-  const [y, m, d] = ymdStr.split('-').map(Number)
-  if (!y || !m || !d) return new Date()
-  const dt = new Date(y, m - 1, d)
-  dt.setHours(0, 0, 0, 0)
-  return dt
-}
+import { addDays, ymdLocal, parseYmdLocal } from '../utils/dateHelpers'
 
 export function DailySalesYoYCard({ locationId, isEditor }) {
   const [salesDate, setSalesDate] = useState(() => ymdLocal(new Date()))
