@@ -45,7 +45,7 @@ export function buildWeeklySkeleton(weekStart) {
     const date = addDays(weekStart, i)
     days.push({
       date: ymdLocal(date),
-      label: DOW[i],
+      label: DOW[date.getDay()],
       thisYear: null,
       lastYear: null,
       yoyPct: null,
