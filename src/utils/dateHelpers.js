@@ -54,15 +54,6 @@ export function buildWeeklySkeleton(weekStart) {
   return days
 }
 
-export function formatDayLabel(dateStr) {
-  const d = new Date(dateStr)
-  if (Number.isNaN(d.getTime())) return dateStr
-  return d.toLocaleDateString(undefined, {
-    weekday: 'short',
-    month: 'numeric',
-    day: 'numeric',
-  })
-}
 
 export function startOfMonthLocal(date) {
   const d = new Date(date.getFullYear(), date.getMonth(), 1)
