@@ -5,6 +5,13 @@ const SUPABASE_URL = Deno.env.get("SUPABASE_URL")
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")
 const ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")
 
+// CORS headers for browser requests
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+}
+
 if (!SUPABASE_URL || !SERVICE_ROLE_KEY || !ANON_KEY) {
   throw new Error('Missing Supabase env vars')
 }
@@ -30,9 +37,14 @@ function clientForRequest(req: Request) {
 }
 
 Deno.serve(async (req) => {
+  // Handle CORS preflight requests
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers: corsHeaders })
+  }
+
   try {
     if (req.method !== 'POST') {
-      return new Response('Method not allowed', { status: 405 })
+      return new Response('Method not allowed', { status: 405, headers: corsHeaders })
     }
 
     const body = await req.json()
@@ -47,7 +59,7 @@ Deno.serve(async (req) => {
     if (!username || !displayName || !role || !locationId || !password) {
       return new Response(
         JSON.stringify({ error: 'Missing required fields' }),
-        { status: 400, headers: { 'Content-Type': 'application/json' } },
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
       )
     }
 
@@ -61,7 +73,7 @@ Deno.serve(async (req) => {
     if (callerUserError || !callerUser) {
       return new Response(
         JSON.stringify({ error: 'Unauthorized' }),
-        { status: 401, headers: { 'Content-Type': 'application/json' } },
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
       )
     }
 
@@ -74,7 +86,7 @@ Deno.serve(async (req) => {
     if (callerEmpError || !callerEmployee) {
       return new Response(
         JSON.stringify({ error: 'Caller is not an employee' }),
-        { status: 403, headers: { 'Content-Type': 'application/json' } },
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
       )
     }
 
@@ -84,7 +96,7 @@ Deno.serve(async (req) => {
     if (!isManager || callerEmployee.location_id !== locationId) {
       return new Response(
         JSON.stringify({ error: 'Forbidden' }),
-        { status: 403, headers: { 'Content-Type': 'application/json' } },
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
       )
     }
 
@@ -105,7 +117,7 @@ Deno.serve(async (req) => {
         JSON.stringify({
           error: createUserError?.message || 'Failed to create auth user',
         }),
-        { status: 400, headers: { 'Content-Type': 'application/json' } },
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
       )
     }
 
@@ -131,19 +143,19 @@ Deno.serve(async (req) => {
         JSON.stringify({
           error: empInsertError.message || 'Failed to insert employee row',
         }),
-        { status: 400, headers: { 'Content-Type': 'application/json' } },
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
       )
     }
 
     return new Response(
       JSON.stringify({ success: true, userId }),
-      { status: 200, headers: { 'Content-Type': 'application/json' } },
+      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
     )
   } catch (err) {
     console.error(err)
     return new Response(
       JSON.stringify({ error: 'Internal server error' }),
-      { status: 500, headers: { 'Content-Type': 'application/json' } },
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
     )
   }
 })
