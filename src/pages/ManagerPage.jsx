@@ -183,9 +183,13 @@ export default function ManagerPage({ profile }) {
         },
       })
 
+      console.log('delete-employee result:', { data, error })
+
       if (error || data?.error) {
         console.error('Error deleting employee', error || data?.error)
-        setEmployeesError(`Failed to delete employee: ${data?.error || error?.message}`)
+        // Try to extract the actual error message
+        const errorMsg = data?.error || error?.context?.body?.error || error?.message || 'Unknown error'
+        setEmployeesError(`Failed to delete employee: ${errorMsg}`)
         return
       }
 
