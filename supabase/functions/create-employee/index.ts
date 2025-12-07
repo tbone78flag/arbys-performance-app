@@ -77,25 +77,35 @@ Deno.serve(async (req) => {
       )
     }
 
-    const { data: callerEmployee, error: callerEmpError } = await callerClient
-      .from('employees')
+    // Check profiles table (used by your app's login system)
+    const { data: callerProfile, error: callerProfileError } = await supabaseAdmin
+      .from('profiles')
       .select('*')
       .eq('id', callerUser.id)
       .single()
 
-    if (callerEmpError || !callerEmployee) {
+    if (callerProfileError || !callerProfile) {
       return new Response(
-        JSON.stringify({ error: 'Caller is not an employee' }),
+        JSON.stringify({ error: 'Caller profile not found' }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
       )
     }
 
-    const isManager =
-      callerEmployee.role === 'MANAGER' || callerEmployee.role === 'ADMIN'
+    // Check if caller is a manager (case-insensitive)
+    const callerRole = (callerProfile.role || '').toUpperCase()
+    const isManager = callerRole === 'MANAGER' || callerRole === 'ADMIN'
 
-    if (!isManager || callerEmployee.location_id !== locationId) {
+    if (!isManager) {
       return new Response(
-        JSON.stringify({ error: 'Forbidden' }),
+        JSON.stringify({ error: 'Only managers can add employees' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+      )
+    }
+
+    // Check location matches (if caller has a location_id)
+    if (callerProfile.location_id && callerProfile.location_id !== locationId) {
+      return new Response(
+        JSON.stringify({ error: 'Cannot add employees to a different location' }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
       )
     }
