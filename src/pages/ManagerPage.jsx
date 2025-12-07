@@ -7,6 +7,8 @@ import CashControl from '../components/CashControl'
 export default function ManagerPage({ profile }) {
   const navigate = useNavigate()
 
+  const locationId = profile?.location_id || 'holladay-3900'
+
   // --- state for employees management ---
   const [employees, setEmployees] = useState([])
   const [loadingEmployees, setLoadingEmployees] = useState(false)
@@ -18,6 +20,7 @@ export default function ManagerPage({ profile }) {
   const [displayName, setDisplayName] = useState('')
   const [password, setPassword] = useState('')
   const [role, setRole] = useState('EMPLOYEE')
+  const [title, setTitle] = useState('')
   const [savingEmployee, setSavingEmployee] = useState(false)
   const [formError, setFormError] = useState(null)
 
@@ -42,10 +45,10 @@ export default function ManagerPage({ profile }) {
       setEmployeesError(null)
 
       const { data, error } = await supabase
-        .from('employees')
-        .select('*')
-        .eq('location_id', profile.location_id)
-        .order('created_at', { ascending: true })
+      .from('employees')
+      .select('*')
+      .eq('location_id', locationId)
+      .order('created_at', { ascending: true })
 
       if (error) {
         console.error('Error loading employees', error)
@@ -82,6 +85,7 @@ export default function ManagerPage({ profile }) {
           username: username.trim(),
           displayName: displayName.trim(),
           role,
+          title: role === 'MANAGER' ? title : null,
           locationId: profile.location_id,
           password: password.trim(),
         },
@@ -98,6 +102,7 @@ export default function ManagerPage({ profile }) {
       setDisplayName('')
       setPassword('')
       setRole('EMPLOYEE')
+      setTitle('')
 
       // reload employees
       const { data: employeesData, error: reloadError } = await supabase
@@ -187,6 +192,7 @@ export default function ManagerPage({ profile }) {
                       <th className="px-2 py-1 text-left">Name</th>
                       <th className="px-2 py-1 text-left">Username</th>
                       <th className="px-2 py-1 text-left">Role</th>
+                      <th className="px-2 py-1 text-left">Title</th>
                       <th className="px-2 py-1 text-left">Active</th>
                       <th className="px-2 py-1 text-left">Actions</th>
                     </tr>
@@ -197,6 +203,7 @@ export default function ManagerPage({ profile }) {
                         <td className="px-2 py-1">{e.display_name}</td>
                         <td className="px-2 py-1">{e.username}</td>
                         <td className="px-2 py-1">{e.role}</td>
+                        <td className="px-2 py-1">{e.title || '—'}</td>
                         <td className="px-2 py-1">
                           {e.is_active ? 'Yes' : 'No'}
                         </td>
@@ -216,7 +223,7 @@ export default function ManagerPage({ profile }) {
                     {employees.length === 0 && (
                       <tr>
                         <td
-                          colSpan={5}
+                          colSpan={6}
                           className="px-2 py-2 text-sm text-gray-500 text-center"
                         >
                           No team members found yet.
@@ -280,14 +287,35 @@ export default function ManagerPage({ profile }) {
                 <select
                   className="border rounded px-2 py-1 text-sm"
                   value={role}
-                  onChange={(e) => setRole(e.target.value)}
+                  onChange={(e) => {
+                    setRole(e.target.value)
+                    if (e.target.value !== 'MANAGER') {
+                      setTitle('')
+                    }
+                  }}
                 >
                   <option value="EMPLOYEE">Employee</option>
                   <option value="MANAGER">Manager</option>
                 </select>
               </div>
 
-              <div className="sm:col-span-4 flex justify-end">
+              {role === 'MANAGER' && (
+                <div className="flex flex-col">
+                  <label className="text-xs font-medium">Title</label>
+                  <select
+                    className="border rounded px-2 py-1 text-sm"
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                  >
+                    <option value="">Select title...</option>
+                    <option value="Shift Manager">Shift Manager</option>
+                    <option value="Assistant Manager">Assistant Manager</option>
+                    <option value="General Manager">General Manager</option>
+                  </select>
+                </div>
+              )}
+
+              <div className={`${role === 'MANAGER' ? 'sm:col-span-3' : 'sm:col-span-4'} flex justify-end`}>
                 <button
                   type="submit"
                   disabled={savingEmployee}
