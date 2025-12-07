@@ -52,7 +52,7 @@ export default function ManagerPage({ profile }) {
 
       if (error) {
         console.error('Error loading employees', error)
-        setEmployeesError('Failed to load team members.')
+        setEmployeesError(`Failed to load team members: ${error.message}`)
       } else {
         setEmployees(data || [])
       }
