@@ -64,63 +64,89 @@ export default function ManagerPage({ profile }) {
   }, [isManager, profile])
 
   async function handleAddEmployee(e) {
-    e.preventDefault()
-    setFormError(null)
+  e.preventDefault()
+  setFormError(null)
 
-    if (!username.trim() || !displayName.trim() || !password.trim()) {
-      setFormError('Username, display name, and password are required.')
+  if (!username.trim() || !displayName.trim() || !password.trim()) {
+    setFormError('Username, display name, and password are required.')
+    return
+  }
+
+  const locationId = profile?.location_id || 'holladay-3900'
+
+  try {
+    setSavingEmployee(true)
+
+    // 1) Get the current session
+    const {
+      data: { session },
+      error: sessionError,
+    } = await supabase.auth.getSession()
+
+    if (sessionError) {
+      console.error('getSession error', sessionError)
+      setFormError('Could not read login session.')
       return
     }
 
-    if (!locationId) {
-      setFormError('No store location configured.')
+    if (!session) {
+      setFormError('You must be logged in to add employees.')
       return
     }
 
-    try {
-      setSavingEmployee(true)
-
-      const { data, error } = await supabase.functions.invoke('create-employee', {
-        body: {
+    // 2) Call the function with the Authorization header
+    const { data, error } = await supabase.functions.invoke('create-employee', {
+      body: {
         username: username.trim(),
         displayName: displayName.trim(),
         role,
         locationId,
         password: password.trim(),
       },
+      headers: {
+        Authorization: `Bearer ${session.access_token}`,
+      },
     })
 
+    console.log('create-employee result:', { data, error })
 
-      if (error || data?.error) {
-        console.error('Error from function', error || data?.error)
-        setFormError(data?.error || error?.message || 'Failed to create employee.')
-        return
-      }
-
-      // clear form
-      setUsername('')
-      setDisplayName('')
-      setPassword('')
-      setRole('EMPLOYEE')
-      setTitle('')
-
-      // reload employees
-      const { data: employeesData, error: reloadError } = await supabase
-        .from('employees')
-        .select('*')
-        .eq('location_id', locationId)
-        .order('created_at', { ascending: true })
-
-
-      if (reloadError) {
-        console.error('Error reloading employees', reloadError)
-      } else {
-        setEmployees(employeesData || [])
-      }
-    } finally {
-      setSavingEmployee(false)
+    if (error || data?.error) {
+      console.error('Function error:', error || data?.error)
+      setFormError(
+        data?.error ||
+          error?.message ||
+          'Edge function returned an error.'
+      )
+      return
     }
+
+    // 3) Clear form
+    setUsername('')
+    setDisplayName('')
+    setPassword('')
+    setRole('EMPLOYEE')
+
+    // 4) Reload employees from this location
+    const { data: employeesData, error: reloadError } = await supabase
+      .from('employees')
+      .select('*')
+      .eq('location_id', locationId)
+      .order('created_at', { ascending: true })
+
+    if (reloadError) {
+      console.error('Error reloading employees', reloadError)
+    } else {
+      setEmployees(employeesData || [])
+    }
+  } catch (err) {
+    console.error('invoke threw:', err)
+    setFormError(
+      err.message || 'Failed to send request to the edge function.'
+    )
+  } finally {
+    setSavingEmployee(false)
   }
+}
 
   async function handleDeactivateEmployee(employeeId) {
     try {

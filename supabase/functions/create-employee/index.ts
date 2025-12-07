@@ -1,32 +1,149 @@
-// Follow this setup guide to integrate the Deno language server with your editor:
-// https://deno.land/manual/getting_started/setup_your_environment
-// This enables autocomplete, go to definition, etc.
+// supabase/functions/create-employee/index.ts
+import { createClient } from "@supabase/supabase-js"
 
-// Setup type definitions for built-in Supabase Runtime APIs
-import "jsr:@supabase/functions-js/edge-runtime.d.ts"
+const SUPABASE_URL = Deno.env.get("SUPABASE_URL")
+const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")
+const ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")
 
-console.log("Hello from Functions!")
+if (!SUPABASE_URL || !SERVICE_ROLE_KEY || !ANON_KEY) {
+  throw new Error('Missing Supabase env vars')
+}
 
-Deno.serve(async (req) => {
-  const { name } = await req.json()
-  const data = {
-    message: `Hello ${name}!`,
-  }
-
-  return new Response(
-    JSON.stringify(data),
-    { headers: { "Content-Type": "application/json" } },
-  )
+// Admin client: can create auth users and insert rows bypassing RLS
+const supabaseAdmin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
+  auth: {
+    autoRefreshToken: false,
+    persistSession: false,
+  },
 })
 
-/* To invoke locally:
+// Caller client: respects RLS, uses the manager's JWT
+function clientForRequest(req: Request) {
+  const authHeader = req.headers.get('Authorization') ?? ''
+  const jwt = authHeader.replace('Bearer ', '')
 
-  1. Run `supabase start` (see: https://supabase.com/docs/reference/cli/supabase-start)
-  2. Make an HTTP request:
+  return createClient(SUPABASE_URL!, ANON_KEY!, {
+    global: {
+      headers: { Authorization: `Bearer ${jwt}` },
+    },
+  })
+}
 
-  curl -i --location --request POST 'http://127.0.0.1:54321/functions/v1/create-employee' \
-    --header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0' \
-    --header 'Content-Type: application/json' \
-    --data '{"name":"Functions"}'
+Deno.serve(async (req) => {
+  try {
+    if (req.method !== 'POST') {
+      return new Response('Method not allowed', { status: 405 })
+    }
 
-*/
+    const body = await req.json()
+    const { username, displayName, role, locationId, password } = body as {
+      username?: string
+      displayName?: string
+      role?: string
+      locationId?: string
+      password?: string
+    }
+
+    if (!username || !displayName || !role || !locationId || !password) {
+      return new Response(
+        JSON.stringify({ error: 'Missing required fields' }),
+        { status: 400, headers: { 'Content-Type': 'application/json' } },
+      )
+    }
+
+    // Verify caller is authenticated and is a MANAGER/ADMIN at this location
+    const callerClient = clientForRequest(req)
+    const {
+      data: { user: callerUser },
+      error: callerUserError,
+    } = await callerClient.auth.getUser()
+
+    if (callerUserError || !callerUser) {
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized' }),
+        { status: 401, headers: { 'Content-Type': 'application/json' } },
+      )
+    }
+
+    const { data: callerEmployee, error: callerEmpError } = await callerClient
+      .from('employees')
+      .select('*')
+      .eq('id', callerUser.id)
+      .single()
+
+    if (callerEmpError || !callerEmployee) {
+      return new Response(
+        JSON.stringify({ error: 'Caller is not an employee' }),
+        { status: 403, headers: { 'Content-Type': 'application/json' } },
+      )
+    }
+
+    const isManager =
+      callerEmployee.role === 'MANAGER' || callerEmployee.role === 'ADMIN'
+
+    if (!isManager || callerEmployee.location_id !== locationId) {
+      return new Response(
+        JSON.stringify({ error: 'Forbidden' }),
+        { status: 403, headers: { 'Content-Type': 'application/json' } },
+      )
+    }
+
+    // Build a pseudo-email for the new user
+    const email = `${locationId}__${username}@arbys-performance.local`
+
+    // 1) Create Auth user
+    const { data: newUser, error: createUserError } =
+      await supabaseAdmin.auth.admin.createUser({
+        email,
+        password,
+        email_confirm: true,
+      })
+
+    if (createUserError || !newUser) {
+      console.error('createUserError', createUserError)
+      return new Response(
+        JSON.stringify({
+          error: createUserError?.message || 'Failed to create auth user',
+        }),
+        { status: 400, headers: { 'Content-Type': 'application/json' } },
+      )
+    }
+
+    const userId = newUser.user.id
+
+    // 2) Insert into employees table
+    const { error: empInsertError } = await supabaseAdmin
+      .from('employees')
+      .insert({
+        id: userId,
+        location_id: locationId,
+        username,
+        display_name: displayName,
+        role,
+        is_active: true,
+      })
+
+    if (empInsertError) {
+      console.error('empInsertError', empInsertError)
+      // Clean up auth user if employee insert fails
+      await supabaseAdmin.auth.admin.deleteUser(userId)
+      return new Response(
+        JSON.stringify({
+          error: empInsertError.message || 'Failed to insert employee row',
+        }),
+        { status: 400, headers: { 'Content-Type': 'application/json' } },
+      )
+    }
+
+    return new Response(
+      JSON.stringify({ success: true, userId }),
+      { status: 200, headers: { 'Content-Type': 'application/json' } },
+    )
+  } catch (err) {
+    console.error(err)
+    return new Response(
+      JSON.stringify({ error: 'Internal server error' }),
+      { status: 500, headers: { 'Content-Type': 'application/json' } },
+    )
+  }
+})
