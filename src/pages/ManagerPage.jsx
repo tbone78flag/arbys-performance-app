@@ -38,7 +38,7 @@ export default function ManagerPage({ profile }) {
 
   // fetch employees for this manager's location
   useEffect(() => {
-    if (!isManager || !profile?.location_id) return
+    if (!isManager) return
 
     async function fetchEmployees() {
       setLoadingEmployees(true)
@@ -61,7 +61,7 @@ export default function ManagerPage({ profile }) {
     }
 
     fetchEmployees()
-  }, [isManager, profile])
+  }, [isManager, locationId])
 
   async function handleAddEmployee(e) {
   e.preventDefault()
@@ -77,11 +77,12 @@ export default function ManagerPage({ profile }) {
   try {
     setSavingEmployee(true)
 
-    // 1) Get the current session
     const {
       data: { session },
       error: sessionError,
     } = await supabase.auth.getSession()
+
+    console.log('getSession result:', { session, sessionError })
 
     if (sessionError) {
       console.error('getSession error', sessionError)
@@ -94,7 +95,6 @@ export default function ManagerPage({ profile }) {
       return
     }
 
-    // 2) Call the function with the Authorization header
     const { data, error } = await supabase.functions.invoke('create-employee', {
       body: {
         username: username.trim(),
@@ -120,13 +120,11 @@ export default function ManagerPage({ profile }) {
       return
     }
 
-    // 3) Clear form
     setUsername('')
     setDisplayName('')
     setPassword('')
     setRole('EMPLOYEE')
 
-    // 4) Reload employees from this location
     const { data: employeesData, error: reloadError } = await supabase
       .from('employees')
       .select('*')
@@ -139,9 +137,13 @@ export default function ManagerPage({ profile }) {
       setEmployees(employeesData || [])
     }
   } catch (err) {
-    console.error('invoke threw:', err)
+    console.error('invoke threw:', err, {
+      name: err?.name,
+      message: err?.message,
+      stack: err?.stack,
+    })
     setFormError(
-      err.message || 'Failed to send request to the edge function.'
+      err?.message || 'Failed to send request to the edge function.'
     )
   } finally {
     setSavingEmployee(false)
