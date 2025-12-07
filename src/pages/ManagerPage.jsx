@@ -72,7 +72,7 @@ export default function ManagerPage({ profile }) {
       return
     }
 
-    if (!profile?.location_id) {
+    if (!locationId) {
       setFormError('No store location configured.')
       return
     }
