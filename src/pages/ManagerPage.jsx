@@ -28,7 +28,6 @@ export default function ManagerPage({ profile }) {
   const [editDisplayName, setEditDisplayName] = useState('')
   const [editRole, setEditRole] = useState('')
   const [editTitle, setEditTitle] = useState('')
-  const [editIsActive, setEditIsActive] = useState(true)
   const [savingEdit, setSavingEdit] = useState(false)
   const [editError, setEditError] = useState(null)
 
@@ -159,26 +158,43 @@ export default function ManagerPage({ profile }) {
   }
 }
 
-  async function handleDeactivateEmployee(employeeId) {
-    try {
-      const { error } = await supabase
-        .from('employees')
-        .update({ is_active: false })
-        .eq('id', employeeId)
+  async function handleDeleteEmployee(employeeId, employeeName) {
+    // Confirm before deleting
+    if (!window.confirm(`Are you sure you want to delete ${employeeName}? This will permanently remove their account and cannot be undone.`)) {
+      return
+    }
 
-      if (error) {
-        console.error('Error deactivating employee', error)
+    try {
+      const {
+        data: { session },
+        error: sessionError,
+      } = await supabase.auth.getSession()
+
+      if (sessionError || !session) {
+        console.error('No session for delete', sessionError)
+        setEmployeesError('You must be logged in to delete employees.')
         return
       }
 
-      // refresh the list
-      setEmployees((prev) =>
-        prev.map((e) =>
-          e.id === employeeId ? { ...e, is_active: false } : e
-        )
-      )
+      const { data, error } = await supabase.functions.invoke('delete-employee', {
+        body: { employeeId },
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      })
+
+      if (error || data?.error) {
+        console.error('Error deleting employee', error || data?.error)
+        setEmployeesError(`Failed to delete employee: ${data?.error || error?.message}`)
+        return
+      }
+
+      // Remove from local state
+      setEmployees((prev) => prev.filter((e) => e.id !== employeeId))
+      setEmployeesError(null)
     } catch (err) {
-      console.error(err)
+      console.error('Delete threw:', err)
+      setEmployeesError(err?.message || 'Failed to delete employee.')
     }
   }
 
@@ -187,7 +203,6 @@ export default function ManagerPage({ profile }) {
     setEditDisplayName(employee.display_name || '')
     setEditRole(employee.role || 'EMPLOYEE')
     setEditTitle(employee.title || '')
-    setEditIsActive(employee.is_active ?? true)
     setEditError(null)
   }
 
@@ -196,7 +211,6 @@ export default function ManagerPage({ profile }) {
     setEditDisplayName('')
     setEditRole('EMPLOYEE')
     setEditTitle('')
-    setEditIsActive(true)
     setEditError(null)
   }
 
@@ -215,7 +229,6 @@ export default function ManagerPage({ profile }) {
           display_name: editDisplayName.trim(),
           role: editRole,
           title: editRole === 'MANAGER' ? editTitle : null,
-          is_active: editIsActive,
         })
         .eq('id', editingEmployee.id)
 
@@ -248,7 +261,6 @@ export default function ManagerPage({ profile }) {
                 display_name: editDisplayName.trim(),
                 role: editRole,
                 title: editRole === 'MANAGER' ? editTitle : null,
-                is_active: editIsActive,
               }
             : emp
         )
@@ -312,7 +324,6 @@ export default function ManagerPage({ profile }) {
                       <th className="px-2 py-1 text-left">Username</th>
                       <th className="px-2 py-1 text-left">Role</th>
                       <th className="px-2 py-1 text-left">Title</th>
-                      <th className="px-2 py-1 text-left">Active</th>
                       <th className="px-2 py-1 text-left">Actions</th>
                     </tr>
                   </thead>
@@ -323,9 +334,6 @@ export default function ManagerPage({ profile }) {
                         <td className="px-2 py-1">{e.username}</td>
                         <td className="px-2 py-1">{e.role}</td>
                         <td className="px-2 py-1">{e.title || '—'}</td>
-                        <td className="px-2 py-1">
-                          {e.is_active ? 'Yes' : 'No'}
-                        </td>
                         <td className="px-2 py-1 space-x-2">
                           {e.id !== profile.id && (
                             <>
@@ -335,14 +343,12 @@ export default function ManagerPage({ profile }) {
                               >
                                 Edit
                               </button>
-                              {e.is_active && (
-                                <button
-                                  className="text-xs text-red-600 hover:underline"
-                                  onClick={() => handleDeactivateEmployee(e.id)}
-                                >
-                                  Deactivate
-                                </button>
-                              )}
+                              <button
+                                className="text-xs text-red-600 hover:underline"
+                                onClick={() => handleDeleteEmployee(e.id, e.display_name)}
+                              >
+                                Delete
+                              </button>
                             </>
                           )}
                         </td>
@@ -352,7 +358,7 @@ export default function ManagerPage({ profile }) {
                     {employees.length === 0 && (
                       <tr>
                         <td
-                          colSpan={6}
+                          colSpan={5}
                           className="px-2 py-2 text-sm text-gray-500 text-center"
                         >
                           No team members found yet.
@@ -526,19 +532,6 @@ export default function ManagerPage({ profile }) {
                   </select>
                 </div>
               )}
-
-              <div className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  id="editIsActive"
-                  checked={editIsActive}
-                  onChange={(e) => setEditIsActive(e.target.checked)}
-                  className="w-4 h-4"
-                />
-                <label htmlFor="editIsActive" className="text-sm font-medium text-gray-700">
-                  Active Employee
-                </label>
-              </div>
 
               <div className="flex justify-end gap-2 pt-2 border-t">
                 <button
