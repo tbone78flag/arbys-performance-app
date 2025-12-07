@@ -73,7 +73,7 @@ export default function ManagerPage({ profile }) {
     }
 
     if (!profile?.location_id) {
-      setFormError('Missing location_id on profile.')
+      setFormError('No store location configured.')
       return
     }
 
@@ -82,14 +82,14 @@ export default function ManagerPage({ profile }) {
 
       const { data, error } = await supabase.functions.invoke('create-employee', {
         body: {
-          username: username.trim(),
-          displayName: displayName.trim(),
-          role,
-          title: role === 'MANAGER' ? title : null,
-          locationId: profile.location_id,
-          password: password.trim(),
-        },
-      })
+        username: username.trim(),
+        displayName: displayName.trim(),
+        role,
+        locationId,
+        password: password.trim(),
+      },
+    })
+
 
       if (error || data?.error) {
         console.error('Error from function', error || data?.error)
@@ -108,8 +108,9 @@ export default function ManagerPage({ profile }) {
       const { data: employeesData, error: reloadError } = await supabase
         .from('employees')
         .select('*')
-        .eq('location_id', profile.location_id)
+        .eq('location_id', locationId)
         .order('created_at', { ascending: true })
+
 
       if (reloadError) {
         console.error('Error reloading employees', reloadError)
