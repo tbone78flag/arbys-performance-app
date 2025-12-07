@@ -159,6 +159,33 @@ Deno.serve(async (req) => {
       )
     }
 
+    // 3) Insert into profiles table (for login system compatibility)
+    // Use username as employee_id for login lookup
+    const { error: profileInsertError } = await supabaseAdmin
+      .from('profiles')
+      .insert({
+        id: userId,
+        email,
+        employee_id: username,
+        full_name: displayName,
+        role: role.toLowerCase(),
+        title: title || null,
+        location_id: locationId,
+      })
+
+    if (profileInsertError) {
+      console.error('profileInsertError', profileInsertError)
+      // Clean up if profile insert fails
+      await supabaseAdmin.from('employees').delete().eq('id', userId)
+      await supabaseAdmin.auth.admin.deleteUser(userId)
+      return new Response(
+        JSON.stringify({
+          error: profileInsertError.message || 'Failed to insert profile row',
+        }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+      )
+    }
+
     return new Response(
       JSON.stringify({ success: true, userId }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },

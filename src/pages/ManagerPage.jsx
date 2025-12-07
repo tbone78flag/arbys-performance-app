@@ -15,7 +15,6 @@ export default function ManagerPage({ profile }) {
   const [employeesError, setEmployeesError] = useState(null)
 
   // add-employee form state
-  const [authUserId, setAuthUserId] = useState('')
   const [username, setUsername] = useState('')
   const [displayName, setDisplayName] = useState('')
   const [password, setPassword] = useState('')
@@ -23,6 +22,15 @@ export default function ManagerPage({ profile }) {
   const [title, setTitle] = useState('')
   const [savingEmployee, setSavingEmployee] = useState(false)
   const [formError, setFormError] = useState(null)
+
+  // edit-employee modal state
+  const [editingEmployee, setEditingEmployee] = useState(null)
+  const [editDisplayName, setEditDisplayName] = useState('')
+  const [editRole, setEditRole] = useState('')
+  const [editTitle, setEditTitle] = useState('')
+  const [editIsActive, setEditIsActive] = useState(true)
+  const [savingEdit, setSavingEdit] = useState(false)
+  const [editError, setEditError] = useState(null)
 
   useEffect(() => {
     if (!profile) {
@@ -174,6 +182,87 @@ export default function ManagerPage({ profile }) {
     }
   }
 
+  function openEditModal(employee) {
+    setEditingEmployee(employee)
+    setEditDisplayName(employee.display_name || '')
+    setEditRole(employee.role || 'EMPLOYEE')
+    setEditTitle(employee.title || '')
+    setEditIsActive(employee.is_active ?? true)
+    setEditError(null)
+  }
+
+  function closeEditModal() {
+    setEditingEmployee(null)
+    setEditDisplayName('')
+    setEditRole('EMPLOYEE')
+    setEditTitle('')
+    setEditIsActive(true)
+    setEditError(null)
+  }
+
+  async function handleSaveEdit(e) {
+    e.preventDefault()
+    if (!editingEmployee) return
+
+    setSavingEdit(true)
+    setEditError(null)
+
+    try {
+      // Update employees table
+      const { error: empError } = await supabase
+        .from('employees')
+        .update({
+          display_name: editDisplayName.trim(),
+          role: editRole,
+          title: editRole === 'MANAGER' ? editTitle : null,
+          is_active: editIsActive,
+        })
+        .eq('id', editingEmployee.id)
+
+      if (empError) {
+        console.error('Error updating employee', empError)
+        setEditError(`Failed to update employee: ${empError.message}`)
+        return
+      }
+
+      // Also update the profiles table if it exists for this user
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .update({
+          full_name: editDisplayName.trim(),
+          role: editRole.toLowerCase(),
+          title: editRole === 'MANAGER' ? editTitle : null,
+        })
+        .eq('id', editingEmployee.id)
+
+      if (profileError) {
+        console.warn('Could not update profile (may not exist):', profileError.message)
+      }
+
+      // Update local state
+      setEmployees((prev) =>
+        prev.map((emp) =>
+          emp.id === editingEmployee.id
+            ? {
+                ...emp,
+                display_name: editDisplayName.trim(),
+                role: editRole,
+                title: editRole === 'MANAGER' ? editTitle : null,
+                is_active: editIsActive,
+              }
+            : emp
+        )
+      )
+
+      closeEditModal()
+    } catch (err) {
+      console.error('Error saving edit:', err)
+      setEditError(err?.message || 'Failed to save changes.')
+    } finally {
+      setSavingEdit(false)
+    }
+  }
+
   return (
     <div className="w-full max-w-3xl mx-auto bg-white shadow p-4 sm:p-6 rounded px-4 sm:px-6">
       {/* Header row */}
@@ -237,14 +326,24 @@ export default function ManagerPage({ profile }) {
                         <td className="px-2 py-1">
                           {e.is_active ? 'Yes' : 'No'}
                         </td>
-                        <td className="px-2 py-1">
-                          {e.is_active && e.id !== profile.id && (
-                            <button
-                              className="text-xs text-red-600 hover:underline"
-                              onClick={() => handleDeactivateEmployee(e.id)}
-                            >
-                              Deactivate
-                            </button>
+                        <td className="px-2 py-1 space-x-2">
+                          {e.id !== profile.id && (
+                            <>
+                              <button
+                                className="text-xs text-blue-600 hover:underline"
+                                onClick={() => openEditModal(e)}
+                              >
+                                Edit
+                              </button>
+                              {e.is_active && (
+                                <button
+                                  className="text-xs text-red-600 hover:underline"
+                                  onClick={() => handleDeactivateEmployee(e.id)}
+                                >
+                                  Deactivate
+                                </button>
+                              )}
+                            </>
                           )}
                         </td>
                       </tr>
@@ -356,6 +455,109 @@ export default function ManagerPage({ profile }) {
               </div>
             </form>
           </section>
+        </div>
+      )}
+
+      {/* Edit Employee Modal */}
+      {editingEmployee && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-md">
+            <div className="p-4 border-b">
+              <h3 className="text-lg font-semibold text-gray-800">
+                Edit Employee: {editingEmployee.display_name}
+              </h3>
+            </div>
+
+            <form onSubmit={handleSaveEdit} className="p-4 space-y-4">
+              {editError && (
+                <p className="text-sm text-red-600 bg-red-50 p-2 rounded">{editError}</p>
+              )}
+
+              <div className="flex flex-col">
+                <label className="text-sm font-medium text-gray-700 mb-1">Display Name</label>
+                <input
+                  className="border rounded px-3 py-2 text-sm"
+                  value={editDisplayName}
+                  onChange={(e) => setEditDisplayName(e.target.value)}
+                  placeholder="Display name"
+                />
+              </div>
+
+              <div className="flex flex-col">
+                <label className="text-sm font-medium text-gray-700 mb-1">Username</label>
+                <input
+                  className="border rounded px-3 py-2 text-sm bg-gray-100"
+                  value={editingEmployee.username || ''}
+                  disabled
+                  title="Username cannot be changed"
+                />
+                <span className="text-xs text-gray-500 mt-1">Username cannot be changed</span>
+              </div>
+
+              <div className="flex flex-col">
+                <label className="text-sm font-medium text-gray-700 mb-1">Role</label>
+                <select
+                  className="border rounded px-3 py-2 text-sm"
+                  value={editRole}
+                  onChange={(e) => {
+                    setEditRole(e.target.value)
+                    if (e.target.value !== 'MANAGER') {
+                      setEditTitle('')
+                    }
+                  }}
+                >
+                  <option value="EMPLOYEE">Employee</option>
+                  <option value="MANAGER">Manager</option>
+                </select>
+              </div>
+
+              {editRole === 'MANAGER' && (
+                <div className="flex flex-col">
+                  <label className="text-sm font-medium text-gray-700 mb-1">Title</label>
+                  <select
+                    className="border rounded px-3 py-2 text-sm"
+                    value={editTitle}
+                    onChange={(e) => setEditTitle(e.target.value)}
+                  >
+                    <option value="">Select title...</option>
+                    <option value="Shift Manager">Shift Manager</option>
+                    <option value="Assistant Manager">Assistant Manager</option>
+                    <option value="General Manager">General Manager</option>
+                  </select>
+                </div>
+              )}
+
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="editIsActive"
+                  checked={editIsActive}
+                  onChange={(e) => setEditIsActive(e.target.checked)}
+                  className="w-4 h-4"
+                />
+                <label htmlFor="editIsActive" className="text-sm font-medium text-gray-700">
+                  Active Employee
+                </label>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2 border-t">
+                <button
+                  type="button"
+                  onClick={closeEditModal}
+                  className="px-4 py-2 text-sm text-gray-600 hover:text-gray-800"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={savingEdit}
+                  className="px-4 py-2 text-sm bg-red-600 text-white rounded hover:bg-red-700 disabled:opacity-60"
+                >
+                  {savingEdit ? 'Saving…' : 'Save Changes'}
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
     </div>
