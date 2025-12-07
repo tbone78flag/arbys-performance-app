@@ -48,12 +48,13 @@ Deno.serve(async (req) => {
     }
 
     const body = await req.json()
-    const { username, displayName, role, locationId, password } = body as {
+    const { username, displayName, role, locationId, password, title } = body as {
       username?: string
       displayName?: string
       role?: string
       locationId?: string
       password?: string
+      title?: string
     }
 
     if (!username || !displayName || !role || !locationId || !password) {
@@ -142,6 +143,7 @@ Deno.serve(async (req) => {
         username,
         display_name: displayName,
         role,
+        title: title || null,
         is_active: true,
       })
 

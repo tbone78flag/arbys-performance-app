@@ -100,6 +100,7 @@ export default function ManagerPage({ profile }) {
         username: username.trim(),
         displayName: displayName.trim(),
         role,
+        title: role === 'MANAGER' ? title : null,
         locationId,
         password: password.trim(),
       },
