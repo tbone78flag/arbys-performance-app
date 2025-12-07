@@ -279,22 +279,22 @@ export default function ManagerPage({ profile }) {
               onSubmit={handleAddEmployee}
             >
               <div className="flex flex-col">
-                <label className="text-xs font-medium">Username</label>
-                <input
-                  className="border rounded px-2 py-1 text-sm"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  placeholder="e.g. jessica"
-                />
-              </div>
-
-              <div className="flex flex-col">
                 <label className="text-xs font-medium">Display Name</label>
                 <input
                   className="border rounded px-2 py-1 text-sm"
                   value={displayName}
                   onChange={(e) => setDisplayName(e.target.value)}
                   placeholder="e.g. Jessica"
+                />
+              </div>
+
+              <div className="flex flex-col">
+                <label className="text-xs font-medium">Username</label>
+                <input
+                  className="border rounded px-2 py-1 text-sm"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  placeholder="e.g. jessica"
                 />
               </div>
 
