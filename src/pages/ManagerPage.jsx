@@ -43,6 +43,11 @@ export default function ManagerPage({ profile }) {
     profile?.role === 'admin' ||
     profile?.role === 'ADMIN'
 
+  // Only Assistant Manager and General Manager can add/edit/delete employees
+  const canManageEmployees = ['Assistant Manager', 'General Manager'].includes(
+    profile?.title
+  )
+
   // fetch employees for this manager's location
   useEffect(() => {
     if (!isManager) return
@@ -309,162 +314,166 @@ export default function ManagerPage({ profile }) {
             </p>
           </div>
 
-          {/* Team management */}
-          <section className="space-y-3">
-            <h3 className="font-semibold text-gray-800">Team Members ({profile.location_id})</h3>
+          {/* Team management - only visible to Assistant Manager and General Manager */}
+          {canManageEmployees && (
+            <section className="space-y-3">
+              <h3 className="font-semibold text-gray-800">Team Members ({profile.location_id})</h3>
 
-            {employeesError && (
-              <p className="text-sm text-red-600">{employeesError}</p>
-            )}
-
-            {loadingEmployees ? (
-              <p className="text-sm text-gray-600">Loading team members…</p>
-            ) : (
-              <div className="overflow-x-auto border rounded">
-                <table className="min-w-full text-sm">
-                  <thead className="bg-gray-100">
-                    <tr>
-                      <th className="px-2 py-1 text-left">Name</th>
-                      <th className="px-2 py-1 text-left">Username</th>
-                      <th className="px-2 py-1 text-left">Role</th>
-                      <th className="px-2 py-1 text-left">Title</th>
-                      <th className="px-2 py-1 text-left">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {employees.map((e) => (
-                      <tr key={e.id} className="border-t">
-                        <td className="px-2 py-1">{e.display_name}</td>
-                        <td className="px-2 py-1">{e.username}</td>
-                        <td className="px-2 py-1">{e.role}</td>
-                        <td className="px-2 py-1">{e.title || '—'}</td>
-                        <td className="px-2 py-1 space-x-2">
-                          {e.id !== profile.id && (
-                            <>
-                              <button
-                                className="text-xs text-blue-600 hover:underline"
-                                onClick={() => openEditModal(e)}
-                              >
-                                Edit
-                              </button>
-                              <button
-                                className="text-xs text-red-600 hover:underline"
-                                onClick={() => handleDeleteEmployee(e.id, e.display_name)}
-                              >
-                                Delete
-                              </button>
-                            </>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-
-                    {employees.length === 0 && (
-                      <tr>
-                        <td
-                          colSpan={5}
-                          className="px-2 py-2 text-sm text-gray-500 text-center"
-                        >
-                          No team members found yet.
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </section>
-
-          {/* Add employee form */}
-          <section className="space-y-2">
-            <h3 className="font-semibold text-gray-800">Add Employee</h3>
-            <p className="text-xs text-gray-600">
-              Creates a login for this location and adds them to your team.
-            </p>
-
-            {formError && (
-              <p className="text-sm text-red-600">{formError}</p>
-            )}
-
-            <form
-              className="grid grid-cols-1 sm:grid-cols-4 gap-2 items-end"
-              onSubmit={handleAddEmployee}
-            >
-              <div className="flex flex-col">
-                <label className="text-xs font-medium">Display Name</label>
-                <input
-                  className="border rounded px-2 py-1 text-sm"
-                  value={displayName}
-                  onChange={(e) => setDisplayName(e.target.value)}
-                  placeholder="e.g. Jessica"
-                />
-              </div>
-
-              <div className="flex flex-col">
-                <label className="text-xs font-medium">Username</label>
-                <input
-                  className="border rounded px-2 py-1 text-sm"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  placeholder="e.g. jessica"
-                />
-              </div>
-
-              <div className="flex flex-col">
-                <label className="text-xs font-medium">Password / PIN</label>
-                <input
-                  className="border rounded px-2 py-1 text-sm"
-                  type="text"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Temporary password"
-                />
-              </div>
-
-              <div className="flex flex-col">
-                <label className="text-xs font-medium">Role</label>
-                <select
-                  className="border rounded px-2 py-1 text-sm"
-                  value={role}
-                  onChange={(e) => {
-                    setRole(e.target.value)
-                    if (e.target.value !== 'MANAGER') {
-                      setTitle('')
-                    }
-                  }}
-                >
-                  <option value="EMPLOYEE">Employee</option>
-                  <option value="MANAGER">Manager</option>
-                </select>
-              </div>
-
-              {role === 'MANAGER' && (
-                <div className="flex flex-col">
-                  <label className="text-xs font-medium">Title</label>
-                  <select
-                    className="border rounded px-2 py-1 text-sm"
-                    value={title}
-                    onChange={(e) => setTitle(e.target.value)}
-                  >
-                    <option value="">Select title...</option>
-                    <option value="Shift Manager">Shift Manager</option>
-                    <option value="Assistant Manager">Assistant Manager</option>
-                    <option value="General Manager">General Manager</option>
-                  </select>
-                </div>
+              {employeesError && (
+                <p className="text-sm text-red-600">{employeesError}</p>
               )}
 
-              <div className={`${role === 'MANAGER' ? 'sm:col-span-3' : 'sm:col-span-4'} flex justify-end`}>
-                <button
-                  type="submit"
-                  disabled={savingEmployee}
-                  className="bg-red-600 text-white px-3 py-1.5 rounded text-sm hover:bg-red-700 disabled:opacity-60"
-                >
-                  {savingEmployee ? 'Creating…' : 'Add Employee'}
-                </button>
-              </div>
-            </form>
-          </section>
+              {loadingEmployees ? (
+                <p className="text-sm text-gray-600">Loading team members…</p>
+              ) : (
+                <div className="overflow-x-auto border rounded">
+                  <table className="min-w-full text-sm">
+                    <thead className="bg-gray-100">
+                      <tr>
+                        <th className="px-2 py-1 text-left">Name</th>
+                        <th className="px-2 py-1 text-left">Username</th>
+                        <th className="px-2 py-1 text-left">Role</th>
+                        <th className="px-2 py-1 text-left">Title</th>
+                        <th className="px-2 py-1 text-left">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {employees.map((e) => (
+                        <tr key={e.id} className="border-t">
+                          <td className="px-2 py-1">{e.display_name}</td>
+                          <td className="px-2 py-1">{e.username}</td>
+                          <td className="px-2 py-1">{e.role}</td>
+                          <td className="px-2 py-1">{e.title || '—'}</td>
+                          <td className="px-2 py-1 space-x-2">
+                            {e.id !== profile.id && (
+                              <>
+                                <button
+                                  className="text-xs text-blue-600 hover:underline"
+                                  onClick={() => openEditModal(e)}
+                                >
+                                  Edit
+                                </button>
+                                <button
+                                  className="text-xs text-red-600 hover:underline"
+                                  onClick={() => handleDeleteEmployee(e.id, e.display_name)}
+                                >
+                                  Delete
+                                </button>
+                              </>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+
+                      {employees.length === 0 && (
+                        <tr>
+                          <td
+                            colSpan={5}
+                            className="px-2 py-2 text-sm text-gray-500 text-center"
+                          >
+                            No team members found yet.
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </section>
+          )}
+
+          {/* Add employee form - only visible to Assistant Manager and General Manager */}
+          {canManageEmployees && (
+            <section className="space-y-2">
+              <h3 className="font-semibold text-gray-800">Add Employee</h3>
+              <p className="text-xs text-gray-600">
+                Creates a login for this location and adds them to your team.
+              </p>
+
+              {formError && (
+                <p className="text-sm text-red-600">{formError}</p>
+              )}
+
+              <form
+                className="grid grid-cols-1 sm:grid-cols-4 gap-2 items-end"
+                onSubmit={handleAddEmployee}
+              >
+                <div className="flex flex-col">
+                  <label className="text-xs font-medium">Display Name</label>
+                  <input
+                    className="border rounded px-2 py-1 text-sm"
+                    value={displayName}
+                    onChange={(e) => setDisplayName(e.target.value)}
+                    placeholder="e.g. Jessica"
+                  />
+                </div>
+
+                <div className="flex flex-col">
+                  <label className="text-xs font-medium">Username</label>
+                  <input
+                    className="border rounded px-2 py-1 text-sm"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    placeholder="e.g. jessica"
+                  />
+                </div>
+
+                <div className="flex flex-col">
+                  <label className="text-xs font-medium">Password / PIN</label>
+                  <input
+                    className="border rounded px-2 py-1 text-sm"
+                    type="text"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="Temporary password"
+                  />
+                </div>
+
+                <div className="flex flex-col">
+                  <label className="text-xs font-medium">Role</label>
+                  <select
+                    className="border rounded px-2 py-1 text-sm"
+                    value={role}
+                    onChange={(e) => {
+                      setRole(e.target.value)
+                      if (e.target.value !== 'MANAGER') {
+                        setTitle('')
+                      }
+                    }}
+                  >
+                    <option value="EMPLOYEE">Employee</option>
+                    <option value="MANAGER">Manager</option>
+                  </select>
+                </div>
+
+                {role === 'MANAGER' && (
+                  <div className="flex flex-col">
+                    <label className="text-xs font-medium">Title</label>
+                    <select
+                      className="border rounded px-2 py-1 text-sm"
+                      value={title}
+                      onChange={(e) => setTitle(e.target.value)}
+                    >
+                      <option value="">Select title...</option>
+                      <option value="Shift Manager">Shift Manager</option>
+                      <option value="Assistant Manager">Assistant Manager</option>
+                      <option value="General Manager">General Manager</option>
+                    </select>
+                  </div>
+                )}
+
+                <div className={`${role === 'MANAGER' ? 'sm:col-span-3' : 'sm:col-span-4'} flex justify-end`}>
+                  <button
+                    type="submit"
+                    disabled={savingEmployee}
+                    className="bg-red-600 text-white px-3 py-1.5 rounded text-sm hover:bg-red-700 disabled:opacity-60"
+                  >
+                    {savingEmployee ? 'Creating…' : 'Add Employee'}
+                  </button>
+                </div>
+              </form>
+            </section>
+          )}
         </div>
       )}
 
