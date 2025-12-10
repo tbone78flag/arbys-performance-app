@@ -13,7 +13,7 @@ export default function GoalsPage({ profile }) {
     profile?.title
   )
 
-  const locationId = profile?.location_id ?? 'holladay-3900s'
+  const locationId = profile?.location_id ?? 'holladay-3900'
 
   // Average check + goals state
   const [averageCheck, setAverageCheck] = useState('')
