@@ -187,7 +187,7 @@ useEffect(() => {
     <div className="flex flex-col">
       <span className="font-medium text-lg">Day Dots Check</span>
       <span className="text-xs text-gray-500">
-        Check each section for items that need day dots printed
+        Check each section for items that need day dots printed. Please click "reset section" after usage.
       </span>
     </div>
     <span
