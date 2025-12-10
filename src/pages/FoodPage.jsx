@@ -72,7 +72,18 @@ useEffect(() => {
 
   return (
       <div className="w-full max-w-3xl bg-white shadow p-6 rounded">
-      <h1 className="text-2xl font-bold mb-4 text-red-700">Food Dashboard</h1>
+      {/* Header row */}
+      <div className="mb-4 sm:mb-6 flex items-center justify-between gap-3">
+        <h1 className="text-2xl font-bold text-red-700">Food Dashboard</h1>
+
+        <button
+          className="bg-red-600 text-white px-3 sm:px-4 py-2 rounded hover:bg-red-700 shrink-0"
+          onClick={() => navigate('/App')}
+          aria-label="Go back"
+        >
+          Go Back
+        </button>
+      </div>
 
 <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
   <div className="text-sm text-gray-700">

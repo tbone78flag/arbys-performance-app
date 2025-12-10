@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import CashControl from '../components/CashControl'
+import DayDotsManagerCard from '../components/DayDotsManagerCard'
 import TeamManagement from '../components/TeamManagement'
 
 export default function ManagerPage({ profile }) {
@@ -43,6 +44,12 @@ export default function ManagerPage({ profile }) {
       title: 'Cash Control',
       summary: 'Track cash counts for drop/lock safe, storage vault, tills, and change orders.',
       component: <CashControl locationId={locationId} />,
+    },
+    {
+      id: 'day-dots',
+      title: 'Day Dots Manager',
+      summary: 'Configure food items that need day dots and their sections.',
+      component: <DayDotsManagerCard locationId={locationId} />,
     },
   ]
 
