@@ -14,7 +14,7 @@ export default function FoodPage({ profile }) {
     }
   }, [profile, navigate])
 
-  const locationId = profile?.location_id ?? 'holladay-3900s';
+  const locationId = profile?.location_id ?? 'holladay-3900';
 
 // Monday-start week helpers (local date math)
 function startOfWeekLocal(d = new Date()) {
