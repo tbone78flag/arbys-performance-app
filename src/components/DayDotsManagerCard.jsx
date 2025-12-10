@@ -3,6 +3,8 @@ import { useState, useEffect } from 'react'
 import { supabase } from '../supabaseClient'
 
 const SECTIONS = [
+  { id: 'morning', label: 'Morning' },
+  { id: 'midday', label: 'Midday' },
   { id: 'drive-thru', label: 'Drive-Thru' },
   { id: 'frontline', label: 'Frontline' },
   { id: 'backline', label: 'Backline' },

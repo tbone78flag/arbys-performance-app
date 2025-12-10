@@ -2,9 +2,11 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
+import DayDots from '../components/DayDots'
 
 export default function FoodPage({ profile }) {
   const navigate = useNavigate()
+  const [dayDotsOpen, setDayDotsOpen] = useState(false)
 
   useEffect(() => {
     if (!profile) {
@@ -171,6 +173,36 @@ useEffect(() => {
         </div>
       );
     })()
+  )}
+</div>
+
+{/* Day Dots Check Accordion */}
+<div className="mt-6 border rounded-lg overflow-hidden">
+  <button
+    type="button"
+    onClick={() => setDayDotsOpen((prev) => !prev)}
+    className="w-full flex items-center justify-between px-4 py-3 text-left bg-white hover:bg-gray-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500"
+    aria-expanded={dayDotsOpen}
+  >
+    <div className="flex flex-col">
+      <span className="font-medium text-lg">Day Dots Check</span>
+      <span className="text-xs text-gray-500">
+        Check each section for items that need day dots printed
+      </span>
+    </div>
+    <span
+      className={`transform transition-transform ${
+        dayDotsOpen ? 'rotate-90' : ''
+      }`}
+    >
+      ▶
+    </span>
+  </button>
+
+  {dayDotsOpen && (
+    <div className="px-4 pb-4 pt-2 bg-gray-50 border-t">
+      <DayDots locationId={locationId} />
+    </div>
   )}
 </div>
 
