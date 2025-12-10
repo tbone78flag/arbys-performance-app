@@ -3,10 +3,12 @@ import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
 import DayDots from '../components/DayDots'
+import DayDotsManagerCard from '../components/DayDotsManagerCard'
 
 export default function FoodPage({ profile }) {
   const navigate = useNavigate()
   const [dayDotsOpen, setDayDotsOpen] = useState(false)
+  const [dayDotsManagerOpen, setDayDotsManagerOpen] = useState(false)
 
   useEffect(() => {
     if (!profile) {
@@ -207,10 +209,40 @@ useEffect(() => {
 </div>
 
       {/* Manager-only section */}
-      {profile?.role === 'manager' && (
+      {(profile?.role === 'manager' || profile?.role === 'MANAGER') && (
         <div className="border-t pt-4 mt-4">
-          <h2 className="text-lg font-semibold text-red-600">Manager Tools</h2>
-          <p>Only visible to managers — e.g. target goals, override entries, etc.</p>
+          <h2 className="text-lg font-semibold text-red-600 mb-2">Manager Tools</h2>
+          <p className="text-sm text-gray-600 mb-4">Only visible to managers.</p>
+
+          {/* Day Dots Manager Accordion */}
+          <div className="border rounded-lg overflow-hidden">
+            <button
+              type="button"
+              onClick={() => setDayDotsManagerOpen((prev) => !prev)}
+              className="w-full flex items-center justify-between px-4 py-3 text-left bg-white hover:bg-gray-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500"
+              aria-expanded={dayDotsManagerOpen}
+            >
+              <div className="flex flex-col">
+                <span className="font-medium">Day Dots Manager</span>
+                <span className="text-xs text-gray-500">
+                  Configure food items that need day dots and their sections.
+                </span>
+              </div>
+              <span
+                className={`transform transition-transform ${
+                  dayDotsManagerOpen ? 'rotate-90' : ''
+                }`}
+              >
+                ▶
+              </span>
+            </button>
+
+            {dayDotsManagerOpen && (
+              <div className="px-4 pb-4 pt-2 bg-gray-50 border-t">
+                <DayDotsManagerCard locationId={locationId} />
+              </div>
+            )}
+          </div>
         </div>
       )}
     </div>
