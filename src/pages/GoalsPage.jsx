@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import { DailySalesYoYCard } from '../components/DailySalesYoYCard'
 import { SpeedWeekEntryCard } from '../components/SpeedWeekEntryCard'
 import { BeefVarianceCard } from '../components/BeefVarianceCard'
+import RewardsManager from '../components/RewardsManager'
 import { startOfWeekLocal, addDays } from '../utils/dateHelpers'
 
 export default function GoalsPage({ profile }) {
@@ -21,6 +22,13 @@ export default function GoalsPage({ profile }) {
   const [loading, setLoading] = useState(true)
   const [savingGoal, setSavingGoal] = useState(false)
   const [savingAvg, setSavingAvg] = useState(false)
+
+  // Accordion state for all sections
+  const [openSection, setOpenSection] = useState(null)
+
+  const toggleSection = (id) => {
+    setOpenSection((current) => (current === id ? null : id))
+  }
 
   // Shared week anchor (for speed + beef)
   const [weekAnchor, setWeekAnchor] = useState(() => new Date())
@@ -109,10 +117,10 @@ export default function GoalsPage({ profile }) {
   if (loading) return <div className="p-6">Loading goals…</div>
 
   return (
-    <div className="p-6 max-w-4xl mx-auto space-y-6">
+    <div className="w-full max-w-3xl mx-auto bg-white shadow p-4 sm:p-6 rounded px-4 sm:px-6">
       {/* Header */}
       <div className="mb-4 sm:mb-6 flex items-center justify-between gap-3">
-        <h1 className="text-2xl font-bold">Goals &amp; Settings</h1>
+        <h1 className="text-2xl font-bold text-red-700">Goals &amp; Settings</h1>
         <button
           className="bg-red-600 text-white px-3 sm:px-4 py-2 rounded hover:bg-red-700 shrink-0"
           onClick={() => navigate('/App')}
@@ -122,90 +130,266 @@ export default function GoalsPage({ profile }) {
         </button>
       </div>
 
-      {/* Daily Sales YoY */}
-      <DailySalesYoYCard locationId={locationId} isEditor={isEditor} />
+      <p className="text-sm text-gray-600 mb-4">
+        Tap a section to expand and view or edit settings.
+      </p>
 
-      {/* Drive-Thru Speed Week Entry */}
-      <SpeedWeekEntryCard
-        locationId={locationId}
-        weekStart={weekStart}
-        weekEnd={weekEnd}
-        weekLabel={weekLabel}
-        onPrevWeek={() => setWeekAnchor(addDays(weekStart, -1))}
-        onNextWeek={() => setWeekAnchor(addDays(weekEnd, 1))}
-      />
+      {/* Accordion sections */}
+      <div className="space-y-2">
+        {/* Daily Sales YoY Accordion */}
+        <div className="border rounded-lg overflow-hidden">
+          <button
+            type="button"
+            onClick={() => toggleSection('daily-sales')}
+            className="w-full flex items-center justify-between px-4 py-3 text-left bg-white hover:bg-gray-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500"
+            aria-expanded={openSection === 'daily-sales'}
+          >
+            <div className="flex flex-col">
+              <span className="font-medium">Daily Sales YoY</span>
+              <span className="text-xs text-gray-500">
+                View and manage daily sales year-over-year comparisons.
+              </span>
+            </div>
+            <span
+              className={`transform transition-transform ${
+                openSection === 'daily-sales' ? 'rotate-90' : ''
+              }`}
+            >
+              ▶
+            </span>
+          </button>
 
-      {/* Beef Variance & Pricing */}
-      <BeefVarianceCard
-        locationId={locationId}
-        profile={profile}
-        weekStart={weekStart}
-        weekLabel={weekLabel}
-        onPrevWeek={() => setWeekAnchor(addDays(weekStart, -1))}
-        onNextWeek={() => setWeekAnchor(addDays(weekEnd, 1))}
-      />
+          {openSection === 'daily-sales' && (
+            <div className="px-4 pb-4 pt-2 bg-gray-50 border-t">
+              <DailySalesYoYCard locationId={locationId} isEditor={isEditor} />
+            </div>
+          )}
+        </div>
 
-      {/* Average Check Editor */}
-      {isEditor && (
-        <div className="bg-white shadow rounded p-4">
-          <h2 className="font-semibold mb-2">Location Average Check</h2>
-          <div className="flex items-center gap-3">
-            <div>
-              <label className="block text-sm">Average Check ($)</label>
-              <input
-                type="number"
-                step="0.01"
-                value={averageCheck}
-                onChange={(e) => setAverageCheck(e.target.value)}
-                className="border rounded px-2 py-1 w-32"
+        {/* Drive-Thru Speed Accordion */}
+        <div className="border rounded-lg overflow-hidden">
+          <button
+            type="button"
+            onClick={() => toggleSection('speed-entry')}
+            className="w-full flex items-center justify-between px-4 py-3 text-left bg-white hover:bg-gray-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500"
+            aria-expanded={openSection === 'speed-entry'}
+          >
+            <div className="flex flex-col">
+              <span className="font-medium">Drive-Thru Speed</span>
+              <span className="text-xs text-gray-500">
+                Enter weekly drive-thru speed times by daypart.
+              </span>
+            </div>
+            <span
+              className={`transform transition-transform ${
+                openSection === 'speed-entry' ? 'rotate-90' : ''
+              }`}
+            >
+              ▶
+            </span>
+          </button>
+
+          {openSection === 'speed-entry' && (
+            <div className="px-4 pb-4 pt-2 bg-gray-50 border-t">
+              <SpeedWeekEntryCard
+                locationId={locationId}
+                weekStart={weekStart}
+                weekEnd={weekEnd}
+                weekLabel={weekLabel}
+                onPrevWeek={() => setWeekAnchor(addDays(weekStart, -1))}
+                onNextWeek={() => setWeekAnchor(addDays(weekEnd, 1))}
               />
             </div>
-            <button
-              onClick={saveAverage}
-              disabled={savingAvg}
-              className="px-4 py-2 bg-blue-600 text-white rounded disabled:opacity-50"
-            >
-              {savingAvg ? 'Saving…' : 'Save Average'}
-            </button>
-          </div>
-          <p className="text-sm text-gray-500 mt-2">
-            This value is used on the Sales page for the “what if” calculator.
-          </p>
+          )}
         </div>
-      )}
 
-      {/* Goal creator */}
-      <div className="bg-white shadow rounded p-4">
-        <h2 className="font-semibold mb-2">Your Goals</h2>
-        <div className="flex gap-2">
-          <textarea
-            rows={2}
-            value={goalText}
-            onChange={(e) => setGoalText(e.target.value)}
-            placeholder="Enter a sales goal..."
-            className="flex-1 border rounded p-2"
-          />
+        {/* Beef Variance Accordion */}
+        <div className="border rounded-lg overflow-hidden">
           <button
-            onClick={saveGoal}
-            disabled={savingGoal}
-            className="px-4 py-2 bg-green-600 text-white rounded disabled:opacity-50"
+            type="button"
+            onClick={() => toggleSection('beef-variance')}
+            className="w-full flex items-center justify-between px-4 py-3 text-left bg-white hover:bg-gray-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500"
+            aria-expanded={openSection === 'beef-variance'}
           >
-            {savingGoal ? 'Saving…' : 'Add Goal'}
+            <div className="flex flex-col">
+              <span className="font-medium">Beef Variance &amp; Pricing</span>
+              <span className="text-xs text-gray-500">
+                Track beef usage variance and pricing data.
+              </span>
+            </div>
+            <span
+              className={`transform transition-transform ${
+                openSection === 'beef-variance' ? 'rotate-90' : ''
+              }`}
+            >
+              ▶
+            </span>
           </button>
+
+          {openSection === 'beef-variance' && (
+            <div className="px-4 pb-4 pt-2 bg-gray-50 border-t">
+              <BeefVarianceCard
+                locationId={locationId}
+                profile={profile}
+                weekStart={weekStart}
+                weekLabel={weekLabel}
+                onPrevWeek={() => setWeekAnchor(addDays(weekStart, -1))}
+                onNextWeek={() => setWeekAnchor(addDays(weekEnd, 1))}
+              />
+            </div>
+          )}
         </div>
-        {goals.length > 0 && (
-          <ul className="mt-3 list-disc list-inside space-y-1">
-            {goals.map((g) => (
-              <li key={g.id} className="text-sm">
-                {g.goal_text}{' '}
-                <span className="text-xs text-gray-400">
-                  ({new Date(g.created_at).toLocaleDateString()})
-                </span>
-              </li>
-            ))}
-          </ul>
-        )}
+
+        {/* Your Goals Accordion */}
+        <div className="border rounded-lg overflow-hidden">
+          <button
+            type="button"
+            onClick={() => toggleSection('your-goals')}
+            className="w-full flex items-center justify-between px-4 py-3 text-left bg-white hover:bg-gray-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500"
+            aria-expanded={openSection === 'your-goals'}
+          >
+            <div className="flex flex-col">
+              <span className="font-medium">Your Goals</span>
+              <span className="text-xs text-gray-500">
+                Set and track your personal sales goals.
+              </span>
+            </div>
+            <span
+              className={`transform transition-transform ${
+                openSection === 'your-goals' ? 'rotate-90' : ''
+              }`}
+            >
+              ▶
+            </span>
+          </button>
+
+          {openSection === 'your-goals' && (
+            <div className="px-4 pb-4 pt-2 bg-gray-50 border-t space-y-3">
+              <div className="flex gap-2">
+                <textarea
+                  rows={2}
+                  value={goalText}
+                  onChange={(e) => setGoalText(e.target.value)}
+                  placeholder="Enter a sales goal..."
+                  className="flex-1 border rounded p-2 text-sm"
+                />
+                <button
+                  onClick={saveGoal}
+                  disabled={savingGoal}
+                  className="px-4 py-2 bg-green-600 text-white rounded text-sm disabled:opacity-50"
+                >
+                  {savingGoal ? 'Saving…' : 'Add Goal'}
+                </button>
+              </div>
+              {goals.length > 0 && (
+                <ul className="list-disc list-inside space-y-1">
+                  {goals.map((g) => (
+                    <li key={g.id} className="text-sm">
+                      {g.goal_text}{' '}
+                      <span className="text-xs text-gray-400">
+                        ({new Date(g.created_at).toLocaleDateString()})
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
+        </div>
       </div>
+
+      {/* Manager Tools Section */}
+      {isEditor && (
+        <section className="border-t pt-4 mt-4">
+          <h2 className="text-lg font-semibold text-red-600 mb-3">Manager Tools</h2>
+          <p className="text-sm text-gray-600 mb-4">
+            Available only to Assistant Managers and General Managers.
+          </p>
+
+          <div className="space-y-2">
+            {/* Average Check Editor Accordion */}
+            <div className="border rounded-lg overflow-hidden">
+              <button
+                type="button"
+                onClick={() => toggleSection('average-check')}
+                className="w-full flex items-center justify-between px-4 py-3 text-left bg-white hover:bg-gray-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500"
+                aria-expanded={openSection === 'average-check'}
+              >
+                <div className="flex flex-col">
+                  <span className="font-medium">Location Average Check</span>
+                  <span className="text-xs text-gray-500">
+                    Set the average check value used for sales calculations.
+                  </span>
+                </div>
+                <span
+                  className={`transform transition-transform ${
+                    openSection === 'average-check' ? 'rotate-90' : ''
+                  }`}
+                >
+                  ▶
+                </span>
+              </button>
+
+              {openSection === 'average-check' && (
+                <div className="px-4 pb-4 pt-2 bg-gray-50 border-t">
+                  <div className="flex items-center gap-3">
+                    <div>
+                      <label className="block text-sm">Average Check ($)</label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={averageCheck}
+                        onChange={(e) => setAverageCheck(e.target.value)}
+                        className="border rounded px-2 py-1 w-32"
+                      />
+                    </div>
+                    <button
+                      onClick={saveAverage}
+                      disabled={savingAvg}
+                      className="px-4 py-2 bg-blue-600 text-white rounded disabled:opacity-50"
+                    >
+                      {savingAvg ? 'Saving…' : 'Save Average'}
+                    </button>
+                  </div>
+                  <p className="text-sm text-gray-500 mt-2">
+                    This value is used on the Sales page for the "what if" calculator.
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* Points Rewards Manager Accordion */}
+            <div className="border rounded-lg overflow-hidden">
+              <button
+                type="button"
+                onClick={() => toggleSection('rewards-manager')}
+                className="w-full flex items-center justify-between px-4 py-3 text-left bg-white hover:bg-gray-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500"
+                aria-expanded={openSection === 'rewards-manager'}
+              >
+                <div className="flex flex-col">
+                  <span className="font-medium">Points Rewards Manager</span>
+                  <span className="text-xs text-gray-500">
+                    Configure rewards that employees can redeem with their points.
+                  </span>
+                </div>
+                <span
+                  className={`transform transition-transform ${
+                    openSection === 'rewards-manager' ? 'rotate-90' : ''
+                  }`}
+                >
+                  ▶
+                </span>
+              </button>
+
+              {openSection === 'rewards-manager' && (
+                <div className="px-4 pb-4 pt-2 bg-gray-50 border-t">
+                  <RewardsManager locationId={locationId} />
+                </div>
+              )}
+            </div>
+          </div>
+        </section>
+      )}
     </div>
   )
 }
