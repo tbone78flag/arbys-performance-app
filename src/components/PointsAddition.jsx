@@ -1,7 +1,7 @@
 // src/components/PointsAddition.jsx
 import { useState, useEffect } from 'react'
 import { supabase } from '../supabaseClient'
-import { useAwardPoints } from '../hooks/usePointsData'
+import { useAwardPoints, useRecentAwards, useUndoPoints } from '../hooks/usePointsData'
 
 // Title hierarchy - higher number = higher rank
 const TITLE_RANK = {
@@ -31,12 +31,22 @@ export default function PointsAddition({ locationId, managerProfile }) {
   const [formError, setFormError] = useState(null)
   const [successMessage, setSuccessMessage] = useState(null)
 
+  // Undo modal state
+  const [undoModalOpen, setUndoModalOpen] = useState(false)
+  const [undoTarget, setUndoTarget] = useState(null)
+  const [undoReason, setUndoReason] = useState('')
+  const [undoError, setUndoError] = useState(null)
+
   const managerId = managerProfile?.id
   const managerTitle = managerProfile?.title
   const allowedTitles = getAllowedTitles(managerTitle)
 
   // Use mutation hook for awarding points
   const awardMutation = useAwardPoints()
+  const undoMutation = useUndoPoints()
+
+  // Fetch recent awards by this manager
+  const { data: recentAwards = [], isLoading: recentLoading } = useRecentAwards(managerId, locationId)
 
   // Fetch employees for this location (excluding self, filtered by title hierarchy)
   useEffect(() => {
@@ -123,6 +133,45 @@ export default function PointsAddition({ locationId, managerProfile }) {
       console.error('Error awarding points:', err)
       setFormError(err?.message || 'Failed to award points.')
     }
+  }
+
+  // Handle undo
+  function openUndoModal(award) {
+    setUndoTarget(award)
+    setUndoReason('')
+    setUndoError(null)
+    setUndoModalOpen(true)
+  }
+
+  async function handleUndo() {
+    if (!undoReason.trim()) {
+      setUndoError('Please provide a reason for undoing this award.')
+      return
+    }
+
+    try {
+      await undoMutation.mutateAsync({
+        pointsLogId: undoTarget.id,
+        reason: undoReason.trim(),
+      })
+      setUndoModalOpen(false)
+      setUndoTarget(null)
+      setUndoReason('')
+    } catch (err) {
+      console.error('Error undoing points:', err)
+      setUndoError(err?.message || 'Failed to undo points.')
+    }
+  }
+
+  // Format time ago
+  function formatTimeAgo(dateStr) {
+    const diff = Date.now() - new Date(dateStr).getTime()
+    const minutes = Math.floor(diff / 60000)
+    if (minutes < 1) return 'Just now'
+    if (minutes < 60) return `${minutes}m ago`
+    const hours = Math.floor(minutes / 60)
+    if (hours < 24) return `${hours}h ago`
+    return new Date(dateStr).toLocaleDateString()
   }
 
   // Quick award buttons
@@ -224,6 +273,95 @@ export default function PointsAddition({ locationId, managerProfile }) {
             {awardMutation.isPending ? 'Awarding...' : 'Award Points'}
           </button>
         </form>
+      )}
+
+      {/* Recent Awards Section */}
+      <div className="border-t pt-4 mt-4">
+        <h4 className="text-sm font-semibold text-gray-700 mb-2">Your Recent Awards</h4>
+        <p className="text-xs text-gray-500 mb-3">
+          Awards can be undone within 1 hour of being given.
+        </p>
+
+        {recentLoading ? (
+          <p className="text-sm text-gray-500">Loading recent awards...</p>
+        ) : recentAwards.length === 0 ? (
+          <p className="text-sm text-gray-500">No recent awards.</p>
+        ) : (
+          <div className="space-y-2">
+            {recentAwards.map((award) => (
+              <div
+                key={award.id}
+                className="flex items-center justify-between p-2 bg-gray-50 rounded border text-sm"
+              >
+                <div className="flex-1">
+                  <div className="font-medium">
+                    +{award.points_amount} pts → {award.employee_name}
+                  </div>
+                  <div className="text-xs text-gray-500">
+                    {award.source_detail} • {formatTimeAgo(award.created_at)}
+                  </div>
+                </div>
+                {award.canUndo ? (
+                  <button
+                    type="button"
+                    onClick={() => openUndoModal(award)}
+                    className="px-2 py-1 text-xs bg-orange-100 text-orange-700 rounded hover:bg-orange-200"
+                  >
+                    Undo
+                  </button>
+                ) : (
+                  <span className="text-xs text-gray-400">Expired</span>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Undo Modal */}
+      {undoModalOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-sm w-full mx-4 shadow-xl">
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">Undo Points Award</h3>
+            <p className="text-sm text-gray-600 mb-4">
+              You are about to remove <strong>{undoTarget?.points_amount} points</strong> from{' '}
+              <strong>{undoTarget?.employee_name}</strong>.
+            </p>
+
+            {undoError && (
+              <p className="text-sm text-red-600 bg-red-50 p-2 rounded mb-3">{undoError}</p>
+            )}
+
+            <div className="mb-4">
+              <label className="block text-sm font-medium mb-1">Reason for undo *</label>
+              <input
+                type="text"
+                className="w-full border rounded px-3 py-2 text-sm"
+                value={undoReason}
+                onChange={(e) => setUndoReason(e.target.value)}
+                placeholder="e.g. Incorrect point amount, wrong employee, etc."
+              />
+            </div>
+
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setUndoModalOpen(false)}
+                className="flex-1 px-4 py-2 border rounded text-sm hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleUndo}
+                disabled={undoMutation.isPending}
+                className="flex-1 px-4 py-2 bg-red-600 text-white rounded text-sm hover:bg-red-700 disabled:opacity-60"
+              >
+                {undoMutation.isPending ? 'Undoing...' : 'Confirm Undo'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )

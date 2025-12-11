@@ -8,6 +8,8 @@ export const pointsKeys = {
   leaderboards: (locationId) => [...pointsKeys.all, 'leaderboards', locationId],
   myPoints: (employeeId) => [...pointsKeys.all, 'myPoints', employeeId],
   rewards: (locationId) => [...pointsKeys.all, 'rewards', locationId],
+  recentAwards: (managerId) => [...pointsKeys.all, 'recentAwards', managerId],
+  allPointsHistory: (locationId) => [...pointsKeys.all, 'history', locationId],
 }
 
 // Calculate week boundaries (Monday-Sunday)
@@ -213,6 +215,128 @@ export function useSpendPoints() {
 
       if (error) throw error
       return { reward }
+    },
+    onSuccess: () => {
+      // Invalidate all points-related queries
+      queryClient.invalidateQueries({ queryKey: pointsKeys.all })
+    },
+  })
+}
+
+// Fetch recent awards by a manager (last 5)
+async function fetchRecentAwards(managerId, locationId) {
+  // Get employee names for display
+  const { data: employees } = await supabase
+    .from('employees')
+    .select('id, display_name')
+    .eq('location_id', locationId)
+
+  const employeeMap = {}
+  ;(employees || []).forEach((e) => {
+    employeeMap[e.id] = e.display_name
+  })
+
+  // Get last 5 awards by this manager
+  const { data, error } = await supabase
+    .from('points_log')
+    .select('id, employee_id, points_amount, source_detail, created_at')
+    .eq('awarded_by', managerId)
+    .eq('source', 'manager')
+    .order('created_at', { ascending: false })
+    .limit(5)
+
+  if (error) throw error
+
+  return (data || []).map((award) => ({
+    ...award,
+    employee_name: employeeMap[award.employee_id] || 'Unknown',
+    // Calculate if within 1 hour window
+    canUndo: new Date() - new Date(award.created_at) < 60 * 60 * 1000,
+  }))
+}
+
+// Hook for recent awards by manager
+export function useRecentAwards(managerId, locationId) {
+  return useQuery({
+    queryKey: pointsKeys.recentAwards(managerId),
+    queryFn: () => fetchRecentAwards(managerId, locationId),
+    enabled: !!managerId && !!locationId,
+    refetchInterval: 30000, // Refresh every 30 seconds to update canUndo status
+  })
+}
+
+// Fetch all points history for a location (for GoalsPage)
+async function fetchAllPointsHistory(locationId, filters = {}) {
+  const { startDate, endDate, awardType } = filters
+
+  // Get employee names
+  const { data: employees } = await supabase
+    .from('employees')
+    .select('id, display_name')
+    .eq('location_id', locationId)
+
+  const employeeMap = {}
+  ;(employees || []).forEach((e) => {
+    employeeMap[e.id] = e.display_name
+  })
+
+  // Build query
+  let query = supabase
+    .from('points_log')
+    .select('id, employee_id, points_amount, source, source_detail, awarded_by, created_at')
+    .eq('location_id', locationId)
+    .gt('points_amount', 0) // Only positive points (awards, not redemptions)
+    .order('created_at', { ascending: false })
+
+  // Apply filters
+  if (startDate) {
+    query = query.gte('created_at', startDate)
+  }
+  if (endDate) {
+    query = query.lte('created_at', endDate)
+  }
+  if (awardType && awardType !== 'all') {
+    query = query.eq('source', awardType)
+  }
+
+  const { data, error } = await query
+
+  if (error) throw error
+
+  return (data || []).map((award) => ({
+    ...award,
+    employee_name: employeeMap[award.employee_id] || 'Unknown',
+    awarded_by_name: award.awarded_by ? employeeMap[award.awarded_by] || 'Unknown' : null,
+  }))
+}
+
+// Hook for all points history
+export function useAllPointsHistory(locationId, filters = {}) {
+  return useQuery({
+    queryKey: [...pointsKeys.allPointsHistory(locationId), filters],
+    queryFn: () => fetchAllPointsHistory(locationId, filters),
+    enabled: !!locationId,
+  })
+}
+
+// Mutation for undoing a points award
+export function useUndoPoints() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async ({ pointsLogId, reason }) => {
+      // Delete the points log entry
+      const { error } = await supabase
+        .from('points_log')
+        .delete()
+        .eq('id', pointsLogId)
+
+      if (error) throw error
+
+      // Optionally log the undo action (could add an undo_log table later)
+      console.log(`Points award ${pointsLogId} undone. Reason: ${reason}`)
+
+      return { pointsLogId, reason }
     },
     onSuccess: () => {
       // Invalidate all points-related queries

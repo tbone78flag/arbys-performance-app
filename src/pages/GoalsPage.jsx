@@ -5,6 +5,7 @@ import { DailySalesYoYCard } from '../components/DailySalesYoYCard'
 import { SpeedWeekEntryCard } from '../components/SpeedWeekEntryCard'
 import { BeefVarianceCard } from '../components/BeefVarianceCard'
 import RewardsManager from '../components/RewardsManager'
+import PointsHistory from '../components/PointsHistory'
 import { startOfWeekLocal, addDays } from '../utils/dateHelpers'
 
 export default function GoalsPage({ profile }) {
@@ -384,6 +385,36 @@ export default function GoalsPage({ profile }) {
               {openSection === 'rewards-manager' && (
                 <div className="px-4 pb-4 pt-2 bg-gray-50 border-t">
                   <RewardsManager locationId={locationId} />
+                </div>
+              )}
+            </div>
+
+            {/* Points History Accordion */}
+            <div className="border rounded-lg overflow-hidden">
+              <button
+                type="button"
+                onClick={() => toggleSection('points-history')}
+                className="w-full flex items-center justify-between px-4 py-3 text-left bg-white hover:bg-gray-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500"
+                aria-expanded={openSection === 'points-history'}
+              >
+                <div className="flex flex-col">
+                  <span className="font-medium">Points History</span>
+                  <span className="text-xs text-gray-500">
+                    View all points awarded and undo if needed.
+                  </span>
+                </div>
+                <span
+                  className={`transform transition-transform ${
+                    openSection === 'points-history' ? 'rotate-90' : ''
+                  }`}
+                >
+                  ▶
+                </span>
+              </button>
+
+              {openSection === 'points-history' && (
+                <div className="px-4 pb-4 pt-2 bg-gray-50 border-t">
+                  <PointsHistory locationId={locationId} />
                 </div>
               )}
             </div>
