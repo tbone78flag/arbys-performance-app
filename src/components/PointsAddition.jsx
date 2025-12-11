@@ -1,6 +1,7 @@
 // src/components/PointsAddition.jsx
 import { useState, useEffect } from 'react'
 import { supabase } from '../supabaseClient'
+import { useAwardPoints } from '../hooks/usePointsData'
 
 // Title hierarchy - higher number = higher rank
 const TITLE_RANK = {
@@ -27,13 +28,15 @@ export default function PointsAddition({ locationId, managerProfile }) {
   const [selectedEmployee, setSelectedEmployee] = useState('')
   const [pointsAmount, setPointsAmount] = useState('')
   const [reason, setReason] = useState('')
-  const [saving, setSaving] = useState(false)
   const [formError, setFormError] = useState(null)
   const [successMessage, setSuccessMessage] = useState(null)
 
   const managerId = managerProfile?.id
   const managerTitle = managerProfile?.title
   const allowedTitles = getAllowedTitles(managerTitle)
+
+  // Use mutation hook for awarding points
+  const awardMutation = useAwardPoints()
 
   // Fetch employees for this location (excluding self, filtered by title hierarchy)
   useEffect(() => {
@@ -99,23 +102,14 @@ export default function PointsAddition({ locationId, managerProfile }) {
       return
     }
 
-    setSaving(true)
-
     try {
-      const { error: insertError } = await supabase.from('points_log').insert({
-        employee_id: selectedEmployee,
-        location_id: locationId,
-        points_amount: points,
-        source: 'manager',
-        source_detail: reason.trim(),
-        awarded_by: managerId,
+      await awardMutation.mutateAsync({
+        employeeId: selectedEmployee,
+        locationId,
+        points,
+        reason: reason.trim(),
+        awardedBy: managerId,
       })
-
-      if (insertError) {
-        console.error('Error awarding points', insertError)
-        setFormError(`Failed to award points: ${insertError.message}`)
-        return
-      }
 
       const employeeName =
         employees.find((e) => e.id === selectedEmployee)?.display_name ||
@@ -128,8 +122,6 @@ export default function PointsAddition({ locationId, managerProfile }) {
     } catch (err) {
       console.error('Error awarding points:', err)
       setFormError(err?.message || 'Failed to award points.')
-    } finally {
-      setSaving(false)
     }
   }
 
@@ -226,10 +218,10 @@ export default function PointsAddition({ locationId, managerProfile }) {
 
           <button
             type="submit"
-            disabled={saving}
+            disabled={awardMutation.isPending}
             className="w-full bg-red-600 text-white px-4 py-2 rounded text-sm hover:bg-red-700 disabled:opacity-60"
           >
-            {saving ? 'Awarding...' : 'Award Points'}
+            {awardMutation.isPending ? 'Awarding...' : 'Award Points'}
           </button>
         </form>
       )}

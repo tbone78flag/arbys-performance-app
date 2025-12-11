@@ -1,8 +1,13 @@
 // src/pages/PointsPage.jsx
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { supabase } from '../supabaseClient'
 import PointsAddition from '../components/PointsAddition'
+import {
+  useLeaderboards,
+  useMyPoints,
+  useRewards,
+  useSpendPoints,
+} from '../hooks/usePointsData'
 
 export default function PointsPage({ profile }) {
   const navigate = useNavigate()
@@ -15,14 +20,7 @@ export default function PointsPage({ profile }) {
   const [spendOpen, setSpendOpen] = useState(false)
   const [managerToolsOpen, setManagerToolsOpen] = useState(false)
 
-  // Data states
-  const [weeklyData, setWeeklyData] = useState([])
-  const [monthlyData, setMonthlyData] = useState([])
-  const [myTotalPoints, setMyTotalPoints] = useState(0)
-  const [myPointsLog, setMyPointsLog] = useState([])
-  const [rewards, setRewards] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [spending, setSpending] = useState(null)
+  // UI states for spend
   const [spendError, setSpendError] = useState(null)
   const [spendSuccess, setSpendSuccess] = useState(null)
 
@@ -38,144 +36,34 @@ export default function PointsPage({ profile }) {
     }
   }, [profile, navigate])
 
-  // Calculate week and month boundaries
-  const { weekStart, weekEnd, monthStart, monthEnd } = useMemo(() => {
-    const now = new Date()
+  // React Query hooks
+  const {
+    data: leaderboardData,
+    isLoading: leaderboardLoading,
+  } = useLeaderboards(locationId)
 
-    // Week start (Monday)
-    const day = now.getDay()
-    const diff = (day + 6) % 7
-    const ws = new Date(now)
-    ws.setHours(0, 0, 0, 0)
-    ws.setDate(ws.getDate() - diff)
+  const {
+    data: myPointsData,
+    isLoading: myPointsLoading,
+  } = useMyPoints(profile?.id)
 
-    const we = new Date(ws)
-    we.setDate(we.getDate() + 6)
-    we.setHours(23, 59, 59, 999)
+  const {
+    data: rewards = [],
+    isLoading: rewardsLoading,
+  } = useRewards(locationId)
 
-    // Month start/end
-    const ms = new Date(now.getFullYear(), now.getMonth(), 1)
-    const me = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999)
+  const spendMutation = useSpendPoints()
 
-    return {
-      weekStart: ws,
-      weekEnd: we,
-      monthStart: ms,
-      monthEnd: me,
-    }
-  }, [])
+  // Extract data from queries
+  const weeklyData = leaderboardData?.weeklyData || []
+  const monthlyData = leaderboardData?.monthlyData || []
+  const weekStart = leaderboardData?.weekStart || new Date()
+  const weekEnd = leaderboardData?.weekEnd || new Date()
+  const monthStart = leaderboardData?.monthStart || new Date()
+  const myTotalPoints = myPointsData?.totalPoints || 0
+  const myPointsLog = myPointsData?.weekLog || []
 
-  // Load all data
-  useEffect(() => {
-    if (!profile) return
-
-    async function loadData() {
-      setLoading(true)
-
-      // 1. Get all points for this location (for weekly/monthly leaderboards)
-      const { data: allPoints } = await supabase
-        .from('points_log')
-        .select('employee_id, points_amount, created_at, source, source_detail')
-        .eq('location_id', locationId)
-        .gte('created_at', weekStart.toISOString())
-
-      // 2. Get employee names
-      const { data: employees } = await supabase
-        .from('employees')
-        .select('id, display_name')
-        .eq('location_id', locationId)
-
-      const employeeMap = {}
-      ;(employees || []).forEach((e) => {
-        employeeMap[e.id] = e.display_name
-      })
-
-      // 3. Calculate weekly totals per employee (only count earned points, not redemptions)
-      const weeklyTotals = {}
-      ;(allPoints || []).forEach((p) => {
-        const pDate = new Date(p.created_at)
-        // Only count positive points (earned), exclude redemptions for leaderboard
-        if (pDate >= weekStart && pDate <= weekEnd && p.points_amount > 0) {
-          if (!weeklyTotals[p.employee_id]) {
-            weeklyTotals[p.employee_id] = 0
-          }
-          weeklyTotals[p.employee_id] += p.points_amount
-        }
-      })
-
-      const weeklyArr = Object.entries(weeklyTotals)
-        .map(([id, points]) => ({
-          id,
-          name: employeeMap[id] || 'Unknown',
-          points,
-        }))
-        .sort((a, b) => b.points - a.points)
-
-      setWeeklyData(weeklyArr)
-
-      // 4. Get monthly data
-      const { data: monthlyPoints } = await supabase
-        .from('points_log')
-        .select('employee_id, points_amount, created_at')
-        .eq('location_id', locationId)
-        .gte('created_at', monthStart.toISOString())
-        .lte('created_at', monthEnd.toISOString())
-
-      // Only count positive points (earned), exclude redemptions for leaderboard
-      const monthlyTotals = {}
-      ;(monthlyPoints || []).forEach((p) => {
-        if (p.points_amount > 0) {
-          if (!monthlyTotals[p.employee_id]) {
-            monthlyTotals[p.employee_id] = 0
-          }
-          monthlyTotals[p.employee_id] += p.points_amount
-        }
-      })
-
-      const monthlyArr = Object.entries(monthlyTotals)
-        .map(([id, points]) => ({
-          id,
-          name: employeeMap[id] || 'Unknown',
-          points,
-        }))
-        .sort((a, b) => b.points - a.points)
-
-      setMonthlyData(monthlyArr)
-
-      // 5. Get my total points (all time, minus redemptions)
-      const { data: myPoints } = await supabase
-        .from('points_log')
-        .select('points_amount')
-        .eq('employee_id', profile.id)
-
-      const total = (myPoints || []).reduce((sum, p) => sum + p.points_amount, 0)
-      setMyTotalPoints(total)
-
-      // 6. Get my points log for this week (for detailed breakdown)
-      const { data: myLog } = await supabase
-        .from('points_log')
-        .select('id, points_amount, source, source_detail, created_at')
-        .eq('employee_id', profile.id)
-        .gte('created_at', weekStart.toISOString())
-        .order('created_at', { ascending: false })
-
-      setMyPointsLog(myLog || [])
-
-      // 7. Get available rewards
-      const { data: rewardsData } = await supabase
-        .from('points_rewards')
-        .select('*')
-        .eq('location_id', locationId)
-        .eq('active', true)
-        .order('points_cost', { ascending: true })
-
-      setRewards(rewardsData || [])
-
-      setLoading(false)
-    }
-
-    loadData()
-  }, [profile, locationId, weekStart, weekEnd, monthStart, monthEnd])
+  const loading = leaderboardLoading || myPointsLoading || rewardsLoading
 
   // Clear success message after 3 seconds
   useEffect(() => {
@@ -200,33 +88,18 @@ export default function PointsPage({ profile }) {
       return
     }
 
-    setSpending(reward.id)
     setSpendError(null)
 
     try {
-      // Deduct points (negative entry)
-      const { error: deductError } = await supabase.from('points_log').insert({
-        employee_id: profile.id,
-        location_id: locationId,
-        points_amount: -reward.points_cost,
-        source: 'redemption',
-        source_detail: reward.reward_name,
+      await spendMutation.mutateAsync({
+        employeeId: profile.id,
+        locationId,
+        reward,
       })
-
-      if (deductError) {
-        console.error('Error redeeming reward', deductError)
-        setSpendError(`Failed to redeem: ${deductError.message}`)
-        return
-      }
-
-      // Update local state
-      setMyTotalPoints((prev) => prev - reward.points_cost)
       setSpendSuccess(`Successfully redeemed "${reward.reward_name}"! Show this to a manager.`)
     } catch (err) {
       console.error('Error spending points:', err)
       setSpendError(err?.message || 'Failed to redeem reward.')
-    } finally {
-      setSpending(null)
     }
   }
 
@@ -473,7 +346,7 @@ export default function PointsPage({ profile }) {
                   <div className="space-y-2">
                     {rewards.map((reward) => {
                       const canAfford = myTotalPoints >= reward.points_cost
-                      const isSpending = spending === reward.id
+                      const isSpending = spendMutation.isPending && spendMutation.variables?.reward?.id === reward.id
 
                       return (
                         <div
