@@ -90,11 +90,12 @@ export default function PointsPage({ profile }) {
         employeeMap[e.id] = e.display_name
       })
 
-      // 3. Calculate weekly totals per employee
+      // 3. Calculate weekly totals per employee (only count earned points, not redemptions)
       const weeklyTotals = {}
       ;(allPoints || []).forEach((p) => {
         const pDate = new Date(p.created_at)
-        if (pDate >= weekStart && pDate <= weekEnd) {
+        // Only count positive points (earned), exclude redemptions for leaderboard
+        if (pDate >= weekStart && pDate <= weekEnd && p.points_amount > 0) {
           if (!weeklyTotals[p.employee_id]) {
             weeklyTotals[p.employee_id] = 0
           }
@@ -120,12 +121,15 @@ export default function PointsPage({ profile }) {
         .gte('created_at', monthStart.toISOString())
         .lte('created_at', monthEnd.toISOString())
 
+      // Only count positive points (earned), exclude redemptions for leaderboard
       const monthlyTotals = {}
       ;(monthlyPoints || []).forEach((p) => {
-        if (!monthlyTotals[p.employee_id]) {
-          monthlyTotals[p.employee_id] = 0
+        if (p.points_amount > 0) {
+          if (!monthlyTotals[p.employee_id]) {
+            monthlyTotals[p.employee_id] = 0
+          }
+          monthlyTotals[p.employee_id] += p.points_amount
         }
-        monthlyTotals[p.employee_id] += p.points_amount
       })
 
       const monthlyArr = Object.entries(monthlyTotals)
@@ -532,7 +536,7 @@ export default function PointsPage({ profile }) {
 
             {managerToolsOpen && (
               <div className="px-4 pb-4 pt-2 bg-gray-50 border-t">
-                <PointsAddition locationId={locationId} managerId={profile.id} />
+                <PointsAddition locationId={locationId} managerProfile={profile} />
               </div>
             )}
           </div>

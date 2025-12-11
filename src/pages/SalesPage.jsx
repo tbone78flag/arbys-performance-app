@@ -43,9 +43,6 @@ export default function SalesPage({ profile }) {
 
           {/* Period chart + export */}
           <SalesPeriodSummary profile={profile} locationId={locationId} />
-
-          {/* Existing cash control section */}
-          <CashControl />
         </div>
       )}
     </div>

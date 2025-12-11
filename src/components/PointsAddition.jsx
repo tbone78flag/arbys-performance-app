@@ -2,7 +2,23 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../supabaseClient'
 
-export default function PointsAddition({ locationId, managerId }) {
+// Title hierarchy - higher number = higher rank
+const TITLE_RANK = {
+  'Team Member': 1,
+  'Shift Manager': 2,
+  'Assistant Manager': 3,
+  'General Manager': 4,
+}
+
+// Get titles that a manager can award points to (lower than their own)
+function getAllowedTitles(managerTitle) {
+  const managerRank = TITLE_RANK[managerTitle] || 0
+  return Object.entries(TITLE_RANK)
+    .filter(([, rank]) => rank < managerRank)
+    .map(([title]) => title)
+}
+
+export default function PointsAddition({ locationId, managerProfile }) {
   const [employees, setEmployees] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -15,7 +31,11 @@ export default function PointsAddition({ locationId, managerId }) {
   const [formError, setFormError] = useState(null)
   const [successMessage, setSuccessMessage] = useState(null)
 
-  // Fetch employees for this location
+  const managerId = managerProfile?.id
+  const managerTitle = managerProfile?.title
+  const allowedTitles = getAllowedTitles(managerTitle)
+
+  // Fetch employees for this location (excluding self, filtered by title hierarchy)
   useEffect(() => {
     async function fetchEmployees() {
       setLoading(true)
@@ -23,7 +43,7 @@ export default function PointsAddition({ locationId, managerId }) {
 
       const { data, error: fetchError } = await supabase
         .from('employees')
-        .select('id, display_name, username')
+        .select('id, display_name, username, title')
         .eq('location_id', locationId)
         .order('display_name', { ascending: true })
 
@@ -31,14 +51,23 @@ export default function PointsAddition({ locationId, managerId }) {
         console.error('Error loading employees', fetchError)
         setError(`Failed to load employees: ${fetchError.message}`)
       } else {
-        setEmployees(data || [])
+        // Filter: exclude self and only include employees with lower titles
+        const filtered = (data || []).filter((emp) => {
+          // Exclude self
+          if (emp.id === managerId) return false
+          // Only include employees with allowed titles (lower in hierarchy)
+          return allowedTitles.includes(emp.title)
+        })
+        setEmployees(filtered)
       }
 
       setLoading(false)
     }
 
-    fetchEmployees()
-  }, [locationId])
+    if (managerId && managerTitle) {
+      fetchEmployees()
+    }
+  }, [locationId, managerId, managerTitle, allowedTitles.join(',')])
 
   // Clear success message after 3 seconds
   useEffect(() => {
@@ -148,7 +177,7 @@ export default function PointsAddition({ locationId, managerId }) {
               <option value="">Choose an employee...</option>
               {employees.map((emp) => (
                 <option key={emp.id} value={emp.id}>
-                  {emp.display_name} ({emp.username})
+                  {emp.display_name} - {emp.title || 'Team Member'}
                 </option>
               ))}
             </select>
