@@ -124,8 +124,8 @@ export default function BingoGame({ profile }) {
       return;
     }
 
-    if (score <= 0) {
-      setSaveError('No points to save.');
+    if (score < 2) {
+      setSaveError('You need at least 2 points to save (the FREE space alone doesn\'t count).');
       return;
     }
 
@@ -207,7 +207,7 @@ export default function BingoGame({ profile }) {
         <button
           type="button"
           onClick={() => setSaveModalOpen(true)}
-          disabled={score <= 0}
+          disabled={score < 2}
           className="px-3 py-1 border rounded bg-green-600 text-white hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed mr-2"
         >
           Save Points
@@ -236,7 +236,7 @@ export default function BingoGame({ profile }) {
               You are about to save <strong>{score} points</strong> from your Bingo game.
             </p>
             <p className="text-sm text-amber-600 mb-4">
-              This will reset your score to 0 and deal a new card. Are you sure?
+              This will reset your score to 1 and deal a new card. Are you sure?
             </p>
 
             {saveError && (

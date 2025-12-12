@@ -492,6 +492,17 @@ export default function SpeedPage({ profile, targets = {} }) {
          Real throughput also depends on order-taking and kitchen capacity. <br/>
          Margin % calculates the profit gain after food/packaging costs. Margin = ((Avg Check-Variable Cost per Car)/Avg Check)*100
        </p>
+
+       <p className="mt-4 text-sm italic">
+         *Check out the sales page to see impact from increasing the average check with upsells.
+       </p>
+
+       <button
+         className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700 mt-2"
+         onClick={() => navigate('/sales')}
+       >
+         Sales Page
+       </button>
      </div>
 
      <h3 className="text-lg font-bold mt-6">Using the What-If Calculator</h3>
