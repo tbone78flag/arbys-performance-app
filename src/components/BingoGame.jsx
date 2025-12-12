@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useAwardPoints } from '../hooks/usePointsData';
+import { supabase } from '../supabaseClient';
+import { useQueryClient } from '@tanstack/react-query';
+import { pointsKeys } from '../hooks/usePointsData';
 
 // === CONFIGURE YOUR SPACE VALUES HERE ===
 // Must have at least 24 entries (center is "FREE")
@@ -59,8 +61,8 @@ export default function BingoGame({ profile }) {
   const [saveError, setSaveError] = useState(null);
   const [saveSuccess, setSaveSuccess] = useState(null);
 
-  // Points mutation
-  const awardMutation = useAwardPoints();
+  // Query client for invalidating points cache
+  const queryClient = useQueryClient();
 
   // Count base marks + 5 pts per completed line
   const calcScore = useCallback(() => {
@@ -131,13 +133,28 @@ export default function BingoGame({ profile }) {
     setSaveError(null);
 
     try {
-      await awardMutation.mutateAsync({
-        employeeId: profile.id,
-        locationId: locationId,
-        points: score,
-        reason: 'Bingo Game',
-        awardedBy: profile.id, // Self-award from game
+      // Direct insert with source 'bingo' for game points
+      const { error } = await supabase.from('points_log').insert({
+        employee_id: profile.id,
+        location_id: locationId,
+        points_amount: score,
+        source: 'bingo',
+        source_detail: 'Bingo Game',
       });
+
+      if (error) {
+        console.error('Supabase error:', error);
+        // Show more detailed error for debugging
+        if (error.code === '23503') {
+          setSaveError('Your account is not set up for points. Please contact a manager.');
+        } else {
+          setSaveError(`Database error: ${error.message}`);
+        }
+        return;
+      }
+
+      // Invalidate points queries to refresh data
+      queryClient.invalidateQueries({ queryKey: pointsKeys.all });
 
       setSaveSuccess(`${score} points saved successfully!`);
       setSaveModalOpen(false);
