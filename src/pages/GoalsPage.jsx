@@ -121,7 +121,7 @@ export default function GoalsPage({ profile }) {
     <div className="w-full max-w-3xl mx-auto bg-white shadow p-4 sm:p-6 rounded px-4 sm:px-6">
       {/* Header */}
       <div className="mb-4 sm:mb-6 flex items-center justify-between gap-3">
-        <h1 className="text-2xl font-bold text-red-700">Goals &amp; Settings</h1>
+        <h1 className="text-2xl font-bold text-red-700">Goals Management Page</h1>
         <button
           className="bg-red-600 text-white px-3 sm:px-4 py-2 rounded hover:bg-red-700 shrink-0"
           onClick={() => navigate('/App')}
@@ -132,7 +132,7 @@ export default function GoalsPage({ profile }) {
       </div>
 
       <p className="text-sm text-gray-600 mb-4">
-        Tap a section to expand and view or edit settings.
+        This page is for managing goal related information and the awards related to those goals. 
       </p>
 
       {/* Accordion sections */}
