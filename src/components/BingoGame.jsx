@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useAwardPoints } from '../hooks/usePointsData';
 
 // === CONFIGURE YOUR SPACE VALUES HERE ===
 // Must have at least 24 entries (center is "FREE")
@@ -38,7 +39,7 @@ function generateCard() {
   );
 }
 
-export default function BingoGame() {
+export default function BingoGame({ profile }) {
   // initialize marked grid with free center marked
   const makeEmpty = () => {
     const m = Array.from({ length: 5 }, () => Array(5).fill(false));
@@ -48,6 +49,15 @@ export default function BingoGame() {
 
   const [card,   setCard]   = useState(generateCard);
   const [marked, setMarked] = useState(makeEmpty);
+
+  // Save points modal state
+  const [saveModalOpen, setSaveModalOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState(null);
+  const [saveSuccess, setSaveSuccess] = useState(null);
+
+  // Points mutation
+  const awardMutation = useAwardPoints();
 
   // Count base marks + 5 pts per completed line
   const calcScore = useCallback(() => {
@@ -94,6 +104,51 @@ export default function BingoGame() {
     setMarked(makeEmpty());
   };
 
+  // Clear success message after 3 seconds
+  useEffect(() => {
+    if (saveSuccess) {
+      const timer = setTimeout(() => setSaveSuccess(null), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [saveSuccess]);
+
+  // Save points and reset game
+  const handleSavePoints = async () => {
+    if (!profile?.id || !profile?.location_id) {
+      setSaveError('Unable to save points. Please try logging in again.');
+      return;
+    }
+
+    if (score <= 0) {
+      setSaveError('No points to save.');
+      return;
+    }
+
+    setSaving(true);
+    setSaveError(null);
+
+    try {
+      await awardMutation.mutateAsync({
+        employeeId: profile.id,
+        locationId: profile.location_id,
+        points: score,
+        reason: 'Bingo Game',
+        awardedBy: profile.id, // Self-award from game
+      });
+
+      setSaveSuccess(`${score} points saved successfully!`);
+      setSaveModalOpen(false);
+      // Reset the game
+      setCard(generateCard());
+      setMarked(makeEmpty());
+    } catch (err) {
+      console.error('Error saving bingo points:', err);
+      setSaveError(err?.message || 'Failed to save points. Please try again.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
     <div className="my-6">
       <h2 className="text-xl font-bold mb-2">Team Sales Bingo</h2>
@@ -130,12 +185,67 @@ export default function BingoGame() {
           Score: <strong>{score}</strong>
         </span>
         <button
+          type="button"
+          onClick={() => setSaveModalOpen(true)}
+          disabled={score <= 0}
+          className="px-3 py-1 border rounded bg-green-600 text-white hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed mr-2"
+        >
+          Save Points
+        </button>
+        <button
+          type="button"
           onClick={newCard}
           className="px-3 py-1 border rounded hover:bg-gray-100"
         >
           New Card
         </button>
       </div>
+
+      {saveSuccess && (
+        <div className="mt-2 text-center text-green-700 bg-green-50 p-2 rounded border border-green-200">
+          {saveSuccess}
+        </div>
+      )}
+
+      {/* Save Points Confirmation Modal */}
+      {saveModalOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-sm w-full mx-4 shadow-xl">
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">Save Bingo Points</h3>
+            <p className="text-sm text-gray-600 mb-4">
+              You are about to save <strong>{score} points</strong> from your Bingo game.
+            </p>
+            <p className="text-sm text-amber-600 mb-4">
+              This will reset your score to 0 and deal a new card. Are you sure?
+            </p>
+
+            {saveError && (
+              <p className="text-sm text-red-600 bg-red-50 p-2 rounded mb-3">{saveError}</p>
+            )}
+
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setSaveModalOpen(false);
+                  setSaveError(null);
+                }}
+                className="flex-1 px-4 py-2 border rounded text-sm hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleSavePoints}
+                disabled={saving}
+                className="flex-1 px-4 py-2 bg-green-600 text-white rounded text-sm hover:bg-green-700 disabled:opacity-60"
+              >
+                {saving ? 'Saving...' : 'Yes, Save Points'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       <br/>
       <h3 className="text-lg font-bold">Rules:</h3>
       <ul style={{ listStyleType: 'disc' }}>
@@ -148,7 +258,7 @@ export default function BingoGame() {
         <dl>
             <dt className="text-lg italic">*2x Sandwich refers to adding an additional of the same sandwich in a way that increases the total cost of the order.
                 <dd>Valid: Getting someone a 2 for $7 ham melt if they originally asked only for one ham melt. </dd>
-                <dd>Not applicable: Getting someone to get the 4 for $12 instead of three roast beefs as this decreases the total cost of the order.</dd>
+                <dd>Not applicable: Getting someone to order the 4 for $12 instead of three roast beefs as this decreases the total cost of the order.</dd>
             </dt>
         </dl>
       </ul>
