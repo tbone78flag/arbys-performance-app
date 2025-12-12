@@ -58,16 +58,23 @@ function App() {
 
     <button
       className="bg-white text-red-600 border border-red-600 px-4 py-2 rounded hover:bg-red-50 mt-4"
-      onClick={() => navigate('/sales')}
+      onClick={() => navigate('/points')}
     >
-      Go to Sales Page
+      Go to Points Page
     </button>
 
     <button
       className="bg-white text-red-600 border border-red-600 px-4 py-2 rounded hover:bg-red-50 mt-4"
-      onClick={() => navigate('/food')}
+      onClick={() => navigate('/games')}
     >
-      Go to Food Page
+      Go to Games Page
+    </button>
+
+    <button
+      className="bg-white text-red-600 border border-red-600 px-4 py-2 rounded hover:bg-red-50 mt-4"
+      onClick={() => navigate('/sales')}
+    >
+      Go to Sales Page
     </button>
 
     <button
@@ -79,23 +86,16 @@ function App() {
 
     <button
       className="bg-white text-red-600 border border-red-600 px-4 py-2 rounded hover:bg-red-50 mt-4"
+      onClick={() => navigate('/food')}
+    >
+      Go to Food Page
+    </button>
+
+    <button
+      className="bg-white text-red-600 border border-red-600 px-4 py-2 rounded hover:bg-red-50 mt-4"
       onClick={() => navigate('/experience')}
     >
       Go to Guest Experience Page
-    </button>
-
-    <button
-      className="bg-white text-red-600 border border-red-600 px-4 py-2 rounded hover:bg-red-50 mt-4"
-      onClick={() => navigate('/points')}
-    >
-      Go to Points Page
-    </button>
-
-    <button
-      className="bg-white text-red-600 border border-red-600 px-4 py-2 rounded hover:bg-red-50 mt-4"
-      onClick={() => navigate('/games')}
-    >
-      Go to Games Page
     </button>
 
     {profile?.role === 'manager' && (
