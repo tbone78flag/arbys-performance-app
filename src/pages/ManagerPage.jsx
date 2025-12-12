@@ -9,8 +9,7 @@ import { startOfWeekLocal, addDays } from '../utils/dateHelpers'
 
 export default function ManagerPage({ profile }) {
   const navigate = useNavigate()
-  const [openItem, setOpenItem] = useState(null)
-  const [openManagerItem, setOpenManagerItem] = useState(null)
+  const [openTool, setOpenTool] = useState(null)
 
   const locationId = profile?.location_id || 'holladay-3900'
 
@@ -37,19 +36,21 @@ export default function ManagerPage({ profile }) {
     profile?.title
   )
 
-  const toggleItem = (id) => {
-    setOpenItem((current) => (current === id ? null : id))
-  }
-
-  const toggleManagerItem = (id) => {
-    setOpenManagerItem((current) => (current === id ? null : id))
+  const toggleTool = (id) => {
+    setOpenTool((current) => (current === id ? null : id))
   }
 
   // Only Assistant Manager and General Manager can edit sales/speed data
   const isEditor = ['Assistant Manager', 'General Manager'].includes(profile?.title)
 
-  // Tools accessible to all managers
-  const managerTools = [
+  // Flat list of all tools
+  const tools = [
+    {
+      id: 'cash-control',
+      title: 'Cash Control',
+      summary: 'Track cash counts for drop/lock safe, storage vault, tills, and change orders.',
+      component: <CashControl locationId={locationId} />,
+    },
     {
       id: 'daily-sales',
       title: 'Daily Sales YoY',
@@ -71,22 +72,17 @@ export default function ManagerPage({ profile }) {
         />
       ),
     },
-    {
-      id: 'cash-control',
-      title: 'Cash Control',
-      summary: 'Track cash counts for drop/lock safe, storage vault, tills, and change orders.',
-      component: <CashControl locationId={locationId} />,
-    },
-  ]
-
-  // Tools only for Assistant Manager and General Manager
-  const seniorManagerTools = [
-    {
-      id: 'team-management',
-      title: 'Team Management',
-      summary: 'Add, edit, and remove team members for this location.',
-      component: <TeamManagement profile={profile} locationId={locationId} />,
-    },
+    // Only show Team Management for Assistant Manager and General Manager
+    ...(canManageEmployees
+      ? [
+          {
+            id: 'team-management',
+            title: 'Team Management',
+            summary: 'Add, edit, and remove team members for this location.',
+            component: <TeamManagement profile={profile} locationId={locationId} />,
+          },
+        ]
+      : []),
   ]
 
   return (
@@ -104,110 +100,54 @@ export default function ManagerPage({ profile }) {
         </button>
       </div>
 
-      {/* Manager Tools - Accessible to all managers */}
+      {/* Manager Tools */}
       {isManager && (
-        <section className="mb-6">
-          <h2 className="text-lg font-semibold mb-3">Manager Tools</h2>
+        <div className="space-y-2">
           <p className="text-sm text-gray-600 mb-4">
             Tap a tool to expand and use it during your shift.
           </p>
 
-          <div className="space-y-2">
-            {managerTools.map((tool) => {
-              const isOpen = openItem === tool.id
-              return (
-                <div
-                  key={tool.id}
-                  className="border rounded-lg overflow-hidden"
+          {tools.map((tool) => {
+            const isToolOpen = openTool === tool.id
+            return (
+              <div
+                key={tool.id}
+                className="border rounded-lg overflow-hidden"
+              >
+                <button
+                  type="button"
+                  onClick={() => toggleTool(tool.id)}
+                  className="w-full flex items-center justify-between px-4 py-3 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500 hover:bg-gray-50"
+                  aria-expanded={isToolOpen}
+                  aria-controls={`tool-panel-${tool.id}`}
                 >
-                  <button
-                    type="button"
-                    onClick={() => toggleItem(tool.id)}
-                    className="w-full flex items-center justify-between px-4 py-3 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500"
-                    aria-expanded={isOpen}
-                    aria-controls={`tool-panel-${tool.id}`}
-                  >
-                    <div className="flex flex-col">
-                      <span className="font-medium">{tool.title}</span>
-                      <span className="text-xs text-gray-500">
-                        {tool.summary}
-                      </span>
-                    </div>
-                    <span
-                      className={`transform transition-transform ${
-                        isOpen ? 'rotate-90' : ''
-                      }`}
-                    >
-                      ▶
+                  <div className="flex flex-col">
+                    <span className="font-medium">{tool.title}</span>
+                    <span className="text-xs text-gray-500">
+                      {tool.summary}
                     </span>
-                  </button>
-
-                  {isOpen && (
-                    <div
-                      id={`tool-panel-${tool.id}`}
-                      className="px-4 pb-4 pt-2 bg-gray-50 border-t"
-                    >
-                      {tool.component}
-                    </div>
-                  )}
-                </div>
-              )
-            })}
-          </div>
-        </section>
-      )}
-
-      {/* Senior Manager Tools - Only for Assistant Manager and General Manager */}
-      {canManageEmployees && (
-        <section className="border-t pt-4 mt-4">
-          <h2 className="text-lg font-semibold text-red-600 mb-3">Senior Manager Tools</h2>
-          <p className="text-sm text-gray-600 mb-4">
-            Available only to Assistant Managers and General Managers.
-          </p>
-
-          <div className="space-y-2">
-            {seniorManagerTools.map((tool) => {
-              const isOpen = openManagerItem === tool.id
-              return (
-                <div
-                  key={tool.id}
-                  className="border rounded-lg overflow-hidden"
-                >
-                  <button
-                    type="button"
-                    onClick={() => toggleManagerItem(tool.id)}
-                    className="w-full flex items-center justify-between px-4 py-3 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500"
-                    aria-expanded={isOpen}
-                    aria-controls={`manager-tool-panel-${tool.id}`}
+                  </div>
+                  <span
+                    className={`transform transition-transform ${
+                      isToolOpen ? 'rotate-90' : ''
+                    }`}
                   >
-                    <div className="flex flex-col">
-                      <span className="font-medium">{tool.title}</span>
-                      <span className="text-xs text-gray-500">
-                        {tool.summary}
-                      </span>
-                    </div>
-                    <span
-                      className={`transform transition-transform ${
-                        isOpen ? 'rotate-90' : ''
-                      }`}
-                    >
-                      ▶
-                    </span>
-                  </button>
+                    ▶
+                  </span>
+                </button>
 
-                  {isOpen && (
-                    <div
-                      id={`manager-tool-panel-${tool.id}`}
-                      className="px-4 pb-4 pt-2 bg-gray-50 border-t"
-                    >
-                      {tool.component}
-                    </div>
-                  )}
-                </div>
-              )
-            })}
-          </div>
-        </section>
+                {isToolOpen && (
+                  <div
+                    id={`tool-panel-${tool.id}`}
+                    className="px-4 pb-4 pt-2 bg-gray-50 border-t"
+                  >
+                    {tool.component}
+                  </div>
+                )}
+              </div>
+            )
+          })}
+        </div>
       )}
     </div>
   )
