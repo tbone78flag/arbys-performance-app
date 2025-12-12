@@ -1,8 +1,6 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../supabaseClient'
 import { useNavigate } from 'react-router-dom'
-import { DailySalesYoYCard } from '../components/DailySalesYoYCard'
-import { SpeedWeekEntryCard } from '../components/SpeedWeekEntryCard'
 import { BeefVarianceCard } from '../components/BeefVarianceCard'
 import RewardsManager from '../components/RewardsManager'
 import PointsHistory from '../components/PointsHistory'
@@ -137,73 +135,6 @@ export default function GoalsPage({ profile }) {
 
       {/* Accordion sections */}
       <div className="space-y-2">
-        {/* Daily Sales YoY Accordion */}
-        <div className="border rounded-lg overflow-hidden">
-          <button
-            type="button"
-            onClick={() => toggleSection('daily-sales')}
-            className="w-full flex items-center justify-between px-4 py-3 text-left bg-white hover:bg-gray-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500"
-            aria-expanded={openSection === 'daily-sales'}
-          >
-            <div className="flex flex-col">
-              <span className="font-medium">Daily Sales YoY</span>
-              <span className="text-xs text-gray-500">
-                View and manage daily sales year-over-year comparisons.
-              </span>
-            </div>
-            <span
-              className={`transform transition-transform ${
-                openSection === 'daily-sales' ? 'rotate-90' : ''
-              }`}
-            >
-              ▶
-            </span>
-          </button>
-
-          {openSection === 'daily-sales' && (
-            <div className="px-4 pb-4 pt-2 bg-gray-50 border-t">
-              <DailySalesYoYCard locationId={locationId} isEditor={isEditor} />
-            </div>
-          )}
-        </div>
-
-        {/* Drive-Thru Speed Accordion */}
-        <div className="border rounded-lg overflow-hidden">
-          <button
-            type="button"
-            onClick={() => toggleSection('speed-entry')}
-            className="w-full flex items-center justify-between px-4 py-3 text-left bg-white hover:bg-gray-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500"
-            aria-expanded={openSection === 'speed-entry'}
-          >
-            <div className="flex flex-col">
-              <span className="font-medium">Drive-Thru Speed</span>
-              <span className="text-xs text-gray-500">
-                Enter weekly drive-thru speed times by daypart.
-              </span>
-            </div>
-            <span
-              className={`transform transition-transform ${
-                openSection === 'speed-entry' ? 'rotate-90' : ''
-              }`}
-            >
-              ▶
-            </span>
-          </button>
-
-          {openSection === 'speed-entry' && (
-            <div className="px-4 pb-4 pt-2 bg-gray-50 border-t">
-              <SpeedWeekEntryCard
-                locationId={locationId}
-                weekStart={weekStart}
-                weekEnd={weekEnd}
-                weekLabel={weekLabel}
-                onPrevWeek={() => setWeekAnchor(addDays(weekStart, -1))}
-                onNextWeek={() => setWeekAnchor(addDays(weekEnd, 1))}
-              />
-            </div>
-          )}
-        </div>
-
         {/* Beef Variance Accordion */}
         <div className="border rounded-lg overflow-hidden">
           <button

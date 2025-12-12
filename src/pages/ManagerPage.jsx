@@ -3,6 +3,9 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import CashControl from '../components/CashControl'
 import TeamManagement from '../components/TeamManagement'
+import { DailySalesYoYCard } from '../components/DailySalesYoYCard'
+import { SpeedWeekEntryCard } from '../components/SpeedWeekEntryCard'
+import { startOfWeekLocal, addDays } from '../utils/dateHelpers'
 
 export default function ManagerPage({ profile }) {
   const navigate = useNavigate()
@@ -10,6 +13,12 @@ export default function ManagerPage({ profile }) {
   const [openManagerItem, setOpenManagerItem] = useState(null)
 
   const locationId = profile?.location_id || 'holladay-3900'
+
+  // Week navigation state for speed entry
+  const [weekAnchor, setWeekAnchor] = useState(() => new Date())
+  const weekStart = startOfWeekLocal(weekAnchor)
+  const weekEnd = addDays(weekStart, 6)
+  const weekLabel = `${weekStart.toLocaleDateString()} – ${weekEnd.toLocaleDateString()}`
 
   useEffect(() => {
     if (!profile) {
@@ -36,8 +45,32 @@ export default function ManagerPage({ profile }) {
     setOpenManagerItem((current) => (current === id ? null : id))
   }
 
+  // Only Assistant Manager and General Manager can edit sales/speed data
+  const isEditor = ['Assistant Manager', 'General Manager'].includes(profile?.title)
+
   // Tools accessible to all managers
   const managerTools = [
+    {
+      id: 'daily-sales',
+      title: 'Daily Sales YoY',
+      summary: 'View and manage daily sales year-over-year comparisons.',
+      component: <DailySalesYoYCard locationId={locationId} isEditor={isEditor} />,
+    },
+    {
+      id: 'speed-entry',
+      title: 'Drive-Thru Speed',
+      summary: 'Enter weekly drive-thru speed times by daypart.',
+      component: (
+        <SpeedWeekEntryCard
+          locationId={locationId}
+          weekStart={weekStart}
+          weekEnd={weekEnd}
+          weekLabel={weekLabel}
+          onPrevWeek={() => setWeekAnchor(addDays(weekStart, -1))}
+          onNextWeek={() => setWeekAnchor(addDays(weekEnd, 1))}
+        />
+      ),
+    },
     {
       id: 'cash-control',
       title: 'Cash Control',
