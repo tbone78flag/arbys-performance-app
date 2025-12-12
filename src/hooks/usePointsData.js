@@ -356,7 +356,6 @@ export function useUndoPoints() {
         source: 'undo',
         source_detail: reason,
         awarded_by: undoneBy,
-        original_points_log_id: pointsLogId,
       })
 
       if (insertError) throw insertError
