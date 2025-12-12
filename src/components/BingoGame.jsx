@@ -47,6 +47,9 @@ export default function BingoGame({ profile }) {
     return m;
   };
 
+  // Use fallback for location_id like other pages do
+  const locationId = profile?.location_id || 'holladay-3900';
+
   const [card,   setCard]   = useState(generateCard);
   const [marked, setMarked] = useState(makeEmpty);
 
@@ -114,7 +117,7 @@ export default function BingoGame({ profile }) {
 
   // Save points and reset game
   const handleSavePoints = async () => {
-    if (!profile?.id || !profile?.location_id) {
+    if (!profile?.id) {
       setSaveError('Unable to save points. Please try logging in again.');
       return;
     }
@@ -130,7 +133,7 @@ export default function BingoGame({ profile }) {
     try {
       await awardMutation.mutateAsync({
         employeeId: profile.id,
-        locationId: profile.location_id,
+        locationId: locationId,
         points: score,
         reason: 'Bingo Game',
         awardedBy: profile.id, // Self-award from game
