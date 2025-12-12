@@ -130,10 +130,10 @@ export default function GoalsPage({ profile }) {
       </div>
 
       <p className="text-sm text-gray-600 mb-4">
-        This page is for managing goal related information and the awards related to those goals. 
+        Tap a section to expand and manage goals and rewards.
       </p>
 
-      {/* Accordion sections */}
+      {/* Flat accordion list */}
       <div className="space-y-2">
         {/* Beef Variance Accordion */}
         <div className="border rounded-lg overflow-hidden">
@@ -144,7 +144,7 @@ export default function GoalsPage({ profile }) {
             aria-expanded={openSection === 'beef-variance'}
           >
             <div className="flex flex-col">
-              <span className="font-medium">Beef Variance &amp; Pricing</span>
+              <span className="font-medium">Beef Variance & Pricing</span>
               <span className="text-xs text-gray-500">
                 Track beef usage variance and pricing data.
               </span>
@@ -228,17 +228,10 @@ export default function GoalsPage({ profile }) {
             </div>
           )}
         </div>
-      </div>
 
-      {/* Manager Tools Section */}
-      {isEditor && (
-        <section className="border-t pt-4 mt-4">
-          <h2 className="text-lg font-semibold text-red-600 mb-3">Manager Tools</h2>
-          <p className="text-sm text-gray-600 mb-4">
-            Available only to Assistant Managers and General Managers.
-          </p>
-
-          <div className="space-y-2">
+        {/* Manager-only tools below */}
+        {isEditor && (
+          <>
             {/* Average Check Editor Accordion */}
             <div className="border rounded-lg overflow-hidden">
               <button
@@ -349,9 +342,9 @@ export default function GoalsPage({ profile }) {
                 </div>
               )}
             </div>
-          </div>
-        </section>
-      )}
+          </>
+        )}
+      </div>
     </div>
   )
 }
