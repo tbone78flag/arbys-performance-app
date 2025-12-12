@@ -414,7 +414,7 @@ export default function GoalsPage({ profile }) {
 
               {openSection === 'points-history' && (
                 <div className="px-4 pb-4 pt-2 bg-gray-50 border-t">
-                  <PointsHistory locationId={locationId} />
+                  <PointsHistory locationId={locationId} profile={profile} />
                 </div>
               )}
             </div>

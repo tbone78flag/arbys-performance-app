@@ -153,6 +153,7 @@ export default function PointsAddition({ locationId, managerProfile }) {
       await undoMutation.mutateAsync({
         pointsLogId: undoTarget.id,
         reason: undoReason.trim(),
+        undoneBy: managerId,
       })
       setUndoModalOpen(false)
       setUndoTarget(null)

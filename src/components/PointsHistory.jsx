@@ -10,11 +10,12 @@ function formatSourceType(source) {
     bingo: 'Bingo',
     trivia: 'Trivia',
     spin: 'Spin the Wheel',
+    undo: 'Points Undone',
   }
   return sourceLabels[source] || source || 'Unknown'
 }
 
-export default function PointsHistory({ locationId }) {
+export default function PointsHistory({ locationId, profile }) {
   // Filter state
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
@@ -58,6 +59,7 @@ export default function PointsHistory({ locationId }) {
       await undoMutation.mutateAsync({
         pointsLogId: undoTarget.id,
         reason: undoReason.trim(),
+        undoneBy: profile?.id,
       })
       setUndoModalOpen(false)
       setUndoTarget(null)
@@ -124,6 +126,7 @@ export default function PointsHistory({ locationId }) {
               <option value="bingo">Bingo</option>
               <option value="trivia">Trivia</option>
               <option value="spin">Spin the Wheel</option>
+              <option value="undo">Undo Records</option>
             </select>
           </div>
 
@@ -147,44 +150,62 @@ export default function PointsHistory({ locationId }) {
         <div className="space-y-2 max-h-96 overflow-y-auto">
           <p className="text-xs text-gray-500">{pointsHistory.length} records found</p>
 
-          {pointsHistory.map((award) => (
-            <div
-              key={award.id}
-              className="flex items-start justify-between p-3 bg-white rounded border text-sm"
-            >
-              <div className="flex-1">
-                <div className="flex items-center gap-2">
-                  <span className="font-semibold text-green-600">
-                    +{award.points_amount} pts
-                  </span>
-                  <span className="text-gray-700">→ {award.employee_name}</span>
-                </div>
+          {pointsHistory.map((record) => {
+            const isUndo = record.source === 'undo'
+            const isPositive = record.points_amount > 0
 
-                <div className="text-xs text-gray-500 mt-1 space-y-0.5">
-                  <div>
-                    <span className="font-medium">{formatSourceType(award.source)}</span>
-                    {award.source_detail && (
-                      <span> • {award.source_detail}</span>
-                    )}
+            return (
+              <div
+                key={record.id}
+                className={`flex items-start justify-between p-3 rounded border text-sm ${
+                  isUndo ? 'bg-orange-50 border-orange-200' : 'bg-white'
+                }`}
+              >
+                <div className="flex-1">
+                  <div className="flex items-center gap-2">
+                    <span className={`font-semibold ${isPositive ? 'text-green-600' : 'text-red-600'}`}>
+                      {isPositive ? '+' : ''}{record.points_amount} pts
+                    </span>
+                    <span className="text-gray-700">
+                      {isUndo ? '← from' : '→'} {record.employee_name}
+                    </span>
                   </div>
 
-                  {award.source === 'manager' && award.awarded_by_name && (
-                    <div>Awarded by: {award.awarded_by_name}</div>
-                  )}
+                  <div className="text-xs text-gray-500 mt-1 space-y-0.5">
+                    <div>
+                      <span className={`font-medium ${isUndo ? 'text-orange-700' : ''}`}>
+                        {formatSourceType(record.source)}
+                      </span>
+                      {record.source_detail && (
+                        <span> • {record.source_detail}</span>
+                      )}
+                    </div>
 
-                  <div>{new Date(award.created_at).toLocaleString()}</div>
+                    {isUndo && record.undone_by_name && (
+                      <div className="text-orange-700">Undone by: {record.undone_by_name}</div>
+                    )}
+
+                    {record.source === 'manager' && record.awarded_by_name && (
+                      <div>Awarded by: {record.awarded_by_name}</div>
+                    )}
+
+                    <div>{new Date(record.created_at).toLocaleString()}</div>
+                  </div>
                 </div>
-              </div>
 
-              <button
-                type="button"
-                onClick={() => openUndoModal(award)}
-                className="px-3 py-1 text-xs bg-red-100 text-red-700 rounded hover:bg-red-200 shrink-0"
-              >
-                Undo
-              </button>
-            </div>
-          ))}
+                {/* Only show Undo button for positive point awards (not for undo records) */}
+                {isPositive && !isUndo && (
+                  <button
+                    type="button"
+                    onClick={() => openUndoModal(record)}
+                    className="px-3 py-1 text-xs bg-red-100 text-red-700 rounded hover:bg-red-200 shrink-0"
+                  >
+                    Undo
+                  </button>
+                )}
+              </div>
+            )
+          })}
         </div>
       )}
 

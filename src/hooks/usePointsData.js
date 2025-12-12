@@ -280,12 +280,11 @@ async function fetchAllPointsHistory(locationId, filters = {}) {
     employeeMap[e.id] = e.display_name
   })
 
-  // Build query
+  // Build query - include both positive points (awards) and undo records
   let query = supabase
     .from('points_log')
     .select('id, employee_id, points_amount, source, source_detail, awarded_by, created_at')
     .eq('location_id', locationId)
-    .gt('points_amount', 0) // Only positive points (awards, not redemptions)
     .order('created_at', { ascending: false })
 
   // Apply filters
@@ -295,18 +294,32 @@ async function fetchAllPointsHistory(locationId, filters = {}) {
   if (endDate) {
     query = query.lte('created_at', endDate)
   }
+
+  // Filter by award type - but always include undo records unless filtering specifically
   if (awardType && awardType !== 'all') {
-    query = query.eq('source', awardType)
+    if (awardType === 'undo') {
+      query = query.eq('source', 'undo')
+    } else {
+      // Show the specific type plus any undos
+      query = query.or(`source.eq.${awardType},source.eq.undo`)
+    }
+  } else {
+    // Exclude redemptions from history (those are spending, not awards/undos)
+    query = query.neq('source', 'redemption')
   }
 
   const { data, error } = await query
 
   if (error) throw error
 
-  return (data || []).map((award) => ({
-    ...award,
-    employee_name: employeeMap[award.employee_id] || 'Unknown',
-    awarded_by_name: award.awarded_by ? employeeMap[award.awarded_by] || 'Unknown' : null,
+  return (data || []).map((record) => ({
+    ...record,
+    employee_name: employeeMap[record.employee_id] || 'Unknown',
+    awarded_by_name: record.awarded_by ? employeeMap[record.awarded_by] || 'Unknown' : null,
+    // For undo records, awarded_by is the person who did the undo
+    undone_by_name: record.source === 'undo' && record.awarded_by
+      ? employeeMap[record.awarded_by] || 'Unknown'
+      : null,
   }))
 }
 
@@ -324,19 +337,39 @@ export function useUndoPoints() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: async ({ pointsLogId, reason }) => {
-      // Delete the points log entry
-      const { error } = await supabase
+    mutationFn: async ({ pointsLogId, reason, undoneBy }) => {
+      // First, fetch the original record to get details
+      const { data: originalRecord, error: fetchError } = await supabase
+        .from('points_log')
+        .select('*')
+        .eq('id', pointsLogId)
+        .single()
+
+      if (fetchError) throw fetchError
+      if (!originalRecord) throw new Error('Original record not found')
+
+      // Create an undo log entry (negative points to reverse the award)
+      const { error: insertError } = await supabase.from('points_log').insert({
+        employee_id: originalRecord.employee_id,
+        location_id: originalRecord.location_id,
+        points_amount: -originalRecord.points_amount,
+        source: 'undo',
+        source_detail: reason,
+        awarded_by: undoneBy,
+        original_points_log_id: pointsLogId,
+      })
+
+      if (insertError) throw insertError
+
+      // Delete the original points log entry
+      const { error: deleteError } = await supabase
         .from('points_log')
         .delete()
         .eq('id', pointsLogId)
 
-      if (error) throw error
+      if (deleteError) throw deleteError
 
-      // Optionally log the undo action (could add an undo_log table later)
-      console.log(`Points award ${pointsLogId} undone. Reason: ${reason}`)
-
-      return { pointsLogId, reason }
+      return { pointsLogId, reason, originalRecord }
     },
     onSuccess: () => {
       // Invalidate all points-related queries

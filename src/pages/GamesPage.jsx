@@ -103,7 +103,7 @@ export default function GamesPage({ profile }) {
                     id={`game-panel-${game.id}`}
                     className="px-4 pb-4 pt-2 bg-gray-50 border-t text-sm"
                   >
-                    {game.id === 'bingo' && <BingoGame />}
+                    {game.id === 'bingo' && <BingoGame profile={profile} />}
                     {game.id === 'speed-board' && <SpeedBoardContent />}
                     {game.id === 'trivia' && <TriviaContent />}
                   </div>
