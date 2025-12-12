@@ -143,7 +143,7 @@ export default function BingoGame() {
         <li>Every square is 1 point. Getting 5 in a row will add an addidtiona; 5 points on top of the points awarded for each square.</li>
         <li>If there are two of the same square then choose one and click that one. Click the other square of that type the next time you get that same upsell</li>
         <li>You can unclick squares if you click the incorrect one.</li>
-        <li>Click new card to wipe out all clicked squares (FREE will remain red) and to shuffle the BINGO card.</li>
+        <li>Click new card (up to 3x per day) to wipe out all clicked squares (FREE will remain red) and to shuffle the BINGO card.</li>
         <br/>
         <dl>
             <dt className="text-lg italic">*2x Sandwich refers to adding an additional of the same sandwich in a way that increases the total cost of the order.
