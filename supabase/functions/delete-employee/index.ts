@@ -128,7 +128,18 @@ Deno.serve(async (req) => {
       )
     }
 
-    // 1) Delete from employees table
+    // 1) Delete from points_log table (cascade delete points history)
+    const { error: pointsDeleteError } = await supabaseAdmin
+      .from('points_log')
+      .delete()
+      .or(`employee_id.eq.${employeeId},awarded_by.eq.${employeeId}`)
+
+    if (pointsDeleteError) {
+      console.error('pointsDeleteError', pointsDeleteError)
+      // Continue anyway - points may not exist
+    }
+
+    // 2) Delete from employees table
     const { error: empDeleteError } = await supabaseAdmin
       .from('employees')
       .delete()
@@ -142,7 +153,7 @@ Deno.serve(async (req) => {
       )
     }
 
-    // 2) Delete from profiles table
+    // 3) Delete from profiles table
     const { error: profileDeleteError } = await supabaseAdmin
       .from('profiles')
       .delete()
@@ -153,7 +164,7 @@ Deno.serve(async (req) => {
       // Continue anyway - profile may not exist
     }
 
-    // 3) Delete the Auth user
+    // 4) Delete the Auth user
     const { error: authDeleteError } = await supabaseAdmin.auth.admin.deleteUser(employeeId)
 
     if (authDeleteError) {
