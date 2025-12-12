@@ -33,6 +33,11 @@ export default function TeamManagement({ profile, locationId }) {
   // toggle active state
   const [togglingActive, setTogglingActive] = useState(null)
 
+  // reset password state
+  const [newPassword, setNewPassword] = useState('')
+  const [resettingPassword, setResettingPassword] = useState(false)
+  const [resetPasswordSuccess, setResetPasswordSuccess] = useState(null)
+
   // fetch employees for this location
   useEffect(() => {
     async function fetchEmployees() {
@@ -247,6 +252,8 @@ export default function TeamManagement({ profile, locationId }) {
     setEditRole(employee.role || 'EMPLOYEE')
     setEditTitle(employee.title || '')
     setEditError(null)
+    setNewPassword('')
+    setResetPasswordSuccess(null)
   }
 
   function closeEditModal() {
@@ -255,6 +262,57 @@ export default function TeamManagement({ profile, locationId }) {
     setEditRole('EMPLOYEE')
     setEditTitle('')
     setEditError(null)
+    setNewPassword('')
+    setResetPasswordSuccess(null)
+  }
+
+  async function handleResetPassword() {
+    if (!editingEmployee || !newPassword.trim()) return
+
+    if (newPassword.length < 6) {
+      setEditError('Password must be at least 6 characters')
+      return
+    }
+
+    setResettingPassword(true)
+    setEditError(null)
+    setResetPasswordSuccess(null)
+
+    try {
+      const {
+        data: { session },
+        error: sessionError,
+      } = await supabase.auth.getSession()
+
+      if (sessionError || !session) {
+        setEditError('You must be logged in to reset passwords.')
+        return
+      }
+
+      const { data, error } = await supabase.functions.invoke('reset-employee-password', {
+        body: {
+          employeeId: editingEmployee.id,
+          newPassword: newPassword.trim(),
+        },
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      })
+
+      if (error || data?.error) {
+        console.error('Reset password error:', error || data?.error)
+        setEditError(data?.error || error?.message || 'Failed to reset password')
+        return
+      }
+
+      setResetPasswordSuccess('Password reset successfully!')
+      setNewPassword('')
+    } catch (err) {
+      console.error('Reset password threw:', err)
+      setEditError(err?.message || 'Failed to reset password.')
+    } finally {
+      setResettingPassword(false)
+    }
   }
 
   async function handleSaveEdit(e) {
@@ -484,7 +542,7 @@ export default function TeamManagement({ profile, locationId }) {
               type="text"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="Temporary password"
+              placeholder="password1234"
             />
           </div>
 
@@ -601,6 +659,34 @@ export default function TeamManagement({ profile, locationId }) {
                   </select>
                 </div>
               )}
+
+              {/* Reset Password Section */}
+              <div className="border-t pt-4 mt-2">
+                <label className="text-sm font-medium text-gray-700 mb-1 block">Reset Password</label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    className="border rounded px-3 py-2 text-sm flex-1"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    placeholder="New password (min 6 chars)"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleResetPassword}
+                    disabled={resettingPassword || !newPassword.trim()}
+                    className="px-3 py-2 text-sm bg-orange-500 text-white rounded hover:bg-orange-600 disabled:opacity-50"
+                  >
+                    {resettingPassword ? '...' : 'Reset'}
+                  </button>
+                </div>
+                {resetPasswordSuccess && (
+                  <p className="text-sm text-green-600 mt-1">{resetPasswordSuccess}</p>
+                )}
+                <p className="text-xs text-gray-500 mt-1">
+                  This will immediately change the employee's password.
+                </p>
+              </div>
 
               <div className="flex justify-end gap-2 pt-2 border-t">
                 <button

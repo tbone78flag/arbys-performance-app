@@ -284,7 +284,7 @@ export default function DayDotsManagerCard({ locationId }) {
                 className="border rounded px-3 py-2 text-sm"
                 value={itemIdentifier}
                 onChange={(e) => setItemIdentifier(e.target.value)}
-                placeholder="e.g. RB-SLICED"
+                placeholder="e.g. Roast Beef Thaw"
               />
             </div>
           </div>
