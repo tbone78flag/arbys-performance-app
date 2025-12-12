@@ -355,20 +355,22 @@ export default function PointsPage({ profile }) {
                             canAfford ? 'bg-white' : 'bg-gray-100 opacity-60'
                           }`}
                         >
-                          <div>
+                          <div className="flex-1 min-w-0 mr-3">
                             <div className="font-medium">{reward.reward_name}</div>
                             <div className="text-sm text-gray-600">
                               {reward.points_cost} points
                             </div>
                           </div>
                           <button
+                            type="button"
                             onClick={() => handleSpendPoints(reward)}
                             disabled={!canAfford || isSpending}
-                            className={`px-4 py-2 rounded text-sm ${
+                            className={`px-4 py-3 rounded text-sm min-h-[44px] min-w-[80px] shrink-0 select-none ${
                               canAfford
-                                ? 'bg-green-600 text-white hover:bg-green-700'
+                                ? 'bg-green-600 text-white hover:bg-green-700 active:bg-green-800'
                                 : 'bg-gray-300 text-gray-500 cursor-not-allowed'
                             } disabled:opacity-60`}
+                            style={{ touchAction: 'manipulation' }}
                           >
                             {isSpending ? 'Redeeming...' : 'Redeem'}
                           </button>
