@@ -24,6 +24,7 @@ export default function TrainingSession({ profile }) {
           lto_learninghub_completed,
           lto_handson_completed,
           compliance_learninghub_completed,
+          compliance_trainer_prompt_completed,
           training_schedule:training_schedule_id(
             id,
             training_type,
@@ -172,7 +173,7 @@ export default function TrainingSession({ profile }) {
 
   // Complete Compliance training session
   const handleCompleteCompliance = async (session) => {
-    if (!session.compliance_learninghub_completed) {
+    if (!session.compliance_learninghub_completed || !session.compliance_trainer_prompt_completed) {
       return
     }
 
@@ -371,21 +372,27 @@ export default function TrainingSession({ profile }) {
                         </div>
                       </label>
 
-                      {/* Trainer Prompt */}
-                      <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                        <div className="flex items-start gap-2">
-                          <span className="text-blue-600 text-lg">💬</span>
-                          <div>
-                            <span className="font-medium text-sm text-blue-800">Trainer Prompt</span>
-                            <p className="text-xs text-blue-700 mt-1">
-                              Ask the trainee: "What are 3 things you learned from this training?"
-                            </p>
-                            <p className="text-xs text-blue-600 mt-2 italic">
-                              Listen to their response before marking as complete.
-                            </p>
-                          </div>
+                      {/* Trainer Prompt Checkbox */}
+                      <label className="flex items-start gap-3 p-3 bg-blue-50 border border-blue-200 rounded-lg cursor-pointer hover:bg-blue-100">
+                        <input
+                          type="checkbox"
+                          checked={session.compliance_trainer_prompt_completed || false}
+                          onChange={(e) =>
+                            handleComplianceCheckbox(session.id, 'compliance_trainer_prompt_completed', e.target.checked)
+                          }
+                          disabled={saving}
+                          className="mt-0.5 h-5 w-5 rounded border-gray-300 text-red-600 focus:ring-red-500"
+                        />
+                        <div>
+                          <span className="font-medium text-sm text-blue-800">Trainer Prompt</span>
+                          <p className="text-xs text-blue-700 mt-1">
+                            Ask the trainee: "What are 3 things you learned from this training?"
+                          </p>
+                          <p className="text-xs text-blue-600 mt-2 italic">
+                            Check this box after listening to their response.
+                          </p>
                         </div>
-                      </div>
+                      </label>
                     </div>
 
                     {/* Done Button */}
@@ -394,7 +401,8 @@ export default function TrainingSession({ profile }) {
                         onClick={() => handleCompleteCompliance(session)}
                         disabled={
                           saving ||
-                          !session.compliance_learninghub_completed
+                          !session.compliance_learninghub_completed ||
+                          !session.compliance_trainer_prompt_completed
                         }
                         className="px-4 py-2 bg-green-600 text-white rounded text-sm font-medium hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
                       >
