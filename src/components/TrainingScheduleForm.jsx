@@ -4,6 +4,27 @@ import { supabase } from '../supabaseClient'
 
 const TRAINING_TYPES = ['AIQ', 'LTO', 'Compliance']
 
+const AIQ_COMPETENCIES = [
+  'Welcome Path Orientation',
+  "Arby's Safety First",
+  'Backline Closing',
+  'Backline Production (Phase 1 & 2)',
+  'Cashier & Dining Room',
+  'Drive-Thru Operations',
+  'Food Preparation',
+  'Frontline Closing',
+  'Fry Station',
+  'Guests Deserve Our Best',
+  'Maintenance',
+  'Runner',
+  'Team Trainer',
+]
+
+const BACKLINE_PHASES = [
+  'Phase 1 Specialty',
+  'Phase 2 Roast Beef',
+]
+
 export default function TrainingScheduleForm({ profile, locationId }) {
   const [employees, setEmployees] = useState([])
   const [loading, setLoading] = useState(true)
@@ -15,6 +36,8 @@ export default function TrainingScheduleForm({ profile, locationId }) {
   const [traineeId, setTraineeId] = useState('')
   const [trainerId, setTrainerId] = useState('')
   const [trainingType, setTrainingType] = useState('')
+  const [competencyType, setCompetencyType] = useState('')
+  const [competencyPhase, setCompetencyPhase] = useState('')
   const [trainingDate, setTrainingDate] = useState('')
   const [shiftStart, setShiftStart] = useState('')
   const [shiftEnd, setShiftEnd] = useState('')
@@ -55,6 +78,8 @@ export default function TrainingScheduleForm({ profile, locationId }) {
         .select(`
           id,
           training_type,
+          competency_type,
+          competency_phase,
           training_date,
           shift_start,
           shift_end,
@@ -82,10 +107,25 @@ export default function TrainingScheduleForm({ profile, locationId }) {
     setTraineeId('')
     setTrainerId('')
     setTrainingType('')
+    setCompetencyType('')
+    setCompetencyPhase('')
     setTrainingDate('')
     setShiftStart('')
     setShiftEnd('')
     setNotes('')
+  }
+
+  // Reset competency fields when training type changes
+  const handleTrainingTypeChange = (value) => {
+    setTrainingType(value)
+    setCompetencyType('')
+    setCompetencyPhase('')
+  }
+
+  // Reset phase when competency type changes
+  const handleCompetencyTypeChange = (value) => {
+    setCompetencyType(value)
+    setCompetencyPhase('')
   }
 
   const handleSubmit = async (e) => {
@@ -95,6 +135,18 @@ export default function TrainingScheduleForm({ profile, locationId }) {
 
     if (!traineeId || !trainerId || !trainingType || !trainingDate || !shiftStart || !shiftEnd) {
       setError('Please fill in all required fields.')
+      return
+    }
+
+    // Validate AIQ requires competency
+    if (trainingType === 'AIQ' && !competencyType) {
+      setError('Please select a competency type for AIQ training.')
+      return
+    }
+
+    // Validate Backline Production requires phase
+    if (competencyType === 'Backline Production (Phase 1 & 2)' && !competencyPhase) {
+      setError('Please select a phase for Backline Production training.')
       return
     }
 
@@ -112,6 +164,8 @@ export default function TrainingScheduleForm({ profile, locationId }) {
         trainee_id: traineeId,
         trainer_id: trainerId,
         training_type: trainingType,
+        competency_type: trainingType === 'AIQ' ? competencyType : null,
+        competency_phase: competencyType === 'Backline Production (Phase 1 & 2)' ? competencyPhase : null,
         training_date: trainingDate,
         shift_start: shiftStart,
         shift_end: shiftEnd,
@@ -155,6 +209,16 @@ export default function TrainingScheduleForm({ profile, locationId }) {
     const ampm = h >= 12 ? 'PM' : 'AM'
     const h12 = h % 12 || 12
     return `${h12}:${minutes} ${ampm}`
+  }
+
+  // Format competency display for upcoming list
+  const formatCompetency = (t) => {
+    if (t.training_type !== 'AIQ' || !t.competency_type) return null
+    let text = t.competency_type
+    if (t.competency_phase) {
+      text += ` (${t.competency_phase})`
+    }
+    return text
   }
 
   if (loading) {
@@ -214,7 +278,7 @@ export default function TrainingScheduleForm({ profile, locationId }) {
             <label className="text-xs font-medium text-gray-600 mb-1">Training Type *</label>
             <select
               value={trainingType}
-              onChange={(e) => setTrainingType(e.target.value)}
+              onChange={(e) => handleTrainingTypeChange(e.target.value)}
               className="border rounded px-2 py-1.5 text-sm"
             >
               <option value="">Select type...</option>
@@ -225,6 +289,44 @@ export default function TrainingScheduleForm({ profile, locationId }) {
               ))}
             </select>
           </div>
+
+          {/* AIQ Competency Type - Only shown when AIQ is selected */}
+          {trainingType === 'AIQ' && (
+            <div className="flex flex-col">
+              <label className="text-xs font-medium text-gray-600 mb-1">Competency Type *</label>
+              <select
+                value={competencyType}
+                onChange={(e) => handleCompetencyTypeChange(e.target.value)}
+                className="border rounded px-2 py-1.5 text-sm"
+              >
+                <option value="">Select competency...</option>
+                {AIQ_COMPETENCIES.map((comp) => (
+                  <option key={comp} value={comp}>
+                    {comp}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {/* Backline Production Phase - Only shown when Backline Production is selected */}
+          {competencyType === 'Backline Production (Phase 1 & 2)' && (
+            <div className="flex flex-col">
+              <label className="text-xs font-medium text-gray-600 mb-1">Phase *</label>
+              <select
+                value={competencyPhase}
+                onChange={(e) => setCompetencyPhase(e.target.value)}
+                className="border rounded px-2 py-1.5 text-sm"
+              >
+                <option value="">Select phase...</option>
+                {BACKLINE_PHASES.map((phase) => (
+                  <option key={phase} value={phase}>
+                    {phase}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
           {/* Training Date */}
           <div className="flex flex-col">
@@ -299,7 +401,7 @@ export default function TrainingScheduleForm({ profile, locationId }) {
                 className="flex items-center justify-between bg-gray-50 border rounded p-3"
               >
                 <div className="flex-1">
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <span className={`text-xs px-2 py-0.5 rounded font-medium ${
                       t.training_type === 'AIQ' ? 'bg-blue-100 text-blue-700' :
                       t.training_type === 'LTO' ? 'bg-purple-100 text-purple-700' :
@@ -307,6 +409,11 @@ export default function TrainingScheduleForm({ profile, locationId }) {
                     }`}>
                       {t.training_type}
                     </span>
+                    {formatCompetency(t) && (
+                      <span className="text-xs text-gray-600">
+                        {formatCompetency(t)}
+                      </span>
+                    )}
                     <span className="text-sm font-medium">
                       {new Date(t.training_date + 'T00:00:00').toLocaleDateString('en-US', {
                         weekday: 'short',

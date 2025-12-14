@@ -57,6 +57,8 @@ export default function Training({ profile, locationId }) {
         .select(`
           id,
           training_type,
+          competency_type,
+          competency_phase,
           training_date,
           shift_start,
           shift_end,
@@ -631,6 +633,18 @@ export default function Training({ profile, locationId }) {
                       <span className="text-gray-500">Training Type:</span>
                       <p className="font-medium">{selectedTraining.training_type}</p>
                     </div>
+                    {selectedTraining.training_type === 'AIQ' && selectedTraining.competency_type && (
+                      <div>
+                        <span className="text-gray-500">Competency:</span>
+                        <p className="font-medium">{selectedTraining.competency_type}</p>
+                      </div>
+                    )}
+                    {selectedTraining.competency_phase && (
+                      <div>
+                        <span className="text-gray-500">Phase:</span>
+                        <p className="font-medium">{selectedTraining.competency_phase}</p>
+                      </div>
+                    )}
                     <div>
                       <span className="text-gray-500">Date:</span>
                       <p className="font-medium">
