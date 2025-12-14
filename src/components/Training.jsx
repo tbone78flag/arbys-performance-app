@@ -34,9 +34,14 @@ export default function Training({ profile, locationId }) {
 
   // Start session state
   const [startingSession, setStartingSession] = useState(false)
+  const [undoingCompletion, setUndoingCompletion] = useState(false)
 
   const weekStart = startOfWeekLocal(weekAnchor)
   const weekEnd = addDays(weekStart, 6)
+
+  // Create stable string representations for useEffect dependencies
+  const weekStartStr = weekStart.toISOString().split('T')[0]
+  const weekEndStr = weekEnd.toISOString().split('T')[0]
 
   // Generate array of days for the week
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i))
@@ -51,9 +56,6 @@ export default function Training({ profile, locationId }) {
   useEffect(() => {
     async function fetchTraining() {
       setLoading(true)
-
-      const startStr = weekStart.toISOString().split('T')[0]
-      const endStr = weekEnd.toISOString().split('T')[0]
 
       const { data, error } = await supabase
         .from('training_schedule')
@@ -74,8 +76,8 @@ export default function Training({ profile, locationId }) {
           trainer:trainer_id(id, display_name)
         `)
         .eq('location_id', locationId)
-        .gte('training_date', startStr)
-        .lte('training_date', endStr)
+        .gte('training_date', weekStartStr)
+        .lte('training_date', weekEndStr)
         .order('shift_start', { ascending: true })
 
       if (error) {
@@ -87,7 +89,7 @@ export default function Training({ profile, locationId }) {
     }
 
     fetchTraining()
-  }, [locationId, weekStart.toISOString()])
+  }, [locationId, weekStartStr, weekEndStr])
 
   // Fetch employees for dropdowns
   useEffect(() => {
@@ -327,6 +329,40 @@ export default function Training({ profile, locationId }) {
     // The TrainingSession component will pick up the new session when it refreshes
   }
 
+  // Handle undoing a completed training (reset to scheduled)
+  const handleUndoCompletion = async () => {
+    if (!selectedTraining) return
+
+    setUndoingCompletion(true)
+    setModalError(null)
+
+    // Reset training_schedule status back to scheduled
+    const { error } = await supabase
+      .from('training_schedule')
+      .update({ status: 'scheduled' })
+      .eq('id', selectedTraining.id)
+
+    setUndoingCompletion(false)
+
+    if (error) {
+      console.error('Error undoing completion:', error)
+      setModalError('Failed to undo completion. Please try again.')
+      return
+    }
+
+    // Update local state to reflect the change
+    setTrainingData((prev) =>
+      prev.map((t) =>
+        t.id === selectedTraining.id
+          ? { ...t, status: 'scheduled' }
+          : t
+      )
+    )
+
+    // Update selectedTraining to reflect the change
+    setSelectedTraining((prev) => ({ ...prev, status: 'scheduled' }))
+  }
+
   return (
     <div className="space-y-4">
       {/* Today's My Trainees - Highlighted Box */}
@@ -558,12 +594,21 @@ export default function Training({ profile, locationId }) {
                   </button>
 
                   {isTrainingCompleted && (
-                    <div className="w-full px-4 py-3 border rounded bg-green-50 border-green-200 flex items-center gap-3">
-                      <span className="text-xl">✅</span>
-                      <div>
-                        <div className="font-medium text-green-700">Training Completed</div>
-                        <div className="text-xs text-green-600">This training session has been completed</div>
+                    <div className="w-full px-4 py-3 border rounded bg-green-50 border-green-200">
+                      <div className="flex items-center gap-3">
+                        <span className="text-xl">✅</span>
+                        <div className="flex-1">
+                          <div className="font-medium text-green-700">Training Completed</div>
+                          <div className="text-xs text-green-600">This training session has been completed</div>
+                        </div>
                       </div>
+                      <button
+                        onClick={handleUndoCompletion}
+                        disabled={undoingCompletion}
+                        className="mt-3 w-full px-3 py-2 text-sm border border-gray-300 rounded bg-white hover:bg-gray-50 text-gray-700 disabled:opacity-50"
+                      >
+                        {undoingCompletion ? 'Undoing...' : 'Undo Completion'}
+                      </button>
                     </div>
                   )}
 

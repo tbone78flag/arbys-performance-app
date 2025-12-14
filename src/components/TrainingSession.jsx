@@ -223,7 +223,7 @@ export default function TrainingSession({ profile }) {
                         <div>
                           <span className="font-medium text-sm">LearningHub Training</span>
                           <p className="text-xs text-gray-500 mt-0.5">
-                            Did the employee complete the LearningHub training?
+                            Did the employee complete the LearningHub training with a passing score?
                           </p>
                         </div>
                       </label>
