@@ -9,11 +9,28 @@ export default function Training({ profile, locationId }) {
   const [weekAnchor, setWeekAnchor] = useState(() => new Date())
   const [trainingData, setTrainingData] = useState([])
   const [loading, setLoading] = useState(true)
-  const [employees, setEmployees] = useState({})
+  const [employees, setEmployees] = useState([])
 
   // Filters
-  const [trainerFilter, setTrainerFilter] = useState('all') // 'all', 'mine', 'others'
+  const [trainerFilter, setTrainerFilter] = useState('mine') // 'all', 'mine', 'others'
   const [typeFilter, setTypeFilter] = useState('all') // 'all', 'AIQ', 'LTO', 'Compliance'
+
+  // Modal state
+  const [selectedTraining, setSelectedTraining] = useState(null)
+  const [modalView, setModalView] = useState('actions') // 'actions', 'reassign', 'reschedule', 'info'
+  const [saving, setSaving] = useState(false)
+  const [modalError, setModalError] = useState(null)
+
+  // Reassign form state
+  const [reassignTrainerId, setReassignTrainerId] = useState('')
+  const [reassignDate, setReassignDate] = useState('')
+  const [reassignShiftStart, setReassignShiftStart] = useState('')
+  const [reassignShiftEnd, setReassignShiftEnd] = useState('')
+
+  // Reschedule form state
+  const [rescheduleDate, setRescheduleDate] = useState('')
+  const [rescheduleShiftStart, setRescheduleShiftStart] = useState('')
+  const [rescheduleShiftEnd, setRescheduleShiftEnd] = useState('')
 
   const weekStart = startOfWeekLocal(weekAnchor)
   const weekEnd = addDays(weekStart, 6)
@@ -23,6 +40,9 @@ export default function Training({ profile, locationId }) {
 
   // Get today's date string for comparison
   const todayStr = new Date().toISOString().split('T')[0]
+
+  // Check if user is GM or AM
+  const isGMorAM = ['General Manager', 'Assistant Manager'].includes(profile?.title)
 
   // Fetch training data for the week
   useEffect(() => {
@@ -43,6 +63,7 @@ export default function Training({ profile, locationId }) {
           notes,
           trainee_id,
           trainer_id,
+          created_at,
           trainee:trainee_id(id, display_name),
           trainer:trainer_id(id, display_name)
         `)
@@ -62,18 +83,18 @@ export default function Training({ profile, locationId }) {
     fetchTraining()
   }, [locationId, weekStart.toISOString()])
 
-  // Fetch employees for lookup
+  // Fetch employees for dropdowns
   useEffect(() => {
     async function fetchEmployees() {
       const { data } = await supabase
         .from('employees')
         .select('id, display_name')
         .eq('location_id', locationId)
+        .eq('is_active', true)
+        .order('display_name')
 
       if (data) {
-        const empMap = {}
-        data.forEach((e) => (empMap[e.id] = e.display_name))
-        setEmployees(empMap)
+        setEmployees(data)
       }
     }
     fetchEmployees()
@@ -136,6 +157,119 @@ export default function Training({ profile, locationId }) {
     }
   }
 
+  // Open modal with training session
+  const openTrainingModal = (training) => {
+    setSelectedTraining(training)
+    setModalView('actions')
+    setModalError(null)
+    // Reset form states
+    setReassignTrainerId('')
+    setReassignDate(training.training_date)
+    setReassignShiftStart(training.shift_start)
+    setReassignShiftEnd(training.shift_end)
+    setRescheduleDate(training.training_date)
+    setRescheduleShiftStart(training.shift_start)
+    setRescheduleShiftEnd(training.shift_end)
+  }
+
+  const closeModal = () => {
+    setSelectedTraining(null)
+    setModalView('actions')
+    setModalError(null)
+  }
+
+  // Handle reassign (GM/AM only)
+  const handleReassign = async () => {
+    if (!reassignTrainerId || !reassignDate || !reassignShiftStart || !reassignShiftEnd) {
+      setModalError('Please fill in all fields.')
+      return
+    }
+
+    setSaving(true)
+    setModalError(null)
+
+    const { error } = await supabase
+      .from('training_schedule')
+      .update({
+        trainer_id: reassignTrainerId,
+        training_date: reassignDate,
+        shift_start: reassignShiftStart,
+        shift_end: reassignShiftEnd,
+      })
+      .eq('id', selectedTraining.id)
+
+    setSaving(false)
+
+    if (error) {
+      console.error('Error reassigning:', error)
+      setModalError('Failed to reassign training.')
+      return
+    }
+
+    // Update local state
+    setTrainingData((prev) =>
+      prev.map((t) =>
+        t.id === selectedTraining.id
+          ? {
+              ...t,
+              trainer_id: reassignTrainerId,
+              training_date: reassignDate,
+              shift_start: reassignShiftStart,
+              shift_end: reassignShiftEnd,
+              trainer: employees.find((e) => e.id === reassignTrainerId),
+            }
+          : t
+      )
+    )
+    closeModal()
+  }
+
+  // Handle reschedule (trainer can reschedule their own)
+  const handleReschedule = async () => {
+    if (!rescheduleDate || !rescheduleShiftStart || !rescheduleShiftEnd) {
+      setModalError('Please fill in all fields.')
+      return
+    }
+
+    setSaving(true)
+    setModalError(null)
+
+    const { error } = await supabase
+      .from('training_schedule')
+      .update({
+        training_date: rescheduleDate,
+        shift_start: rescheduleShiftStart,
+        shift_end: rescheduleShiftEnd,
+      })
+      .eq('id', selectedTraining.id)
+
+    setSaving(false)
+
+    if (error) {
+      console.error('Error rescheduling:', error)
+      setModalError('Failed to reschedule training.')
+      return
+    }
+
+    // Update local state
+    setTrainingData((prev) =>
+      prev.map((t) =>
+        t.id === selectedTraining.id
+          ? {
+              ...t,
+              training_date: rescheduleDate,
+              shift_start: rescheduleShiftStart,
+              shift_end: rescheduleShiftEnd,
+            }
+          : t
+      )
+    )
+    closeModal()
+  }
+
+  // Check if current user can reschedule (is the trainer)
+  const canReschedule = selectedTraining?.trainer_id === profile.id
+
   return (
     <div className="space-y-4">
       {/* Today's My Trainees - Highlighted Box */}
@@ -148,7 +282,8 @@ export default function Training({ profile, locationId }) {
             {todaysMyTrainees.map((t) => (
               <div
                 key={t.id}
-                className="flex items-center justify-between bg-white border border-green-200 rounded p-2"
+                className="flex items-center justify-between bg-white border border-green-200 rounded p-2 cursor-pointer hover:bg-green-50"
+                onClick={() => openTrainingModal(t)}
               >
                 <div>
                   <span className="font-medium">{t.trainee?.display_name}</span>
@@ -252,7 +387,8 @@ export default function Training({ profile, locationId }) {
                       {dayTraining.map((t) => (
                         <div
                           key={t.id}
-                          className={`text-xs p-1.5 rounded border ${getTypeColor(t.training_type)}`}
+                          onClick={() => openTrainingModal(t)}
+                          className={`text-xs p-1.5 rounded border cursor-pointer hover:opacity-80 ${getTypeColor(t.training_type)}`}
                         >
                           <div className="font-medium truncate">
                             {t.trainee?.display_name}
@@ -283,6 +419,278 @@ export default function Training({ profile, locationId }) {
           </span>
         ))}
       </div>
+
+      {/* Training Action Modal */}
+      {selectedTraining && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-md">
+            {/* Modal Header */}
+            <div className="p-4 border-b">
+              <h3 className="text-lg font-semibold text-gray-800">
+                {modalView === 'actions' && 'Training Session'}
+                {modalView === 'reassign' && 'Reassign Training'}
+                {modalView === 'reschedule' && 'Reschedule Training'}
+                {modalView === 'info' && 'Training Details'}
+              </h3>
+              <p className="text-sm text-gray-600">
+                {selectedTraining.trainee?.display_name} - {selectedTraining.training_type}
+              </p>
+            </div>
+
+            <div className="p-4">
+              {modalError && (
+                <p className="text-sm text-red-600 bg-red-50 p-2 rounded mb-3">{modalError}</p>
+              )}
+
+              {/* Actions View */}
+              {modalView === 'actions' && (
+                <div className="space-y-2">
+                  {isGMorAM && (
+                    <button
+                      onClick={() => setModalView('reassign')}
+                      className="w-full text-left px-4 py-3 border rounded hover:bg-gray-50 flex items-center gap-3"
+                    >
+                      <span className="text-xl">👤</span>
+                      <div>
+                        <div className="font-medium">Reassign</div>
+                        <div className="text-xs text-gray-500">Assign to a different trainer</div>
+                      </div>
+                    </button>
+                  )}
+
+                  {canReschedule && (
+                    <button
+                      onClick={() => setModalView('reschedule')}
+                      className="w-full text-left px-4 py-3 border rounded hover:bg-gray-50 flex items-center gap-3"
+                    >
+                      <span className="text-xl">📅</span>
+                      <div>
+                        <div className="font-medium">Reschedule</div>
+                        <div className="text-xs text-gray-500">Change date or shift times</div>
+                      </div>
+                    </button>
+                  )}
+
+                  <button
+                    onClick={() => setModalView('info')}
+                    className="w-full text-left px-4 py-3 border rounded hover:bg-gray-50 flex items-center gap-3"
+                  >
+                    <span className="text-xl">ℹ️</span>
+                    <div>
+                      <div className="font-medium">More Info</div>
+                      <div className="text-xs text-gray-500">View full training details</div>
+                    </div>
+                  </button>
+
+                  <button
+                    disabled
+                    className="w-full text-left px-4 py-3 border rounded bg-gray-50 text-gray-400 flex items-center gap-3 cursor-not-allowed"
+                  >
+                    <span className="text-xl">▶️</span>
+                    <div>
+                      <div className="font-medium">Start Training Session</div>
+                      <div className="text-xs">Coming soon...</div>
+                    </div>
+                  </button>
+                </div>
+              )}
+
+              {/* Reassign View */}
+              {modalView === 'reassign' && (
+                <div className="space-y-4">
+                  <div className="flex flex-col">
+                    <label className="text-sm font-medium text-gray-700 mb-1">New Trainer *</label>
+                    <select
+                      value={reassignTrainerId}
+                      onChange={(e) => setReassignTrainerId(e.target.value)}
+                      className="border rounded px-3 py-2 text-sm"
+                    >
+                      <option value="">Select trainer...</option>
+                      {employees.map((emp) => (
+                        <option key={emp.id} value={emp.id}>
+                          {emp.display_name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="flex flex-col">
+                    <label className="text-sm font-medium text-gray-700 mb-1">Date *</label>
+                    <input
+                      type="date"
+                      value={reassignDate}
+                      onChange={(e) => setReassignDate(e.target.value)}
+                      className="border rounded px-3 py-2 text-sm"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="flex flex-col">
+                      <label className="text-sm font-medium text-gray-700 mb-1">Shift Start *</label>
+                      <input
+                        type="time"
+                        value={reassignShiftStart}
+                        onChange={(e) => setReassignShiftStart(e.target.value)}
+                        className="border rounded px-3 py-2 text-sm"
+                      />
+                    </div>
+                    <div className="flex flex-col">
+                      <label className="text-sm font-medium text-gray-700 mb-1">Shift End *</label>
+                      <input
+                        type="time"
+                        value={reassignShiftEnd}
+                        onChange={(e) => setReassignShiftEnd(e.target.value)}
+                        className="border rounded px-3 py-2 text-sm"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end gap-2 pt-2 border-t">
+                    <button
+                      onClick={() => setModalView('actions')}
+                      className="px-4 py-2 text-sm text-gray-600 hover:text-gray-800"
+                    >
+                      Back
+                    </button>
+                    <button
+                      onClick={handleReassign}
+                      disabled={saving}
+                      className="px-4 py-2 text-sm bg-red-600 text-white rounded hover:bg-red-700 disabled:opacity-50"
+                    >
+                      {saving ? 'Saving...' : 'Reassign'}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Reschedule View */}
+              {modalView === 'reschedule' && (
+                <div className="space-y-4">
+                  <div className="flex flex-col">
+                    <label className="text-sm font-medium text-gray-700 mb-1">New Date *</label>
+                    <input
+                      type="date"
+                      value={rescheduleDate}
+                      onChange={(e) => setRescheduleDate(e.target.value)}
+                      className="border rounded px-3 py-2 text-sm"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="flex flex-col">
+                      <label className="text-sm font-medium text-gray-700 mb-1">Shift Start *</label>
+                      <input
+                        type="time"
+                        value={rescheduleShiftStart}
+                        onChange={(e) => setRescheduleShiftStart(e.target.value)}
+                        className="border rounded px-3 py-2 text-sm"
+                      />
+                    </div>
+                    <div className="flex flex-col">
+                      <label className="text-sm font-medium text-gray-700 mb-1">Shift End *</label>
+                      <input
+                        type="time"
+                        value={rescheduleShiftEnd}
+                        onChange={(e) => setRescheduleShiftEnd(e.target.value)}
+                        className="border rounded px-3 py-2 text-sm"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end gap-2 pt-2 border-t">
+                    <button
+                      onClick={() => setModalView('actions')}
+                      className="px-4 py-2 text-sm text-gray-600 hover:text-gray-800"
+                    >
+                      Back
+                    </button>
+                    <button
+                      onClick={handleReschedule}
+                      disabled={saving}
+                      className="px-4 py-2 text-sm bg-red-600 text-white rounded hover:bg-red-700 disabled:opacity-50"
+                    >
+                      {saving ? 'Saving...' : 'Reschedule'}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Info View */}
+              {modalView === 'info' && (
+                <div className="space-y-3">
+                  <div className="grid grid-cols-2 gap-3 text-sm">
+                    <div>
+                      <span className="text-gray-500">Trainee:</span>
+                      <p className="font-medium">{selectedTraining.trainee?.display_name}</p>
+                    </div>
+                    <div>
+                      <span className="text-gray-500">Trainer:</span>
+                      <p className="font-medium">{selectedTraining.trainer?.display_name}</p>
+                    </div>
+                    <div>
+                      <span className="text-gray-500">Training Type:</span>
+                      <p className="font-medium">{selectedTraining.training_type}</p>
+                    </div>
+                    <div>
+                      <span className="text-gray-500">Date:</span>
+                      <p className="font-medium">
+                        {new Date(selectedTraining.training_date + 'T00:00:00').toLocaleDateString('en-US', {
+                          weekday: 'short',
+                          month: 'short',
+                          day: 'numeric',
+                          year: 'numeric'
+                        })}
+                      </p>
+                    </div>
+                    <div>
+                      <span className="text-gray-500">Shift Start:</span>
+                      <p className="font-medium">{formatTime(selectedTraining.shift_start)}</p>
+                    </div>
+                    <div>
+                      <span className="text-gray-500">Shift End:</span>
+                      <p className="font-medium">{formatTime(selectedTraining.shift_end)}</p>
+                    </div>
+                  </div>
+
+                  {selectedTraining.notes && (
+                    <div className="text-sm">
+                      <span className="text-gray-500">Notes:</span>
+                      <p className="mt-1 p-2 bg-gray-50 rounded">{selectedTraining.notes}</p>
+                    </div>
+                  )}
+
+                  {!selectedTraining.notes && (
+                    <div className="text-sm text-gray-400 italic">No notes for this training session.</div>
+                  )}
+
+                  <div className="text-xs text-gray-400">
+                    Created: {new Date(selectedTraining.created_at).toLocaleString()}
+                  </div>
+
+                  <div className="flex justify-end pt-2 border-t">
+                    <button
+                      onClick={() => setModalView('actions')}
+                      className="px-4 py-2 text-sm text-gray-600 hover:text-gray-800"
+                    >
+                      Back
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Close button for all views */}
+            <div className="px-4 pb-4">
+              <button
+                onClick={closeModal}
+                className="w-full px-4 py-2 text-sm border rounded hover:bg-gray-50"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
