@@ -639,6 +639,12 @@ export default function Training({ profile, locationId }) {
                         <p className="font-medium">{selectedTraining.competency_type}</p>
                       </div>
                     )}
+                    {selectedTraining.training_type === 'Compliance' && selectedTraining.competency_type && (
+                      <div>
+                        <span className="text-gray-500">Course:</span>
+                        <p className="font-medium">{selectedTraining.competency_type}</p>
+                      </div>
+                    )}
                     {selectedTraining.competency_phase && (
                       <div>
                         <span className="text-gray-500">Phase:</span>

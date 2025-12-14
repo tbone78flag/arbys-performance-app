@@ -25,6 +25,28 @@ const BACKLINE_PHASES = [
   'Phase 2 Roast Beef',
 ]
 
+// Compliance courses categorized by who can take them
+const COMPLIANCE_COURSES_MANAGER_ONLY = [
+  'OSHA',
+  'Credit Card Security - Manager 2023',
+  'Heat Illness Prevention Managers',
+  'POS Manager Functions 2023',
+  'Scam Awareness',
+]
+
+const COMPLIANCE_COURSES_ALL = [
+  'Cybersecurity Basics',
+  'HazCom & SDC 2023',
+  'Respect 2024',
+  'Emergency Action Plan (EAP) 2025',
+]
+
+const COMPLIANCE_COURSES_TEAM_MEMBER_ONLY = [
+  'POS Team Member 2023',
+  'Credit Card Security Team Member 2023',
+  'Heat Illness Prevention Team Member',
+]
+
 export default function TrainingScheduleForm({ profile, locationId }) {
   const [employees, setEmployees] = useState([])
   const [loading, setLoading] = useState(true)
@@ -38,6 +60,7 @@ export default function TrainingScheduleForm({ profile, locationId }) {
   const [trainingType, setTrainingType] = useState('')
   const [competencyType, setCompetencyType] = useState('')
   const [competencyPhase, setCompetencyPhase] = useState('')
+  const [complianceCourse, setComplianceCourse] = useState('')
   const [trainingDate, setTrainingDate] = useState('')
   const [shiftStart, setShiftStart] = useState('')
   const [shiftEnd, setShiftEnd] = useState('')
@@ -109,6 +132,7 @@ export default function TrainingScheduleForm({ profile, locationId }) {
     setTrainingType('')
     setCompetencyType('')
     setCompetencyPhase('')
+    setComplianceCourse('')
     setTrainingDate('')
     setShiftStart('')
     setShiftEnd('')
@@ -120,6 +144,21 @@ export default function TrainingScheduleForm({ profile, locationId }) {
     setTrainingType(value)
     setCompetencyType('')
     setCompetencyPhase('')
+    setComplianceCourse('')
+  }
+
+  // Get available compliance courses based on trainee's role
+  const getComplianceCourses = () => {
+    const selectedTrainee = employees.find(emp => emp.id === traineeId)
+    const traineeRole = selectedTrainee?.role || 'EMPLOYEE'
+
+    if (traineeRole === 'MANAGER') {
+      // Managers see manager-only courses + all courses
+      return [...COMPLIANCE_COURSES_MANAGER_ONLY, ...COMPLIANCE_COURSES_ALL]
+    } else {
+      // Team members see team-member-only courses + all courses
+      return [...COMPLIANCE_COURSES_ALL, ...COMPLIANCE_COURSES_TEAM_MEMBER_ONLY]
+    }
   }
 
   // Reset phase when competency type changes
@@ -150,12 +189,26 @@ export default function TrainingScheduleForm({ profile, locationId }) {
       return
     }
 
+    // Validate Compliance requires course selection
+    if (trainingType === 'Compliance' && !complianceCourse) {
+      setError('Please select a compliance course.')
+      return
+    }
+
     if (traineeId === trainerId) {
       setError('Trainee and trainer cannot be the same person.')
       return
     }
 
     setSaving(true)
+
+    // Determine competency_type based on training type
+    let finalCompetencyType = null
+    if (trainingType === 'AIQ') {
+      finalCompetencyType = competencyType
+    } else if (trainingType === 'Compliance') {
+      finalCompetencyType = complianceCourse
+    }
 
     const { error: insertError } = await supabase
       .from('training_schedule')
@@ -164,7 +217,7 @@ export default function TrainingScheduleForm({ profile, locationId }) {
         trainee_id: traineeId,
         trainer_id: trainerId,
         training_type: trainingType,
-        competency_type: trainingType === 'AIQ' ? competencyType : null,
+        competency_type: finalCompetencyType,
         competency_phase: competencyType === 'Backline Production (Phase 1 & 2)' ? competencyPhase : null,
         training_date: trainingDate,
         shift_start: shiftStart,
@@ -213,7 +266,9 @@ export default function TrainingScheduleForm({ profile, locationId }) {
 
   // Format competency display for upcoming list
   const formatCompetency = (t) => {
-    if (t.training_type !== 'AIQ' || !t.competency_type) return null
+    if (!t.competency_type) return null
+    // Show competency for both AIQ and Compliance training types
+    if (t.training_type !== 'AIQ' && t.training_type !== 'Compliance') return null
     let text = t.competency_type
     if (t.competency_phase) {
       text += ` (${t.competency_phase})`
@@ -325,6 +380,33 @@ export default function TrainingScheduleForm({ profile, locationId }) {
                   </option>
                 ))}
               </select>
+            </div>
+          )}
+
+          {/* Compliance Course - Only shown when Compliance is selected and trainee is chosen */}
+          {trainingType === 'Compliance' && traineeId && (
+            <div className="flex flex-col">
+              <label className="text-xs font-medium text-gray-600 mb-1">Compliance Course *</label>
+              <select
+                value={complianceCourse}
+                onChange={(e) => setComplianceCourse(e.target.value)}
+                className="border rounded px-2 py-1.5 text-sm"
+              >
+                <option value="">Select course...</option>
+                {getComplianceCourses().map((course) => (
+                  <option key={course} value={course}>
+                    {course}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {/* Compliance Course - Show message if no trainee selected */}
+          {trainingType === 'Compliance' && !traineeId && (
+            <div className="flex flex-col">
+              <label className="text-xs font-medium text-gray-600 mb-1">Compliance Course *</label>
+              <p className="text-xs text-gray-500 italic py-1.5">Select a trainee first to see available courses</p>
             </div>
           )}
 
