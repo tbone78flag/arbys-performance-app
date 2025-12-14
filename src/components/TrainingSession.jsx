@@ -23,6 +23,7 @@ export default function TrainingSession({ profile }) {
           status,
           lto_learninghub_completed,
           lto_handson_completed,
+          compliance_learninghub_completed,
           training_schedule:training_schedule_id(
             id,
             training_type,
@@ -109,6 +110,69 @@ export default function TrainingSession({ profile }) {
   // Complete LTO training session
   const handleCompleteLTO = async (session) => {
     if (!session.lto_learninghub_completed || !session.lto_handson_completed) {
+      return
+    }
+
+    setSaving(true)
+
+    // Update training_sessions status
+    const { error: sessionError } = await supabase
+      .from('training_sessions')
+      .update({
+        status: 'completed',
+        completed_at: new Date().toISOString(),
+      })
+      .eq('id', session.id)
+
+    if (sessionError) {
+      console.error('Error completing session:', sessionError)
+      setSaving(false)
+      return
+    }
+
+    // Also mark the training_schedule as completed
+    const { error: scheduleError } = await supabase
+      .from('training_schedule')
+      .update({
+        status: 'completed',
+      })
+      .eq('id', session.training_schedule_id)
+
+    if (scheduleError) {
+      console.error('Error updating schedule status:', scheduleError)
+    }
+
+    // Remove from active sessions
+    setActiveSessions((prev) => prev.filter((s) => s.id !== session.id))
+    setSaving(false)
+  }
+
+  // Update Compliance checkbox
+  const handleComplianceCheckbox = async (sessionId, field, value) => {
+    setSaving(true)
+
+    const updateData = { [field]: value }
+
+    const { error } = await supabase
+      .from('training_sessions')
+      .update(updateData)
+      .eq('id', sessionId)
+
+    if (error) {
+      console.error('Error updating session:', error)
+    } else {
+      setActiveSessions((prev) =>
+        prev.map((s) =>
+          s.id === sessionId ? { ...s, ...updateData } : s
+        )
+      )
+    }
+    setSaving(false)
+  }
+
+  // Complete Compliance training session
+  const handleCompleteCompliance = async (session) => {
+    if (!session.compliance_learninghub_completed) {
       return
     }
 
@@ -271,10 +335,72 @@ export default function TrainingSession({ profile }) {
                   </div>
                 )}
 
-                {/* Compliance Training Content - Coming Soon */}
+                {/* Compliance Training Content */}
                 {schedule.training_type === 'Compliance' && (
-                  <div className="text-center py-4 text-gray-500">
-                    <p className="text-sm">Compliance training session content coming soon...</p>
+                  <div className="space-y-4">
+                    <p className="text-sm text-gray-600">
+                      Complete the following for {schedule.trainee?.display_name}:
+                    </p>
+
+                    {/* Show the compliance course name */}
+                    {schedule.competency_type && (
+                      <div className="bg-orange-50 border border-orange-200 rounded-lg p-3">
+                        <p className="text-sm font-medium text-orange-800">
+                          Course: {schedule.competency_type}
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Compliance Checklist */}
+                    <div className="space-y-3">
+                      <label className="flex items-start gap-3 p-3 bg-white border rounded-lg cursor-pointer hover:bg-gray-50">
+                        <input
+                          type="checkbox"
+                          checked={session.compliance_learninghub_completed || false}
+                          onChange={(e) =>
+                            handleComplianceCheckbox(session.id, 'compliance_learninghub_completed', e.target.checked)
+                          }
+                          disabled={saving}
+                          className="mt-0.5 h-5 w-5 rounded border-gray-300 text-red-600 focus:ring-red-500"
+                        />
+                        <div>
+                          <span className="font-medium text-sm">LearningHub Training</span>
+                          <p className="text-xs text-gray-500 mt-0.5">
+                            Did the employee complete the LearningHub training with a passing score?
+                          </p>
+                        </div>
+                      </label>
+
+                      {/* Trainer Prompt */}
+                      <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                        <div className="flex items-start gap-2">
+                          <span className="text-blue-600 text-lg">💬</span>
+                          <div>
+                            <span className="font-medium text-sm text-blue-800">Trainer Prompt</span>
+                            <p className="text-xs text-blue-700 mt-1">
+                              Ask the trainee: "What are 3 things you learned from this training?"
+                            </p>
+                            <p className="text-xs text-blue-600 mt-2 italic">
+                              Listen to their response before marking as complete.
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Done Button */}
+                    <div className="flex justify-end pt-2">
+                      <button
+                        onClick={() => handleCompleteCompliance(session)}
+                        disabled={
+                          saving ||
+                          !session.compliance_learninghub_completed
+                        }
+                        className="px-4 py-2 bg-green-600 text-white rounded text-sm font-medium hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {saving ? 'Saving...' : 'Done'}
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>
