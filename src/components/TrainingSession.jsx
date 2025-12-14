@@ -114,7 +114,8 @@ export default function TrainingSession({ profile }) {
 
     setSaving(true)
 
-    const { error } = await supabase
+    // Update training_sessions status
+    const { error: sessionError } = await supabase
       .from('training_sessions')
       .update({
         status: 'completed',
@@ -122,12 +123,26 @@ export default function TrainingSession({ profile }) {
       })
       .eq('id', session.id)
 
-    if (error) {
-      console.error('Error completing session:', error)
-    } else {
-      // Remove from active sessions
-      setActiveSessions((prev) => prev.filter((s) => s.id !== session.id))
+    if (sessionError) {
+      console.error('Error completing session:', sessionError)
+      setSaving(false)
+      return
     }
+
+    // Also mark the training_schedule as completed
+    const { error: scheduleError } = await supabase
+      .from('training_schedule')
+      .update({
+        status: 'completed',
+      })
+      .eq('id', session.training_schedule_id)
+
+    if (scheduleError) {
+      console.error('Error updating schedule status:', scheduleError)
+    }
+
+    // Remove from active sessions
+    setActiveSessions((prev) => prev.filter((s) => s.id !== session.id))
     setSaving(false)
   }
 

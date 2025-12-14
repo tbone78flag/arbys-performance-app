@@ -69,6 +69,7 @@ export default function Training({ profile, locationId }) {
           trainee_id,
           trainer_id,
           created_at,
+          status,
           trainee:trainee_id(id, display_name),
           trainer:trainer_id(id, display_name)
         `)
@@ -275,8 +276,11 @@ export default function Training({ profile, locationId }) {
   // Check if current user can reschedule (is the trainer)
   const canReschedule = selectedTraining?.trainer_id === profile.id
 
-  // Check if current user can start a session (is the trainer)
-  const canStartSession = selectedTraining?.trainer_id === profile.id
+  // Check if current user can start a session (is the trainer and training not completed)
+  const canStartSession = selectedTraining?.trainer_id === profile.id && selectedTraining?.status !== 'completed'
+
+  // Check if training is already completed
+  const isTrainingCompleted = selectedTraining?.status === 'completed'
 
   // Handle starting a training session
   const handleStartSession = async () => {
@@ -332,23 +336,33 @@ export default function Training({ profile, locationId }) {
             Your Trainees Today
           </h3>
           <div className="space-y-2">
-            {todaysMyTrainees.map((t) => (
-              <div
-                key={t.id}
-                className="flex items-center justify-between bg-white border border-green-200 rounded p-2 cursor-pointer hover:bg-green-50"
-                onClick={() => openTrainingModal(t)}
-              >
-                <div>
-                  <span className="font-medium">{t.trainee?.display_name}</span>
-                  <span className={`ml-2 text-xs px-2 py-0.5 rounded ${getTypeColor(t.training_type)}`}>
-                    {t.training_type}
+            {todaysMyTrainees.map((t) => {
+              const isCompleted = t.status === 'completed'
+              return (
+                <div
+                  key={t.id}
+                  className={`flex items-center justify-between bg-white border border-green-200 rounded p-2 cursor-pointer hover:bg-green-50 ${isCompleted ? 'opacity-60' : ''}`}
+                  onClick={() => openTrainingModal(t)}
+                >
+                  <div className="flex items-center gap-2">
+                    <span className={`font-medium ${isCompleted ? 'line-through' : ''}`}>
+                      {t.trainee?.display_name}
+                    </span>
+                    <span className={`text-xs px-2 py-0.5 rounded ${getTypeColor(t.training_type)}`}>
+                      {t.training_type}
+                    </span>
+                    {isCompleted && (
+                      <span className="text-xs px-2 py-0.5 rounded bg-green-100 text-green-700 font-medium">
+                        Done
+                      </span>
+                    )}
+                  </div>
+                  <span className={`text-sm text-gray-600 ${isCompleted ? 'line-through' : ''}`}>
+                    {formatTime(t.shift_start)} - {formatTime(t.shift_end)}
                   </span>
                 </div>
-                <span className="text-sm text-gray-600">
-                  {formatTime(t.shift_start)} - {formatTime(t.shift_end)}
-                </span>
-              </div>
-            ))}
+              )
+            })}
           </div>
         </div>
       )}
@@ -437,23 +451,31 @@ export default function Training({ profile, locationId }) {
                     </p>
                   ) : (
                     <div className="space-y-1">
-                      {dayTraining.map((t) => (
-                        <div
-                          key={t.id}
-                          onClick={() => openTrainingModal(t)}
-                          className={`text-xs p-1.5 rounded border cursor-pointer hover:opacity-80 ${getTypeColor(t.training_type)}`}
-                        >
-                          <div className="font-medium truncate">
-                            {t.trainee?.display_name}
+                      {dayTraining.map((t) => {
+                        const isCompleted = t.status === 'completed'
+                        return (
+                          <div
+                            key={t.id}
+                            onClick={() => openTrainingModal(t)}
+                            className={`text-xs p-1.5 rounded border cursor-pointer hover:opacity-80 ${getTypeColor(t.training_type)} ${isCompleted ? 'opacity-60' : ''}`}
+                          >
+                            <div className={`font-medium truncate ${isCompleted ? 'line-through' : ''}`}>
+                              {t.trainee?.display_name}
+                            </div>
+                            <div className={`text-[10px] opacity-75 ${isCompleted ? 'line-through' : ''}`}>
+                              {formatTime(t.shift_start)}-{formatTime(t.shift_end)}
+                            </div>
+                            <div className={`text-[10px] opacity-75 truncate ${isCompleted ? 'line-through' : ''}`}>
+                              w/ {t.trainer?.display_name}
+                            </div>
+                            {isCompleted && (
+                              <div className="text-[10px] font-medium text-green-700 mt-0.5">
+                                Completed
+                              </div>
+                            )}
                           </div>
-                          <div className="text-[10px] opacity-75">
-                            {formatTime(t.shift_start)}-{formatTime(t.shift_end)}
-                          </div>
-                          <div className="text-[10px] opacity-75 truncate">
-                            w/ {t.trainer?.display_name}
-                          </div>
-                        </div>
-                      ))}
+                        )
+                      })}
                     </div>
                   )}
                 </div>
@@ -535,7 +557,17 @@ export default function Training({ profile, locationId }) {
                     </div>
                   </button>
 
-                  {canStartSession && (
+                  {isTrainingCompleted && (
+                    <div className="w-full px-4 py-3 border rounded bg-green-50 border-green-200 flex items-center gap-3">
+                      <span className="text-xl">✅</span>
+                      <div>
+                        <div className="font-medium text-green-700">Training Completed</div>
+                        <div className="text-xs text-green-600">This training session has been completed</div>
+                      </div>
+                    </div>
+                  )}
+
+                  {!isTrainingCompleted && canStartSession && (
                     <button
                       onClick={handleStartSession}
                       disabled={startingSession}
@@ -551,7 +583,7 @@ export default function Training({ profile, locationId }) {
                     </button>
                   )}
 
-                  {!canStartSession && (
+                  {!isTrainingCompleted && !canStartSession && (
                     <button
                       disabled
                       className="w-full text-left px-4 py-3 border rounded bg-gray-50 text-gray-400 flex items-center gap-3 cursor-not-allowed"
