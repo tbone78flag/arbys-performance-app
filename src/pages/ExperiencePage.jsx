@@ -1,8 +1,8 @@
 // src/pages/ExperiencePage.jsx
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { supabase } from '../supabaseClient'
 import Training from '../components/Training'
+import TrainingSession from '../components/TrainingSession'
 
 export default function ExperiencePage({ profile }) {
   const navigate = useNavigate()
@@ -74,6 +74,36 @@ export default function ExperiencePage({ profile }) {
             {openSection === 'training' && (
               <div className="px-4 pb-4 pt-2 bg-gray-50 border-t">
                 <Training profile={profile} locationId={locationId} />
+              </div>
+            )}
+          </div>
+
+          {/* Training Session Accordion */}
+          <div className="border rounded-lg overflow-hidden">
+            <button
+              type="button"
+              onClick={() => toggleSection('session')}
+              className="w-full flex items-center justify-between px-4 py-3 text-left bg-white hover:bg-gray-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500"
+              aria-expanded={openSection === 'session'}
+            >
+              <div className="flex flex-col">
+                <span className="font-medium">Training Session</span>
+                <span className="text-xs text-gray-500">
+                  View and complete your active training sessions.
+                </span>
+              </div>
+              <span
+                className={`transform transition-transform ${
+                  openSection === 'session' ? 'rotate-90' : ''
+                }`}
+              >
+                ▶
+              </span>
+            </button>
+
+            {openSection === 'session' && (
+              <div className="px-4 pb-4 pt-2 bg-gray-50 border-t">
+                <TrainingSession profile={profile} />
               </div>
             )}
           </div>

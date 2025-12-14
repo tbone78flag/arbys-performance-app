@@ -32,6 +32,9 @@ export default function Training({ profile, locationId }) {
   const [rescheduleShiftStart, setRescheduleShiftStart] = useState('')
   const [rescheduleShiftEnd, setRescheduleShiftEnd] = useState('')
 
+  // Start session state
+  const [startingSession, setStartingSession] = useState(false)
+
   const weekStart = startOfWeekLocal(weekAnchor)
   const weekEnd = addDays(weekStart, 6)
 
@@ -272,6 +275,54 @@ export default function Training({ profile, locationId }) {
   // Check if current user can reschedule (is the trainer)
   const canReschedule = selectedTraining?.trainer_id === profile.id
 
+  // Check if current user can start a session (is the trainer)
+  const canStartSession = selectedTraining?.trainer_id === profile.id
+
+  // Handle starting a training session
+  const handleStartSession = async () => {
+    if (!selectedTraining) return
+
+    setStartingSession(true)
+    setModalError(null)
+
+    // Check if session already exists for this training schedule
+    const { data: existingSession } = await supabase
+      .from('training_sessions')
+      .select('id')
+      .eq('training_schedule_id', selectedTraining.id)
+      .eq('status', 'in_progress')
+      .single()
+
+    if (existingSession) {
+      setModalError('A training session is already in progress for this schedule.')
+      setStartingSession(false)
+      return
+    }
+
+    // Create new training session
+    const { error } = await supabase
+      .from('training_sessions')
+      .insert({
+        training_schedule_id: selectedTraining.id,
+        trainer_id: profile.id,
+        trainee_id: selectedTraining.trainee_id,
+        started_at: new Date().toISOString(),
+        status: 'in_progress',
+      })
+
+    setStartingSession(false)
+
+    if (error) {
+      console.error('Error starting session:', error)
+      setModalError('Failed to start training session. Please try again.')
+      return
+    }
+
+    // Close modal and show success
+    closeModal()
+    // The TrainingSession component will pick up the new session when it refreshes
+  }
+
   return (
     <div className="space-y-4">
       {/* Today's My Trainees - Highlighted Box */}
@@ -484,16 +535,34 @@ export default function Training({ profile, locationId }) {
                     </div>
                   </button>
 
-                  <button
-                    disabled
-                    className="w-full text-left px-4 py-3 border rounded bg-gray-50 text-gray-400 flex items-center gap-3 cursor-not-allowed"
-                  >
-                    <span className="text-xl">▶️</span>
-                    <div>
-                      <div className="font-medium">Start Training Session</div>
-                      <div className="text-xs">Coming soon...</div>
-                    </div>
-                  </button>
+                  {canStartSession && (
+                    <button
+                      onClick={handleStartSession}
+                      disabled={startingSession}
+                      className="w-full text-left px-4 py-3 border rounded hover:bg-green-50 flex items-center gap-3 disabled:opacity-50"
+                    >
+                      <span className="text-xl">▶️</span>
+                      <div>
+                        <div className="font-medium">Start Training Session</div>
+                        <div className="text-xs text-gray-500">
+                          {startingSession ? 'Starting...' : 'Begin the training session now'}
+                        </div>
+                      </div>
+                    </button>
+                  )}
+
+                  {!canStartSession && (
+                    <button
+                      disabled
+                      className="w-full text-left px-4 py-3 border rounded bg-gray-50 text-gray-400 flex items-center gap-3 cursor-not-allowed"
+                    >
+                      <span className="text-xl">▶️</span>
+                      <div>
+                        <div className="font-medium">Start Training Session</div>
+                        <div className="text-xs">Only the assigned trainer can start this session</div>
+                      </div>
+                    </button>
+                  )}
                 </div>
               )}
 
