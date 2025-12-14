@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import { BeefVarianceCard } from '../components/BeefVarianceCard'
 import RewardsManager from '../components/RewardsManager'
 import PointsHistory from '../components/PointsHistory'
+import TrainingScheduleForm from '../components/TrainingScheduleForm'
 import { startOfWeekLocal, addDays } from '../utils/dateHelpers'
 
 export default function GoalsPage({ profile }) {
@@ -339,6 +340,36 @@ export default function GoalsPage({ profile }) {
               {openSection === 'points-history' && (
                 <div className="px-4 pb-4 pt-2 bg-gray-50 border-t">
                   <PointsHistory locationId={locationId} profile={profile} />
+                </div>
+              )}
+            </div>
+
+            {/* Training Scheduler Accordion */}
+            <div className="border rounded-lg overflow-hidden">
+              <button
+                type="button"
+                onClick={() => toggleSection('training-scheduler')}
+                className="w-full flex items-center justify-between px-4 py-3 text-left bg-white hover:bg-gray-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500"
+                aria-expanded={openSection === 'training-scheduler'}
+              >
+                <div className="flex flex-col">
+                  <span className="font-medium">Training Scheduler</span>
+                  <span className="text-xs text-gray-500">
+                    Schedule training sessions for team members.
+                  </span>
+                </div>
+                <span
+                  className={`transform transition-transform ${
+                    openSection === 'training-scheduler' ? 'rotate-90' : ''
+                  }`}
+                >
+                  ▶
+                </span>
+              </button>
+
+              {openSection === 'training-scheduler' && (
+                <div className="px-4 pb-4 pt-2 bg-gray-50 border-t">
+                  <TrainingScheduleForm profile={profile} locationId={locationId} />
                 </div>
               )}
             </div>

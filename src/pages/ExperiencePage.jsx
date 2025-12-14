@@ -1,10 +1,19 @@
 // src/pages/ExperiencePage.jsx
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
+import Training from '../components/Training'
 
 export default function ExperiencePage({ profile }) {
   const navigate = useNavigate()
+  const locationId = profile?.location_id ?? 'holladay-3900'
+
+  // Accordion state
+  const [openSection, setOpenSection] = useState(null)
+
+  const toggleSection = (id) => {
+    setOpenSection((current) => (current === id ? null : id))
+  }
 
   useEffect(() => {
     if (!profile) {
@@ -13,7 +22,7 @@ export default function ExperiencePage({ profile }) {
   }, [profile, navigate])
 
   return (
-      <div className="w-full max-w-3xl mx-auto bg-white shadow p-4 sm:p-6 rounded px-4 sm:px-6">
+    <div className="w-full max-w-3xl mx-auto bg-white shadow p-4 sm:p-6 rounded px-4 sm:px-6">
       {/* Header row */}
       <div className="mb-4 sm:mb-6 flex items-center justify-between gap-3">
         <h1 className="text-2xl font-bold text-red-700">Experience Dashboard</h1>
@@ -30,15 +39,44 @@ export default function ExperiencePage({ profile }) {
       {/* Accessible to all team members */}
       <div className="mb-4">
         <h2 className="text-lg font-semibold">Daily Experience Submission</h2>
-        <p>Team members can enter experience data here.</p>
+        <p className="text-sm text-gray-600">Team members can enter experience data here.</p>
         {/* Later: form or button */}
       </div>
 
       {/* Manager-only section */}
       {profile?.role === 'manager' && (
-        <div className="border-t pt-4 mt-4">
-          <h2 className="text-lg font-semibold text-red-600">Manager Tools</h2>
-          <p>Only visible to managers — e.g. target goals, override entries, etc.</p>
+        <div className="border-t pt-4 mt-4 space-y-2">
+          <h2 className="text-lg font-semibold text-red-600 mb-3">Manager Tools</h2>
+
+          {/* Training Calendar Accordion */}
+          <div className="border rounded-lg overflow-hidden">
+            <button
+              type="button"
+              onClick={() => toggleSection('training')}
+              className="w-full flex items-center justify-between px-4 py-3 text-left bg-white hover:bg-gray-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500"
+              aria-expanded={openSection === 'training'}
+            >
+              <div className="flex flex-col">
+                <span className="font-medium">Training Calendar</span>
+                <span className="text-xs text-gray-500">
+                  View weekly training schedule and your assigned trainees.
+                </span>
+              </div>
+              <span
+                className={`transform transition-transform ${
+                  openSection === 'training' ? 'rotate-90' : ''
+                }`}
+              >
+                ▶
+              </span>
+            </button>
+
+            {openSection === 'training' && (
+              <div className="px-4 pb-4 pt-2 bg-gray-50 border-t">
+                <Training profile={profile} locationId={locationId} />
+              </div>
+            )}
+          </div>
         </div>
       )}
     </div>
