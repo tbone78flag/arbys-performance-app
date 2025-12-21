@@ -36,24 +36,33 @@ const ORIENTATION_SECTIONS = [
       {
         description: 'Frontline',
         subItems: [
-          'Sub-point 1',
-          'Sub-point 2',
+          'Guest perception (employee greetings, smiles, eye contact, thanks and cleanliness)',
+          'Equipment review',
+        ],
+      },
+      {
+        description: 'Fry Station',
+        subItems: [
+          'Safety (fryer age and safety procedures)',
+          'Hot oil, fire extinguisher, ansul system location',
+          'Equipment review',
         ],
       },
       {
         description: 'Backline',
         subItems: [
-          'Sub-point 1',
+          'Safety (slicer age and safety procedures)',
+          'Equipment review',
         ],
       },
       { description: 'Kitchen Safety' },
       {
         description: 'Storage/Break Area',
         subItems: [
-          'Sub-point 1',
-          'Sub-point 2',
-          'Sub-point 3',
-          'Sub-point 4',
+          'Safety (lifting properly, organization)',
+          'Dry storage',
+          'Cooler / freezer door release system',
+          'Back door exit (see OSM for guidelines)',
         ],
       },
     ],
@@ -65,28 +74,28 @@ const ORIENTATION_SECTIONS = [
       {
         description: 'Guests Deserve Our Best',
         subItems: [
-          'Sub-point 1',
-          'Sub-point 2',
-          'Sub-point 3',
-          'Sub-point 4',
+          'Friendly Interactions',
+          'Knowledgeable Team Members',
+          'Accurate Orders',
+          'Enthusiastic Service',
         ],
       },
       {
         description: 'BLAST - Arby\'s approach to handling complaints',
         subItems: [
-          'Sub-point 1',
+          'Believe, Listen, Apologize, Solve it, Thank',
         ],
       },
       { description: 'Restaurant priorities - Arby\'s Ops Review' },
       {
         description: 'Arby\'s Values',
         subItems: [
-          'Sub-point 1',
-          'Sub-point 2',
-          'Sub-point 3',
-          'Sub-point 4',
-          'Sub-point 5',
-          'Sub-point 6',
+          'Dream Big',
+          'Work Hard',
+          'Get It Done',
+          'Play Fair',
+          'Have Fun',
+          'Make a Difference',
         ],
       },
     ],
@@ -98,11 +107,11 @@ const ORIENTATION_SECTIONS = [
       {
         description: 'Team Member Top 5 Priorities',
         subItems: [
-          '1. Sub-point 1',
-          '2. Sub-point 2',
-          '3. Sub-point 3',
-          '4. Sub-point 4',
-          '5. Sub-point 5',
+          '1. Guest Focused Service',
+          '2. Speed & Accuracy',
+          '3. Quality Product Made Right',
+          '4. Cleanliness Guest View & Work Area',
+          '5. Safety: Food & Personal',
         ],
         numbered: true,
       },
@@ -112,7 +121,7 @@ const ORIENTATION_SECTIONS = [
       {
         description: 'Review standards for appearance',
         subItems: [
-          'Sub-point 1',
+          'Uniform / non-slip shoes / name tag / grooming / health and hygiene',
         ],
       },
     ],
@@ -125,7 +134,7 @@ const ORIENTATION_SECTIONS = [
       {
         description: 'Watch Learning Hub Training',
         subItems: [
-          'Sub-point 1',
+          'Watch Welcome Path (Orientation)',
         ],
       },
     ],
