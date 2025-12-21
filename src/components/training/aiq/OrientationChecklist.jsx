@@ -5,8 +5,8 @@ const ORIENTATION_SECTIONS = [
   {
     title: 'Welcome',
     items: [
-      { field: 'orientation_welcome_1', description: 'Welcome item 1' },
-      { field: 'orientation_welcome_2', description: 'Welcome item 2' },
+      { field: 'orientation_welcome_1', description: 'Introductions to the team' },
+      { field: 'orientation_welcome_2', description: 'Receive uniform and Team Takeaway Booklet' },
     ],
   },
   {
