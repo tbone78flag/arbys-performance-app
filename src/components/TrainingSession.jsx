@@ -4,27 +4,27 @@ import { supabase } from '../supabaseClient'
 import LTOSessionContent, { getLTOSessionFields } from './training/LTOSessionContent'
 import AIQSessionContent, { getAIQSessionFields } from './training/AIQSessionContent'
 
+// Build the select query with all needed fields - defined outside component to avoid re-creation
+const SESSION_FIELDS = [
+  'id',
+  'training_schedule_id',
+  'started_at',
+  'completed_at',
+  'status',
+  // Compliance fields
+  'compliance_learninghub_completed',
+  'compliance_trainer_prompt_completed',
+  // LTO fields (from LTOSessionContent)
+  ...getLTOSessionFields(),
+  // AIQ fields (from AIQSessionContent)
+  ...getAIQSessionFields(),
+].join(', ')
+
 export default function TrainingSession({ profile }) {
   const [activeSessions, setActiveSessions] = useState([])
   const [loading, setLoading] = useState(true)
   const [expandedSession, setExpandedSession] = useState(null)
   const [saving, setSaving] = useState(false)
-
-  // Build the select query with all needed fields
-  const sessionFields = [
-    'id',
-    'training_schedule_id',
-    'started_at',
-    'completed_at',
-    'status',
-    // Compliance fields
-    'compliance_learninghub_completed',
-    'compliance_trainer_prompt_completed',
-    // LTO fields (from LTOSessionContent)
-    ...getLTOSessionFields(),
-    // AIQ fields (from AIQSessionContent)
-    ...getAIQSessionFields(),
-  ].join(',\n          ')
 
   // Fetch active training sessions for this trainer
   useEffect(() => {
@@ -34,7 +34,7 @@ export default function TrainingSession({ profile }) {
       const { data, error } = await supabase
         .from('training_sessions')
         .select(`
-          ${sessionFields},
+          ${SESSION_FIELDS},
           training_schedule:training_schedule_id(
             id,
             training_type,
@@ -57,7 +57,7 @@ export default function TrainingSession({ profile }) {
     }
 
     fetchActiveSessions()
-  }, [profile.id, sessionFields])
+  }, [profile.id])
 
   const formatDateTime = (dateString) => {
     return new Date(dateString).toLocaleString('en-US', {
