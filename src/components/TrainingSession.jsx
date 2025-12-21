@@ -1,12 +1,27 @@
 // src/components/TrainingSession.jsx
 import { useState, useEffect } from 'react'
 import { supabase } from '../supabaseClient'
+import LTOSessionContent, { getLTOSessionFields } from './training/LTOSessionContent'
 
 export default function TrainingSession({ profile }) {
   const [activeSessions, setActiveSessions] = useState([])
   const [loading, setLoading] = useState(true)
   const [expandedSession, setExpandedSession] = useState(null)
   const [saving, setSaving] = useState(false)
+
+  // Build the select query with all needed fields
+  const sessionFields = [
+    'id',
+    'training_schedule_id',
+    'started_at',
+    'completed_at',
+    'status',
+    // Compliance fields
+    'compliance_learninghub_completed',
+    'compliance_trainer_prompt_completed',
+    // LTO fields (from LTOSessionContent)
+    ...getLTOSessionFields(),
+  ].join(',\n          ')
 
   // Fetch active training sessions for this trainer
   useEffect(() => {
@@ -16,15 +31,7 @@ export default function TrainingSession({ profile }) {
       const { data, error } = await supabase
         .from('training_sessions')
         .select(`
-          id,
-          training_schedule_id,
-          started_at,
-          completed_at,
-          status,
-          lto_learninghub_completed,
-          lto_handson_completed,
-          compliance_learninghub_completed,
-          compliance_trainer_prompt_completed,
+          ${sessionFields},
           training_schedule:training_schedule_id(
             id,
             training_type,
@@ -47,7 +54,7 @@ export default function TrainingSession({ profile }) {
     }
 
     fetchActiveSessions()
-  }, [profile.id])
+  }, [profile.id, sessionFields])
 
   const formatDateTime = (dateString) => {
     return new Date(dateString).toLocaleString('en-US', {
@@ -85,8 +92,8 @@ export default function TrainingSession({ profile }) {
     setExpandedSession(expandedSession === sessionId ? null : sessionId)
   }
 
-  // Update LTO checkbox
-  const handleLTOCheckbox = async (sessionId, field, value) => {
+  // Generic checkbox handler - works for any training type
+  const handleCheckboxChange = async (sessionId, field, value) => {
     setSaving(true)
 
     const updateData = { [field]: value }
@@ -108,12 +115,8 @@ export default function TrainingSession({ profile }) {
     setSaving(false)
   }
 
-  // Complete LTO training session
-  const handleCompleteLTO = async (session) => {
-    if (!session.lto_learninghub_completed || !session.lto_handson_completed) {
-      return
-    }
-
+  // Generic complete handler - marks session and schedule as completed
+  const handleComplete = async (session) => {
     setSaving(true)
 
     // Update training_sessions status
@@ -148,67 +151,12 @@ export default function TrainingSession({ profile }) {
     setSaving(false)
   }
 
-  // Update Compliance checkbox
-  const handleComplianceCheckbox = async (sessionId, field, value) => {
-    setSaving(true)
-
-    const updateData = { [field]: value }
-
-    const { error } = await supabase
-      .from('training_sessions')
-      .update(updateData)
-      .eq('id', sessionId)
-
-    if (error) {
-      console.error('Error updating session:', error)
-    } else {
-      setActiveSessions((prev) =>
-        prev.map((s) =>
-          s.id === sessionId ? { ...s, ...updateData } : s
-        )
-      )
-    }
-    setSaving(false)
-  }
-
-  // Complete Compliance training session
+  // Compliance-specific complete handler (checks required fields)
   const handleCompleteCompliance = async (session) => {
     if (!session.compliance_learninghub_completed || !session.compliance_trainer_prompt_completed) {
       return
     }
-
-    setSaving(true)
-
-    // Update training_sessions status
-    const { error: sessionError } = await supabase
-      .from('training_sessions')
-      .update({
-        status: 'completed',
-        completed_at: new Date().toISOString(),
-      })
-      .eq('id', session.id)
-
-    if (sessionError) {
-      console.error('Error completing session:', sessionError)
-      setSaving(false)
-      return
-    }
-
-    // Also mark the training_schedule as completed
-    const { error: scheduleError } = await supabase
-      .from('training_schedule')
-      .update({
-        status: 'completed',
-      })
-      .eq('id', session.training_schedule_id)
-
-    if (scheduleError) {
-      console.error('Error updating schedule status:', scheduleError)
-    }
-
-    // Remove from active sessions
-    setActiveSessions((prev) => prev.filter((s) => s.id !== session.id))
-    setSaving(false)
+    await handleComplete(session)
   }
 
   if (loading) {
@@ -269,63 +217,13 @@ export default function TrainingSession({ profile }) {
                 {/* LTO Training Content */}
                 {schedule.training_type === 'LTO' && (
                   <div className="space-y-4">
-                    <p className="text-sm text-gray-600">
-                      Complete the following checklist for {schedule.trainee?.display_name}:
-                    </p>
-
-                    {/* LTO Checklist */}
-                    <div className="space-y-3">
-                      <label className="flex items-start gap-3 p-3 bg-white border rounded-lg cursor-pointer hover:bg-gray-50">
-                        <input
-                          type="checkbox"
-                          checked={session.lto_learninghub_completed || false}
-                          onChange={(e) =>
-                            handleLTOCheckbox(session.id, 'lto_learninghub_completed', e.target.checked)
-                          }
-                          disabled={saving}
-                          className="mt-0.5 h-5 w-5 rounded border-gray-300 text-red-600 focus:ring-red-500"
-                        />
-                        <div>
-                          <span className="font-medium text-sm">LearningHub Training</span>
-                          <p className="text-xs text-gray-500 mt-0.5">
-                            Did the employee complete the LearningHub training with a passing score?
-                          </p>
-                        </div>
-                      </label>
-
-                      <label className="flex items-start gap-3 p-3 bg-white border rounded-lg cursor-pointer hover:bg-gray-50">
-                        <input
-                          type="checkbox"
-                          checked={session.lto_handson_completed || false}
-                          onChange={(e) =>
-                            handleLTOCheckbox(session.id, 'lto_handson_completed', e.target.checked)
-                          }
-                          disabled={saving}
-                          className="mt-0.5 h-5 w-5 rounded border-gray-300 text-red-600 focus:ring-red-500"
-                        />
-                        <div>
-                          <span className="font-medium text-sm">Hands-on Training</span>
-                          <p className="text-xs text-gray-500 mt-0.5">
-                            Did the employee complete the hands-on training?
-                          </p>
-                        </div>
-                      </label>
-                    </div>
-
-                    {/* Done Button */}
-                    <div className="flex justify-end pt-2">
-                      <button
-                        onClick={() => handleCompleteLTO(session)}
-                        disabled={
-                          saving ||
-                          !session.lto_learninghub_completed ||
-                          !session.lto_handson_completed
-                        }
-                        className="px-4 py-2 bg-green-600 text-white rounded text-sm font-medium hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        {saving ? 'Saving...' : 'Done'}
-                      </button>
-                    </div>
+                    <LTOSessionContent
+                      session={session}
+                      schedule={schedule}
+                      saving={saving}
+                      onCheckboxChange={handleCheckboxChange}
+                      onComplete={handleComplete}
+                    />
                   </div>
                 )}
 
@@ -359,7 +257,7 @@ export default function TrainingSession({ profile }) {
                           type="checkbox"
                           checked={session.compliance_learninghub_completed || false}
                           onChange={(e) =>
-                            handleComplianceCheckbox(session.id, 'compliance_learninghub_completed', e.target.checked)
+                            handleCheckboxChange(session.id, 'compliance_learninghub_completed', e.target.checked)
                           }
                           disabled={saving}
                           className="mt-0.5 h-5 w-5 rounded border-gray-300 text-red-600 focus:ring-red-500"
@@ -378,7 +276,7 @@ export default function TrainingSession({ profile }) {
                           type="checkbox"
                           checked={session.compliance_trainer_prompt_completed || false}
                           onChange={(e) =>
-                            handleComplianceCheckbox(session.id, 'compliance_trainer_prompt_completed', e.target.checked)
+                            handleCheckboxChange(session.id, 'compliance_trainer_prompt_completed', e.target.checked)
                           }
                           disabled={saving}
                           className="mt-0.5 h-5 w-5 rounded border-gray-300 text-red-600 focus:ring-red-500"
