@@ -70,7 +70,7 @@ export default function AIQSessionContent({
 
   // Route to the appropriate checklist component based on competency type
   switch (competencyType) {
-    case 'Orientation':
+    case 'Welcome Path Orientation':
       return (
         <OrientationChecklist
           session={session}
