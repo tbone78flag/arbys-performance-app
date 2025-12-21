@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../supabaseClient'
 import LTOSessionContent, { getLTOSessionFields } from './training/LTOSessionContent'
+import AIQSessionContent, { getAIQSessionFields } from './training/AIQSessionContent'
 
 export default function TrainingSession({ profile }) {
   const [activeSessions, setActiveSessions] = useState([])
@@ -21,6 +22,8 @@ export default function TrainingSession({ profile }) {
     'compliance_trainer_prompt_completed',
     // LTO fields (from LTOSessionContent)
     ...getLTOSessionFields(),
+    // AIQ fields (from AIQSessionContent)
+    ...getAIQSessionFields(),
   ].join(',\n          ')
 
   // Fetch active training sessions for this trainer
@@ -227,10 +230,16 @@ export default function TrainingSession({ profile }) {
                   </div>
                 )}
 
-                {/* AIQ Training Content - Coming Soon */}
+                {/* AIQ Training Content */}
                 {schedule.training_type === 'AIQ' && (
-                  <div className="text-center py-4 text-gray-500">
-                    <p className="text-sm">AIQ training session content coming soon...</p>
+                  <div className="space-y-4">
+                    <AIQSessionContent
+                      session={session}
+                      schedule={schedule}
+                      saving={saving}
+                      onCheckboxChange={handleCheckboxChange}
+                      onComplete={handleComplete}
+                    />
                   </div>
                 )}
 

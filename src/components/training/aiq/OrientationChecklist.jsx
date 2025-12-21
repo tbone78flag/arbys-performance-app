@@ -1,4 +1,4 @@
-// src/components/training/sessions/OrientationChecklist.jsx
+// src/components/training/aiq/OrientationChecklist.jsx
 
 // Define the checklist sections for Orientation training
 const ORIENTATION_SECTIONS = [

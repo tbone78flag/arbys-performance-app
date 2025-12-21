@@ -1,5 +1,4 @@
 // src/components/training/LTOSessionContent.jsx
-import OrientationChecklist, { getOrientationFields } from './sessions/OrientationChecklist'
 
 // Export all LTO-related database fields needed for the query
 export function getLTOSessionFields() {
@@ -7,15 +6,11 @@ export function getLTOSessionFields() {
     // Generic LTO fields
     'lto_learninghub_completed',
     'lto_handson_completed',
-    // Orientation-specific fields
-    ...getOrientationFields(),
-    // Add more competency fields here as they are created
-    // ...getFrontlineFields(),
-    // ...getBacklineFields(),
+    // Add more LTO-specific fields here as they are created
   ]
 }
 
-// Generic LTO checklist for competencies that don't have a specific component yet
+// Generic LTO checklist for all LTO competencies
 function GenericLTOChecklist({
   session,
   schedule,
@@ -91,39 +86,15 @@ export default function LTOSessionContent({
   onCheckboxChange,
   onComplete,
 }) {
-  const competencyType = schedule.competency_type
-
-  // Route to the appropriate checklist component based on competency type
-  switch (competencyType) {
-    case 'Orientation':
-      return (
-        <OrientationChecklist
-          session={session}
-          schedule={schedule}
-          saving={saving}
-          onCheckboxChange={onCheckboxChange}
-          onComplete={onComplete}
-        />
-      )
-
-    // Add more cases here as you create new checklist components:
-    // case 'Frontline Production':
-    //   return <FrontlineChecklist ... />
-    // case 'Backline Production (Phase 1 & 2)':
-    //   return <BacklineChecklist ... />
-    // case 'Team Trainer':
-    //   return <TeamTrainerChecklist ... />
-
-    default:
-      // Fall back to generic LTO checklist for competencies without specific components
-      return (
-        <GenericLTOChecklist
-          session={session}
-          schedule={schedule}
-          saving={saving}
-          onCheckboxChange={onCheckboxChange}
-          onComplete={onComplete}
-        />
-      )
-  }
+  // For now, all LTO training uses the generic checklist
+  // Add specific LTO competency components here if needed in the future
+  return (
+    <GenericLTOChecklist
+      session={session}
+      schedule={schedule}
+      saving={saving}
+      onCheckboxChange={onCheckboxChange}
+      onComplete={onComplete}
+    />
+  )
 }
