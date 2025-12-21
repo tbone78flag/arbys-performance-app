@@ -16,20 +16,20 @@ const ORIENTATION_SECTIONS = [
         field: 'orientation_tour_exterior',
         description: 'Exterior',
         subItems: [
-          'Sub-point 1',
-          'Sub-point 2',
-          'Sub-point 3',
-          'Sub-point 4',
+          'Guest perception',
+          'Parking lot',
+          'Dumpster / waste area',
+          'Drive-thru',
         ],
       },
       {
         field: 'orientation_tour_dining',
         description: 'Dining Room/Lobby',
         subItems: [
-          'Sub-point 1',
-          'Sub-point 2',
-          'Sub-point 3',
-          'Sub-point 4',
+          'Guest perception',
+          'Safety',
+          'Condiments',
+          'Restrooms',
         ],
       },
       {
