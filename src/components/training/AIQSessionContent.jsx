@@ -1,11 +1,14 @@
 // src/components/training/AIQSessionContent.jsx
 import OrientationChecklist, { getOrientationFields } from './aiq/OrientationChecklist'
+import SafetyFirstChecklist, { getSafetyFirstFields } from './aiq/SafetyFirstChecklist'
 
 // Export all AIQ-related database fields needed for the query
 export function getAIQSessionFields() {
   return [
     // Orientation-specific fields
     ...getOrientationFields(),
+    // Safety First fields
+    ...getSafetyFirstFields(),
     // Add more competency fields here as they are created
     // ...getFrontlineFields(),
     // ...getBacklineFields(),
@@ -73,6 +76,17 @@ export default function AIQSessionContent({
     case 'Welcome Path Orientation':
       return (
         <OrientationChecklist
+          session={session}
+          schedule={schedule}
+          saving={saving}
+          onCheckboxChange={onCheckboxChange}
+          onComplete={onComplete}
+        />
+      )
+
+    case "Arby's Safety First":
+      return (
+        <SafetyFirstChecklist
           session={session}
           schedule={schedule}
           saving={saving}
