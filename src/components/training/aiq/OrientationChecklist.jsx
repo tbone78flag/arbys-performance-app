@@ -1,19 +1,21 @@
 // src/components/training/aiq/OrientationChecklist.jsx
 
 // Define the checklist sections for Orientation training
+// Each section has ONE checkbox, with items/subItems as informational text
 const ORIENTATION_SECTIONS = [
   {
+    field: 'orientation_welcome',
     title: 'Welcome',
     items: [
-      { field: 'orientation_welcome_1', description: 'Introductions to the team' },
-      { field: 'orientation_welcome_2', description: 'Receive uniform and Team Takeaway Booklet' },
+      { description: 'Introductions to the team' },
+      { description: 'Receive uniform and Team Takeaway Booklet' },
     ],
   },
   {
+    field: 'orientation_tour',
     title: 'Restaurant Tour',
     items: [
       {
-        field: 'orientation_tour_exterior',
         description: 'Exterior',
         subItems: [
           'Guest perception',
@@ -23,7 +25,6 @@ const ORIENTATION_SECTIONS = [
         ],
       },
       {
-        field: 'orientation_tour_dining',
         description: 'Dining Room/Lobby',
         subItems: [
           'Guest perception',
@@ -33,7 +34,6 @@ const ORIENTATION_SECTIONS = [
         ],
       },
       {
-        field: 'orientation_tour_frontline',
         description: 'Frontline',
         subItems: [
           'Sub-point 1',
@@ -41,18 +41,13 @@ const ORIENTATION_SECTIONS = [
         ],
       },
       {
-        field: 'orientation_tour_backline',
         description: 'Backline',
         subItems: [
           'Sub-point 1',
         ],
       },
+      { description: 'Kitchen Safety' },
       {
-        field: 'orientation_tour_safety',
-        description: 'Kitchen Safety',
-      },
-      {
-        field: 'orientation_tour_storage',
         description: 'Storage/Break Area',
         subItems: [
           'Sub-point 1',
@@ -64,10 +59,10 @@ const ORIENTATION_SECTIONS = [
     ],
   },
   {
+    field: 'orientation_benefits',
     title: 'Benefits - Expectations & What We Are About',
     items: [
       {
-        field: 'orientation_benefits_guests',
         description: 'Guests Deserve Our Best',
         subItems: [
           'Sub-point 1',
@@ -77,18 +72,13 @@ const ORIENTATION_SECTIONS = [
         ],
       },
       {
-        field: 'orientation_benefits_blast',
         description: 'BLAST - Arby\'s approach to handling complaints',
         subItems: [
           'Sub-point 1',
         ],
       },
+      { description: 'Restaurant priorities - Arby\'s Ops Review' },
       {
-        field: 'orientation_benefits_priorities',
-        description: 'Restaurant priorities - Arby\'s Ops Review',
-      },
-      {
-        field: 'orientation_benefits_values',
         description: 'Arby\'s Values',
         subItems: [
           'Sub-point 1',
@@ -102,10 +92,10 @@ const ORIENTATION_SECTIONS = [
     ],
   },
   {
+    field: 'orientation_responsibilities',
     title: 'Team Member Responsibilities',
     items: [
       {
-        field: 'orientation_responsibilities_top5',
         description: 'Team Member Top 5 Priorities',
         subItems: [
           '1. Sub-point 1',
@@ -116,20 +106,10 @@ const ORIENTATION_SECTIONS = [
         ],
         numbered: true,
       },
+      { description: 'Deployment Guide and Post Rush / secondary responsibilities' },
+      { description: 'C.A.Y.G. - Clean As You Go' },
+      { description: 'Teamwork' },
       {
-        field: 'orientation_responsibilities_deployment',
-        description: 'Deployment Guide and Post Rush / secondary responsibilities',
-      },
-      {
-        field: 'orientation_responsibilities_cayg',
-        description: 'C.A.Y.G. - Clean As You Go',
-      },
-      {
-        field: 'orientation_responsibilities_teamwork',
-        description: 'Teamwork',
-      },
-      {
-        field: 'orientation_responsibilities_appearance',
         description: 'Review standards for appearance',
         subItems: [
           'Sub-point 1',
@@ -138,14 +118,11 @@ const ORIENTATION_SECTIONS = [
     ],
   },
   {
+    field: 'orientation_paperwork',
     title: 'Complete Required Paperwork',
     items: [
+      { description: 'Complete I-9 Verification' },
       {
-        field: 'orientation_paperwork_i9',
-        description: 'Complete I-9 Verification',
-      },
-      {
-        field: 'orientation_paperwork_learninghub',
         description: 'Watch Learning Hub Training',
         subItems: [
           'Sub-point 1',
@@ -154,26 +131,22 @@ const ORIENTATION_SECTIONS = [
     ],
   },
   {
+    field: 'orientation_policies',
     title: 'Review Policies',
     items: [
-      { field: 'orientation_policies_1', description: 'Review company policies, safety procedures, and employee handbook.' },
+      { description: 'Review company policies, safety procedures, and employee handbook.' },
     ],
   },
 ]
 
-// Get all items flattened from sections
-function getAllItems() {
-  return ORIENTATION_SECTIONS.flatMap((section) => section.items)
-}
-
-// Check if all orientation items are completed
-export function isOrientationComplete(session) {
-  return getAllItems().every((item) => session[item.field])
-}
-
-// Get the list of database fields needed for this checklist
+// Get the list of database fields needed for this checklist (just 6 fields now)
 export function getOrientationFields() {
-  return getAllItems().map((item) => item.field)
+  return ORIENTATION_SECTIONS.map((section) => section.field)
+}
+
+// Check if all orientation sections are completed
+export function isOrientationComplete(session) {
+  return ORIENTATION_SECTIONS.every((section) => session[section.field])
 }
 
 export default function OrientationChecklist({
@@ -192,47 +165,42 @@ export default function OrientationChecklist({
           Orientation Training - Welcome Path
         </p>
         <p className="text-xs text-purple-600 mt-1">
-          Complete all checkpoints for {schedule.trainee?.display_name}
+          Complete all sections for {schedule.trainee?.display_name}
         </p>
       </div>
 
-      {/* Orientation Checklist - Grouped by Section */}
+      {/* Orientation Checklist - One checkbox per section */}
       <div className="space-y-4">
         {ORIENTATION_SECTIONS.map((section) => (
-          <div key={section.title} className="border rounded-lg overflow-hidden">
-            {/* Section Header */}
-            <div className="bg-gray-100 px-3 py-2 border-b">
-              <h4 className="font-medium text-sm text-gray-800">{section.title}</h4>
-            </div>
+          <div key={section.field} className="border rounded-lg overflow-hidden">
+            {/* Section Header with Checkbox */}
+            <label className="flex items-start gap-3 px-3 py-3 bg-gray-100 border-b cursor-pointer hover:bg-gray-50">
+              <input
+                type="checkbox"
+                checked={session[section.field] || false}
+                onChange={(e) => onCheckboxChange(session.id, section.field, e.target.checked)}
+                disabled={saving}
+                className="mt-0.5 h-5 w-5 rounded border-gray-300 text-red-600 focus:ring-red-500"
+              />
+              <span className="font-medium text-sm text-gray-800">{section.title}</span>
+            </label>
 
-            {/* Section Items */}
-            <div className="divide-y">
-              {section.items.map((item) => (
-                <label
-                  key={item.field}
-                  className="flex items-start gap-3 p-3 bg-white cursor-pointer hover:bg-gray-50"
-                >
-                  <input
-                    type="checkbox"
-                    checked={session[item.field] || false}
-                    onChange={(e) => onCheckboxChange(session.id, item.field, e.target.checked)}
-                    disabled={saving}
-                    className="mt-0.5 h-5 w-5 rounded border-gray-300 text-red-600 focus:ring-red-500"
-                  />
-                  <div className="flex-1">
-                    <span className="text-sm text-gray-700 font-medium">{item.description}</span>
-                    {item.subItems && item.subItems.length > 0 && (
-                      <ul className="mt-1 ml-1 text-xs text-gray-500 space-y-0.5">
-                        {item.subItems.map((subItem, idx) => (
-                          <li key={idx} className="flex items-start gap-1">
-                            {!item.numbered && <span className="text-gray-400">•</span>}
-                            <span>{subItem}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                  </div>
-                </label>
+            {/* Section Items (informational, no checkboxes) */}
+            <div className="px-4 py-3 bg-white space-y-2">
+              {section.items.map((item, idx) => (
+                <div key={idx} className="text-sm">
+                  <div className="text-gray-700 font-medium">{item.description}</div>
+                  {item.subItems && item.subItems.length > 0 && (
+                    <ul className="mt-1 ml-4 text-xs text-gray-500 space-y-0.5">
+                      {item.subItems.map((subItem, subIdx) => (
+                        <li key={subIdx} className="flex items-start gap-1">
+                          {!item.numbered && <span className="text-gray-400">•</span>}
+                          <span>{subItem}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
               ))}
             </div>
           </div>
