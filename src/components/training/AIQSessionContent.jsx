@@ -3,6 +3,8 @@ import OrientationChecklist, { getOrientationFields } from './aiq/OrientationChe
 import SafetyFirstChecklist, { getSafetyFirstFields } from './aiq/SafetyFirstChecklist'
 import GuestsDeserveOurBestChecklist, { getGuestsDeserveOurBestFields } from './aiq/GuestsDeserveOurBestChecklist'
 import SlicerSafetyChecklist, { getSlicerSafetyFields } from './aiq/SlicerSafetyChecklist'
+import BacklinePhase1Checklist, { getBacklinePhase1Fields } from './aiq/BacklinePhase1Checklist'
+import BacklinePhase2Checklist, { getBacklinePhase2Fields } from './aiq/BacklinePhase2Checklist'
 
 // Export all AIQ-related database fields needed for the query
 export function getAIQSessionFields() {
@@ -15,9 +17,12 @@ export function getAIQSessionFields() {
     ...getGuestsDeserveOurBestFields(),
     // Slicer Safety fields
     ...getSlicerSafetyFields(),
+    // Backline Phase 1 fields
+    ...getBacklinePhase1Fields(),
+    // Backline Phase 2 fields
+    ...getBacklinePhase2Fields(),
     // Add more competency fields here as they are created
     // ...getFrontlineFields(),
-    // ...getBacklineFields(),
     // ...getTeamTrainerFields(),
   ]
 }
@@ -76,6 +81,33 @@ export default function AIQSessionContent({
   onComplete,
 }) {
   const competencyType = schedule.competency_type
+  const competencyPhase = schedule.competency_phase
+
+  // Handle Backline Production phases first (before the switch)
+  if (competencyType === 'Backline Production (Phase 1 & 2)') {
+    if (competencyPhase === 'Phase 1 Specialty') {
+      return (
+        <BacklinePhase1Checklist
+          session={session}
+          schedule={schedule}
+          saving={saving}
+          onCheckboxChange={onCheckboxChange}
+          onComplete={onComplete}
+        />
+      )
+    }
+    if (competencyPhase === 'Phase 2 Roast Beef') {
+      return (
+        <BacklinePhase2Checklist
+          session={session}
+          schedule={schedule}
+          saving={saving}
+          onCheckboxChange={onCheckboxChange}
+          onComplete={onComplete}
+        />
+      )
+    }
+  }
 
   // Route to the appropriate checklist component based on competency type
   switch (competencyType) {
