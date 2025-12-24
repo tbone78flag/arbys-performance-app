@@ -1,6 +1,7 @@
 // src/components/training/AIQSessionContent.jsx
 import OrientationChecklist, { getOrientationFields } from './aiq/OrientationChecklist'
 import SafetyFirstChecklist, { getSafetyFirstFields } from './aiq/SafetyFirstChecklist'
+import GuestsDeserveOurBestChecklist, { getGuestsDeserveOurBestFields } from './aiq/GuestsDeserveOurBestChecklist'
 
 // Export all AIQ-related database fields needed for the query
 export function getAIQSessionFields() {
@@ -9,6 +10,8 @@ export function getAIQSessionFields() {
     ...getOrientationFields(),
     // Safety First fields
     ...getSafetyFirstFields(),
+    // Guests Deserve Our Best fields
+    ...getGuestsDeserveOurBestFields(),
     // Add more competency fields here as they are created
     // ...getFrontlineFields(),
     // ...getBacklineFields(),
@@ -87,6 +90,17 @@ export default function AIQSessionContent({
     case "Arby's Safety First":
       return (
         <SafetyFirstChecklist
+          session={session}
+          schedule={schedule}
+          saving={saving}
+          onCheckboxChange={onCheckboxChange}
+          onComplete={onComplete}
+        />
+      )
+
+    case 'Guests Deserve Our Best':
+      return (
+        <GuestsDeserveOurBestChecklist
           session={session}
           schedule={schedule}
           saving={saving}
