@@ -1,57 +1,57 @@
-// src/components/training/aiq/BacklinePhase1Checklist.jsx
+// src/components/training/aiq/CashierDiningRoomChecklist.jsx
 import { useState } from 'react'
 
-// Observation items (10 checkboxes)
+// Observation items (8 checkboxes)
 const OBSERVATION_ITEMS = [
-  { field: 'bl1_obs_1', description: 'Employee has completed the Learning Hub lesson and hands-on training session with Certified Trainer.' },
-  { field: 'bl1_obs_2', description: 'Stops task to serve guests immediately' },
-  { field: 'bl1_obs_3', description: 'Follows safety procedures' },
-  { field: 'bl1_obs_4', description: 'Serves only top quality products-shows pride' },
-  { field: 'bl1_obs_5', description: 'Bumps orders once completed' },
-  { field: 'bl1_obs_6', description: 'Demonstrates team - helps others to serve guests' },
-  { field: 'bl1_obs_7', description: 'Follows time, temperature and FIFO guidelines' },
-  { field: 'bl1_obs_8', description: 'Keeps station clean and sanitized - CAYG' },
-  { field: 'bl1_obs_9', description: 'Delivers 100% order accuracy during rush period' },
-  { field: 'bl1_obs_10', description: 'Prepares sandwiches properly-assembled, toast, cut and wrap' },
+  { field: 'cdr_obs_1', description: 'Employee has completed the Learning Hub lesson and hands-on training session with Certified Trainer.' },
+  { field: 'cdr_obs_2', description: 'Stops task to serve guests immediately.' },
+  { field: 'cdr_obs_3', description: 'Follows safety procedures.' },
+  { field: 'cdr_obs_4', description: 'Properly operates cash register and follows service steps.' },
+  { field: 'cdr_obs_5', description: 'Follows cash handling procedures.' },
+  { field: 'cdr_obs_6', description: 'Follows 3-tier dining room cleanliness process - CAYG.' },
+  { field: 'cdr_obs_7', description: 'Eager to help to achieve service time goals - Hustle!.' },
+  { field: 'cdr_obs_8', description: 'Demonstrates Guests Deserve Our Best.' },
 ]
 
-// Demonstration items (5 checkboxes)
+// Demonstration items (7 checkboxes)
 const DEMONSTRATION_ITEMS = [
-  { field: 'bl1_demo_1', description: 'Wash hands' },
-  { field: 'bl1_demo_2', description: 'Product knowledge - describe _____________.' },
-  { field: 'bl1_demo_3', description: 'Rotates products correctly' },
-  { field: 'bl1_demo_4', description: 'Uses correct wrap / packaging' },
-  { field: 'bl1_demo_5', description: 'Follows correct microwave procedures' },
+  { field: 'cdr_demo_1', description: 'Wash hands.' },
+  { field: 'cdr_demo_2', description: 'Product knowledge - describe ___________ .' },
+  { field: 'cdr_demo_3', description: 'Follow service sequence.' },
+  { field: 'cdr_demo_4', description: 'Role play a guest complaint using BLAST.' },
+  { field: 'cdr_demo_5', description: 'Ring in a ________________.' },
+  { field: 'cdr_demo_6', description: 'Package a large order following proper packaging guidelines.' },
+  { field: 'cdr_demo_7', description: 'Prepare a shake.' },
 ]
 
 // Knowledge items (6 numbered questions - informational only, not checkboxes)
 const KNOWLEDGE_ITEMS = [
   { text: '1. How often should you wash your hands?' },
-  { text: '2. What is the hold time for prepared sandwiches?' },
-  { text: '3. What is the best way to keep bread / rolls fresh?' },
-  { text: '4. What should you do if a sandwich is returned?' },
-  { text: '5. What are some ways that you can help improve speed of service?' },
-  { text: '6. How do you ensure the guest leaves happy?' },
+  { text: '2. Explain how to properly receive a guest recovery card.' },
+  { text: '3. How do you Create Happiness with your guests?' },
+  { text: '4. What should you do if you have no guests?' },
+  { text: '5. What is the speed of service standard for frontline?' },
+  { text: '6. What is the procedure for when you have a void?' },
 ]
 
 // Get the list of database fields needed for this checklist
-export function getBacklinePhase1Fields() {
+export function getCashierDiningRoomFields() {
   return [
     ...OBSERVATION_ITEMS.map((item) => item.field),
     ...DEMONSTRATION_ITEMS.map((item) => item.field),
-    'bl1_knowledge_completed',
+    'cdr_knowledge_completed',
   ]
 }
 
 // Check if all items are completed
-export function isBacklinePhase1Complete(session) {
+export function isCashierDiningRoomComplete(session) {
   const observationComplete = OBSERVATION_ITEMS.every((item) => session[item.field])
   const demonstrationComplete = DEMONSTRATION_ITEMS.every((item) => session[item.field])
-  const knowledgeComplete = session.bl1_knowledge_completed
+  const knowledgeComplete = session.cdr_knowledge_completed
   return observationComplete && demonstrationComplete && knowledgeComplete
 }
 
-export default function BacklinePhase1Checklist({
+export default function CashierDiningRoomChecklist({
   session,
   schedule,
   saving,
@@ -63,20 +63,20 @@ export default function BacklinePhase1Checklist({
   const [demonstrationOpen, setDemonstrationOpen] = useState(true)
   const [knowledgeOpen, setKnowledgeOpen] = useState(true)
 
-  const isComplete = isBacklinePhase1Complete(session)
+  const isComplete = isCashierDiningRoomComplete(session)
 
   // Check section completion status
   const observationComplete = OBSERVATION_ITEMS.every((item) => session[item.field])
   const demonstrationComplete = DEMONSTRATION_ITEMS.every((item) => session[item.field])
-  const knowledgeComplete = session.bl1_knowledge_completed
+  const knowledgeComplete = session.cdr_knowledge_completed
 
   return (
     <>
-      <div className="bg-purple-50 border border-purple-200 rounded-lg p-3">
-        <p className="text-sm font-medium text-purple-800">
-          Backline Production - Phase 1 Specialty - AIQ Training
+      <div className="bg-teal-50 border border-teal-200 rounded-lg p-3">
+        <p className="text-sm font-medium text-teal-800">
+          Cashier & Dining Room - AIQ Training
         </p>
-        <p className="text-xs text-purple-600 mt-1">
+        <p className="text-xs text-teal-600 mt-1">
           Complete all sections for {schedule.trainee?.display_name}
         </p>
       </div>
@@ -213,17 +213,17 @@ export default function BacklinePhase1Checklist({
                 </div>
               ))}
             </div>
-            <label className="flex items-start gap-3 p-3 bg-purple-50 border border-purple-200 rounded-lg cursor-pointer hover:bg-purple-100">
+            <label className="flex items-start gap-3 p-3 bg-teal-50 border border-teal-200 rounded-lg cursor-pointer hover:bg-teal-100">
               <input
                 type="checkbox"
-                checked={session.bl1_knowledge_completed || false}
-                onChange={(e) => onCheckboxChange(session.id, 'bl1_knowledge_completed', e.target.checked)}
+                checked={session.cdr_knowledge_completed || false}
+                onChange={(e) => onCheckboxChange(session.id, 'cdr_knowledge_completed', e.target.checked)}
                 disabled={saving}
                 className="mt-0.5 h-5 w-5 rounded border-gray-300 text-red-600 focus:ring-red-500"
               />
               <div>
-                <span className="text-sm font-medium text-purple-800">Knowledge Questions Completed</span>
-                <p className="text-xs text-purple-600 mt-0.5">
+                <span className="text-sm font-medium text-teal-800">Knowledge Questions Completed</span>
+                <p className="text-xs text-teal-600 mt-0.5">
                   Check this box after asking and discussing all questions with the trainee.
                 </p>
               </div>

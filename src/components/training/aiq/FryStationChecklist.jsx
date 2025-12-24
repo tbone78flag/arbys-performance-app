@@ -1,57 +1,56 @@
-// src/components/training/aiq/BacklinePhase1Checklist.jsx
+// src/components/training/aiq/FryStationChecklist.jsx
 import { useState } from 'react'
 
 // Observation items (10 checkboxes)
 const OBSERVATION_ITEMS = [
-  { field: 'bl1_obs_1', description: 'Employee has completed the Learning Hub lesson and hands-on training session with Certified Trainer.' },
-  { field: 'bl1_obs_2', description: 'Stops task to serve guests immediately' },
-  { field: 'bl1_obs_3', description: 'Follows safety procedures' },
-  { field: 'bl1_obs_4', description: 'Serves only top quality products-shows pride' },
-  { field: 'bl1_obs_5', description: 'Bumps orders once completed' },
-  { field: 'bl1_obs_6', description: 'Demonstrates team - helps others to serve guests' },
-  { field: 'bl1_obs_7', description: 'Follows time, temperature and FIFO guidelines' },
-  { field: 'bl1_obs_8', description: 'Keeps station clean and sanitized - CAYG' },
-  { field: 'bl1_obs_9', description: 'Delivers 100% order accuracy during rush period' },
-  { field: 'bl1_obs_10', description: 'Prepares sandwiches properly-assembled, toast, cut and wrap' },
+  { field: 'fry_obs_1', description: 'Employee has completed the Learning Hub lesson and hands-on training session with Certified Trainer.' },
+  { field: 'fry_obs_2', description: 'Stops task to serve guests immediately.' },
+  { field: 'fry_obs_3', description: 'Wears a headset or works from the speaker system.' },
+  { field: 'fry_obs_4', description: 'Bumps orders as soon as they are assembled and ready for pickup.' },
+  { field: 'fry_obs_5', description: 'Follows safety procedures.' },
+  { field: 'fry_obs_6', description: 'Portions product accurately: serves only top quality products.' },
+  { field: 'fry_obs_7', description: 'Follows time ans temperature guidelines' },
+  { field: 'fry_obs_8', description: 'Keeps station clean and sanitized - CAYG' },
+  { field: 'fry_obs_9', description: 'Eager to help achieve service time goals-Hustle!' },
+  { field: 'fry_obs_10', description: 'Uses correct tongs when handling products.' },
 ]
 
-// Demonstration items (5 checkboxes)
+// Demonstration items (4 checkboxes)
 const DEMONSTRATION_ITEMS = [
-  { field: 'bl1_demo_1', description: 'Wash hands' },
-  { field: 'bl1_demo_2', description: 'Product knowledge - describe _____________.' },
-  { field: 'bl1_demo_3', description: 'Rotates products correctly' },
-  { field: 'bl1_demo_4', description: 'Uses correct wrap / packaging' },
-  { field: 'bl1_demo_5', description: 'Follows correct microwave procedures' },
+  { field: 'fry_demo_1', description: 'Wash hands.' },
+  { field: 'fry_demo_2', description: 'How to prepare, hold and portion each product.' },
+  { field: 'fry_demo_3', description: 'Fryer filtering, test shortening quality.' },
+  { field: 'fry_demo_4', description: 'Follows proper fill levels in fry baskets.' },
 ]
 
 // Knowledge items (6 numbered questions - informational only, not checkboxes)
 const KNOWLEDGE_ITEMS = [
   { text: '1. How often should you wash your hands?' },
-  { text: '2. What is the hold time for prepared sandwiches?' },
-  { text: '3. What is the best way to keep bread / rolls fresh?' },
-  { text: '4. What should you do if a sandwich is returned?' },
-  { text: '5. What are some ways that you can help improve speed of service?' },
-  { text: '6. How do you ensure the guest leaves happy?' },
+  { text: '2. What is the hold time for curly fries?' },
+  { text: '3. What resource can you refer to if you do not remember a product hold time?' },
+  { text: '4. What temperature must the fry freezer maintain?' },
+  { text: '5. What is the temperature of the fryers?' },
+  { text: '6. Explain how to use the bin charts.' },
 ]
 
 // Get the list of database fields needed for this checklist
-export function getBacklinePhase1Fields() {
+export function getFryStationFields() {
   return [
     ...OBSERVATION_ITEMS.map((item) => item.field),
     ...DEMONSTRATION_ITEMS.map((item) => item.field),
-    'bl1_knowledge_completed',
+    'fry_knowledge_completed',
   ]
 }
 
 // Check if all items are completed
-export function isBacklinePhase1Complete(session) {
+export function isFryStationComplete(session) {
   const observationComplete = OBSERVATION_ITEMS.every((item) => session[item.field])
   const demonstrationComplete = DEMONSTRATION_ITEMS.every((item) => session[item.field])
-  const knowledgeComplete = session.bl1_knowledge_completed
+  const knowledgeComplete = session.fry_knowledge_completed
   return observationComplete && demonstrationComplete && knowledgeComplete
 }
 
-export default function BacklinePhase1Checklist({
+export default function FryStationChecklist({
   session,
   schedule,
   saving,
@@ -63,20 +62,20 @@ export default function BacklinePhase1Checklist({
   const [demonstrationOpen, setDemonstrationOpen] = useState(true)
   const [knowledgeOpen, setKnowledgeOpen] = useState(true)
 
-  const isComplete = isBacklinePhase1Complete(session)
+  const isComplete = isFryStationComplete(session)
 
   // Check section completion status
   const observationComplete = OBSERVATION_ITEMS.every((item) => session[item.field])
   const demonstrationComplete = DEMONSTRATION_ITEMS.every((item) => session[item.field])
-  const knowledgeComplete = session.bl1_knowledge_completed
+  const knowledgeComplete = session.fry_knowledge_completed
 
   return (
     <>
-      <div className="bg-purple-50 border border-purple-200 rounded-lg p-3">
-        <p className="text-sm font-medium text-purple-800">
-          Backline Production - Phase 1 Specialty - AIQ Training
+      <div className="bg-orange-50 border border-orange-200 rounded-lg p-3">
+        <p className="text-sm font-medium text-orange-800">
+          Fry Station - AIQ Training
         </p>
-        <p className="text-xs text-purple-600 mt-1">
+        <p className="text-xs text-orange-600 mt-1">
           Complete all sections for {schedule.trainee?.display_name}
         </p>
       </div>
@@ -213,17 +212,17 @@ export default function BacklinePhase1Checklist({
                 </div>
               ))}
             </div>
-            <label className="flex items-start gap-3 p-3 bg-purple-50 border border-purple-200 rounded-lg cursor-pointer hover:bg-purple-100">
+            <label className="flex items-start gap-3 p-3 bg-orange-50 border border-orange-200 rounded-lg cursor-pointer hover:bg-orange-100">
               <input
                 type="checkbox"
-                checked={session.bl1_knowledge_completed || false}
-                onChange={(e) => onCheckboxChange(session.id, 'bl1_knowledge_completed', e.target.checked)}
+                checked={session.fry_knowledge_completed || false}
+                onChange={(e) => onCheckboxChange(session.id, 'fry_knowledge_completed', e.target.checked)}
                 disabled={saving}
                 className="mt-0.5 h-5 w-5 rounded border-gray-300 text-red-600 focus:ring-red-500"
               />
               <div>
-                <span className="text-sm font-medium text-purple-800">Knowledge Questions Completed</span>
-                <p className="text-xs text-purple-600 mt-0.5">
+                <span className="text-sm font-medium text-orange-800">Knowledge Questions Completed</span>
+                <p className="text-xs text-orange-600 mt-0.5">
                   Check this box after asking and discussing all questions with the trainee.
                 </p>
               </div>

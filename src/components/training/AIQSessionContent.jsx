@@ -5,6 +5,8 @@ import GuestsDeserveOurBestChecklist, { getGuestsDeserveOurBestFields } from './
 import SlicerSafetyChecklist, { getSlicerSafetyFields } from './aiq/SlicerSafetyChecklist'
 import BacklinePhase1Checklist, { getBacklinePhase1Fields } from './aiq/BacklinePhase1Checklist'
 import BacklinePhase2Checklist, { getBacklinePhase2Fields } from './aiq/BacklinePhase2Checklist'
+import FryStationChecklist, { getFryStationFields } from './aiq/FryStationChecklist'
+import CashierDiningRoomChecklist, { getCashierDiningRoomFields } from './aiq/CashierDiningRoomChecklist'
 
 // Export all AIQ-related database fields needed for the query
 export function getAIQSessionFields() {
@@ -21,6 +23,10 @@ export function getAIQSessionFields() {
     ...getBacklinePhase1Fields(),
     // Backline Phase 2 fields
     ...getBacklinePhase2Fields(),
+    // Fry Station fields
+    ...getFryStationFields(),
+    // Cashier & Dining Room fields
+    ...getCashierDiningRoomFields(),
     // Add more competency fields here as they are created
     // ...getFrontlineFields(),
     // ...getTeamTrainerFields(),
@@ -147,6 +153,28 @@ export default function AIQSessionContent({
     case 'Slicer Safety':
       return (
         <SlicerSafetyChecklist
+          session={session}
+          schedule={schedule}
+          saving={saving}
+          onCheckboxChange={onCheckboxChange}
+          onComplete={onComplete}
+        />
+      )
+
+    case 'Fry Station':
+      return (
+        <FryStationChecklist
+          session={session}
+          schedule={schedule}
+          saving={saving}
+          onCheckboxChange={onCheckboxChange}
+          onComplete={onComplete}
+        />
+      )
+
+    case 'Cashier & Dining Room':
+      return (
+        <CashierDiningRoomChecklist
           session={session}
           schedule={schedule}
           saving={saving}
