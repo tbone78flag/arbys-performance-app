@@ -131,6 +131,11 @@ export default function Training({ profile, locationId }) {
     (t) => t.training_date === todayStr && t.trainer_id === profile.id
   )
 
+  // Get past due trainings (before today, not completed)
+  const pastDueTrainings = trainingData.filter(
+    (t) => t.training_date < todayStr && t.status !== 'completed'
+  )
+
   const formatTime = (time) => {
     if (!time) return ''
     const [hours, minutes] = time.split(':')
@@ -363,8 +368,65 @@ export default function Training({ profile, locationId }) {
     setSelectedTraining((prev) => ({ ...prev, status: 'scheduled' }))
   }
 
+  // Format date for display
+  const formatDate = (dateStr) => {
+    const date = new Date(dateStr + 'T00:00:00')
+    return date.toLocaleDateString('en-US', {
+      weekday: 'short',
+      month: 'short',
+      day: 'numeric',
+    })
+  }
+
   return (
     <div className="space-y-4">
+      {/* Past Due Trainings - Red Alert Box */}
+      {pastDueTrainings.length > 0 && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+          <h3 className="font-semibold text-red-800 mb-2">
+            Past Due ({pastDueTrainings.length})
+          </h3>
+          <div className="space-y-2">
+            {pastDueTrainings.map((t) => (
+              <div
+                key={t.id}
+                className="bg-white border border-red-200 rounded p-2 cursor-pointer hover:bg-red-50"
+                onClick={() => openTrainingModal(t)}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium">
+                      {t.trainee?.display_name}
+                    </span>
+                    <span className={`text-xs px-2 py-0.5 rounded ${getTypeColor(t.training_type)}`}>
+                      {t.training_type}
+                    </span>
+                  </div>
+                  <span className="text-sm text-red-600 font-medium">
+                    {formatDate(t.training_date)}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between mt-1">
+                  <div className="text-xs text-gray-600">
+                    w/ {t.trainer?.display_name}
+                  </div>
+                  <div className="text-xs text-gray-500">
+                    {formatTime(t.shift_start)} - {formatTime(t.shift_end)}
+                  </div>
+                </div>
+                {/* Show competency/course and phase if applicable */}
+                {t.competency_type && (
+                  <div className="text-xs text-gray-600 mt-1">
+                    {t.competency_type}
+                    {t.competency_phase && ` (${t.competency_phase})`}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Today's My Trainees - Highlighted Box */}
       {todaysMyTrainees.length > 0 && (
         <div className="bg-green-50 border border-green-200 rounded-lg p-4">
@@ -498,11 +560,18 @@ export default function Training({ profile, locationId }) {
                     <div className="space-y-1">
                       {dayTraining.map((t) => {
                         const isCompleted = t.status === 'completed'
+                        const isPastDue = t.training_date < todayStr && !isCompleted
                         return (
                           <div
                             key={t.id}
                             onClick={() => openTrainingModal(t)}
-                            className={`text-xs p-1.5 rounded border cursor-pointer hover:opacity-80 ${getTypeColor(t.training_type)} ${isCompleted ? 'opacity-60' : ''}`}
+                            className={`text-xs p-1.5 rounded border cursor-pointer hover:opacity-80 ${
+                              isPastDue
+                                ? 'bg-red-100 text-red-700 border-red-300'
+                                : isCompleted
+                                  ? `${getTypeColor(t.training_type)} opacity-60`
+                                  : getTypeColor(t.training_type)
+                            }`}
                           >
                             <div className={`font-medium truncate ${isCompleted ? 'line-through' : ''}`}>
                               {t.trainee?.display_name}
@@ -513,6 +582,11 @@ export default function Training({ profile, locationId }) {
                             <div className={`text-[10px] opacity-75 truncate ${isCompleted ? 'line-through' : ''}`}>
                               w/ {t.trainer?.display_name}
                             </div>
+                            {isPastDue && (
+                              <div className="text-[10px] font-medium text-red-700 mt-0.5">
+                                Past Due
+                              </div>
+                            )}
                             {isCompleted && (
                               <div className="text-[10px] font-medium text-green-700 mt-0.5">
                                 Completed
