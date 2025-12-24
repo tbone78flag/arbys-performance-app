@@ -85,7 +85,7 @@ export default function SafetyFirstChecklist({
         </p>
       </div>
 
-      {/* Trainer's Guide Dropdown */}
+      {/* Trainer's Guide Dropdown - placeholder for future content */}
       <div className="border rounded-lg overflow-hidden">
         <button
           type="button"
@@ -99,97 +99,103 @@ export default function SafetyFirstChecklist({
         </button>
 
         {trainersGuideOpen && (
-          <div className="p-4 bg-white space-y-6">
-            {/* Observation Section */}
-            <div>
-              <h4 className="font-medium text-sm text-gray-800 mb-3 pb-2 border-b">
-                Observation
-              </h4>
-              <div className="space-y-2">
-                {OBSERVATION_ITEMS.map((item) => (
-                  <label
-                    key={item.field}
-                    className="flex items-start gap-3 p-2 rounded cursor-pointer hover:bg-gray-50"
-                  >
-                    <input
-                      type="checkbox"
-                      checked={session[item.field] || false}
-                      onChange={(e) => onCheckboxChange(session.id, item.field, e.target.checked)}
-                      disabled={saving}
-                      className="mt-0.5 h-5 w-5 rounded border-gray-300 text-red-600 focus:ring-red-500"
-                    />
-                    <span className="text-sm text-gray-700">{item.description}</span>
-                  </label>
-                ))}
-              </div>
-            </div>
-
-            {/* Demonstration Section */}
-            <div>
-              <h4 className="font-medium text-sm text-gray-800 mb-3 pb-2 border-b">
-                Demonstration
-              </h4>
-              <div className="space-y-2">
-                {DEMONSTRATION_ITEMS.map((item) => (
-                  <label
-                    key={item.field}
-                    className="flex items-start gap-3 p-2 rounded cursor-pointer hover:bg-gray-50"
-                  >
-                    <input
-                      type="checkbox"
-                      checked={session[item.field] || false}
-                      onChange={(e) => onCheckboxChange(session.id, item.field, e.target.checked)}
-                      disabled={saving}
-                      className="mt-0.5 h-5 w-5 rounded border-gray-300 text-red-600 focus:ring-red-500"
-                    />
-                    <span className="text-sm text-gray-700">{item.description}</span>
-                  </label>
-                ))}
-              </div>
-            </div>
-
-            {/* Questions Section */}
-            <div>
-              <h4 className="font-medium text-sm text-gray-800 mb-3 pb-2 border-b">
-                Questions
-              </h4>
-              <div className="space-y-2 mb-4">
-                {QUESTIONS.map((question, idx) => (
-                  <div key={idx} className="text-sm text-gray-700">
-                    <div className="py-1">
-                      <span>{question.text}</span>
-                    </div>
-                    {question.subItems && question.subItems.length > 0 && (
-                      <ul className="ml-4 mt-1 text-xs text-gray-500 space-y-0.5">
-                        {question.subItems.map((subItem, subIdx) => (
-                          <li key={subIdx} className="flex items-start gap-1">
-                            <span className="text-gray-400">•</span>
-                            <span>{subItem}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                  </div>
-                ))}
-              </div>
-              <label className="flex items-start gap-3 p-3 bg-blue-50 border border-blue-200 rounded-lg cursor-pointer hover:bg-blue-100">
-                <input
-                  type="checkbox"
-                  checked={session.safety_questions_completed || false}
-                  onChange={(e) => onCheckboxChange(session.id, 'safety_questions_completed', e.target.checked)}
-                  disabled={saving}
-                  className="mt-0.5 h-5 w-5 rounded border-gray-300 text-red-600 focus:ring-red-500"
-                />
-                <div>
-                  <span className="text-sm font-medium text-blue-800">Questions Completed</span>
-                  <p className="text-xs text-blue-600 mt-0.5">
-                    Check this box after asking and discussing all questions with the trainee.
-                  </p>
-                </div>
-              </label>
-            </div>
+          <div className="p-4 bg-white">
+            <p className="text-sm text-gray-500 italic">
+              Trainer's guide content coming soon...
+            </p>
           </div>
         )}
+      </div>
+
+      {/* Observation Section */}
+      <div className="border rounded-lg overflow-hidden">
+        <h4 className="font-medium text-sm text-gray-800 px-4 py-3 bg-gray-100 border-b">
+          Observation
+        </h4>
+        <div className="p-4 bg-white space-y-2">
+          {OBSERVATION_ITEMS.map((item) => (
+            <label
+              key={item.field}
+              className="flex items-start gap-3 p-2 rounded cursor-pointer hover:bg-gray-50"
+            >
+              <input
+                type="checkbox"
+                checked={session[item.field] || false}
+                onChange={(e) => onCheckboxChange(session.id, item.field, e.target.checked)}
+                disabled={saving}
+                className="mt-0.5 h-5 w-5 rounded border-gray-300 text-red-600 focus:ring-red-500"
+              />
+              <span className="text-sm text-gray-700">{item.description}</span>
+            </label>
+          ))}
+        </div>
+      </div>
+
+      {/* Demonstration Section */}
+      <div className="border rounded-lg overflow-hidden">
+        <h4 className="font-medium text-sm text-gray-800 px-4 py-3 bg-gray-100 border-b">
+          Demonstration
+        </h4>
+        <div className="p-4 bg-white space-y-2">
+          {DEMONSTRATION_ITEMS.map((item) => (
+            <label
+              key={item.field}
+              className="flex items-start gap-3 p-2 rounded cursor-pointer hover:bg-gray-50"
+            >
+              <input
+                type="checkbox"
+                checked={session[item.field] || false}
+                onChange={(e) => onCheckboxChange(session.id, item.field, e.target.checked)}
+                disabled={saving}
+                className="mt-0.5 h-5 w-5 rounded border-gray-300 text-red-600 focus:ring-red-500"
+              />
+              <span className="text-sm text-gray-700">{item.description}</span>
+            </label>
+          ))}
+        </div>
+      </div>
+
+      {/* Questions Section */}
+      <div className="border rounded-lg overflow-hidden">
+        <h4 className="font-medium text-sm text-gray-800 px-4 py-3 bg-gray-100 border-b">
+          Questions
+        </h4>
+        <div className="p-4 bg-white space-y-4">
+          <div className="space-y-2">
+            {QUESTIONS.map((question, idx) => (
+              <div key={idx} className="text-sm text-gray-700">
+                <div className="py-1">
+                  <span>{question.text}</span>
+                </div>
+                {question.subItems && question.subItems.length > 0 && (
+                  <ul className="ml-4 mt-1 text-xs text-gray-500 space-y-0.5">
+                    {question.subItems.map((subItem, subIdx) => (
+                      <li key={subIdx} className="flex items-start gap-1">
+                        <span className="text-gray-400">•</span>
+                        <span>{subItem}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            ))}
+          </div>
+          <label className="flex items-start gap-3 p-3 bg-blue-50 border border-blue-200 rounded-lg cursor-pointer hover:bg-blue-100">
+            <input
+              type="checkbox"
+              checked={session.safety_questions_completed || false}
+              onChange={(e) => onCheckboxChange(session.id, 'safety_questions_completed', e.target.checked)}
+              disabled={saving}
+              className="mt-0.5 h-5 w-5 rounded border-gray-300 text-red-600 focus:ring-red-500"
+            />
+            <div>
+              <span className="text-sm font-medium text-blue-800">Questions Completed</span>
+              <p className="text-xs text-blue-600 mt-0.5">
+                Check this box after asking and discussing all questions with the trainee.
+              </p>
+            </div>
+          </label>
+        </div>
       </div>
 
       {/* Done Button */}

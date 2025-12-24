@@ -377,25 +377,34 @@ export default function Training({ profile, locationId }) {
               return (
                 <div
                   key={t.id}
-                  className={`flex items-center justify-between bg-white border border-green-200 rounded p-2 cursor-pointer hover:bg-green-50 ${isCompleted ? 'opacity-60' : ''}`}
+                  className={`bg-white border border-green-200 rounded p-2 cursor-pointer hover:bg-green-50 ${isCompleted ? 'opacity-60' : ''}`}
                   onClick={() => openTrainingModal(t)}
                 >
-                  <div className="flex items-center gap-2">
-                    <span className={`font-medium ${isCompleted ? 'line-through' : ''}`}>
-                      {t.trainee?.display_name}
-                    </span>
-                    <span className={`text-xs px-2 py-0.5 rounded ${getTypeColor(t.training_type)}`}>
-                      {t.training_type}
-                    </span>
-                    {isCompleted && (
-                      <span className="text-xs px-2 py-0.5 rounded bg-green-100 text-green-700 font-medium">
-                        Done
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className={`font-medium ${isCompleted ? 'line-through' : ''}`}>
+                        {t.trainee?.display_name}
                       </span>
-                    )}
+                      <span className={`text-xs px-2 py-0.5 rounded ${getTypeColor(t.training_type)}`}>
+                        {t.training_type}
+                      </span>
+                      {isCompleted && (
+                        <span className="text-xs px-2 py-0.5 rounded bg-green-100 text-green-700 font-medium">
+                          Done
+                        </span>
+                      )}
+                    </div>
+                    <span className={`text-sm text-gray-600 ${isCompleted ? 'line-through' : ''}`}>
+                      {formatTime(t.shift_start)} - {formatTime(t.shift_end)}
+                    </span>
                   </div>
-                  <span className={`text-sm text-gray-600 ${isCompleted ? 'line-through' : ''}`}>
-                    {formatTime(t.shift_start)} - {formatTime(t.shift_end)}
-                  </span>
+                  {/* Show competency/course and phase if applicable */}
+                  {t.competency_type && (
+                    <div className={`text-xs text-gray-600 mt-1 ${isCompleted ? 'line-through' : ''}`}>
+                      {t.competency_type}
+                      {t.competency_phase && ` (${t.competency_phase})`}
+                    </div>
+                  )}
                 </div>
               )
             })}
