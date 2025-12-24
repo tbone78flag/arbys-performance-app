@@ -2,6 +2,7 @@
 import OrientationChecklist, { getOrientationFields } from './aiq/OrientationChecklist'
 import SafetyFirstChecklist, { getSafetyFirstFields } from './aiq/SafetyFirstChecklist'
 import GuestsDeserveOurBestChecklist, { getGuestsDeserveOurBestFields } from './aiq/GuestsDeserveOurBestChecklist'
+import SlicerSafetyChecklist, { getSlicerSafetyFields } from './aiq/SlicerSafetyChecklist'
 
 // Export all AIQ-related database fields needed for the query
 export function getAIQSessionFields() {
@@ -12,6 +13,8 @@ export function getAIQSessionFields() {
     ...getSafetyFirstFields(),
     // Guests Deserve Our Best fields
     ...getGuestsDeserveOurBestFields(),
+    // Slicer Safety fields
+    ...getSlicerSafetyFields(),
     // Add more competency fields here as they are created
     // ...getFrontlineFields(),
     // ...getBacklineFields(),
@@ -101,6 +104,17 @@ export default function AIQSessionContent({
     case 'Guests Deserve Our Best':
       return (
         <GuestsDeserveOurBestChecklist
+          session={session}
+          schedule={schedule}
+          saving={saving}
+          onCheckboxChange={onCheckboxChange}
+          onComplete={onComplete}
+        />
+      )
+
+    case 'Slicer Safety':
+      return (
+        <SlicerSafetyChecklist
           session={session}
           schedule={schedule}
           saving={saving}

@@ -17,6 +17,7 @@ const AIQ_COMPETENCIES = [
   'Guests Deserve Our Best',
   'Maintenance',
   'Runner',
+  'Slicer Safety',
   'Team Trainer',
 ]
 
