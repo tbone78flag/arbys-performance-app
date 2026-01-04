@@ -43,7 +43,7 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-red-50 p-4">
-      <h1 className="text-3xl font-bold text-red-700 mb-6 text-center">Welcome to Arby's Performance App</h1>
+      <h1 className="text-3xl font-bold text-red-700 mb-6 text-center">Welcome to the Arby's Performance App</h1>
       
       <form onSubmit={handleLogin} className="bg-white p-6 rounded shadow-md w-full max-w-sm">
         <input
