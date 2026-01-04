@@ -1,6 +1,5 @@
 // src/components/SalesWeeklyTrends.jsx
-import { useState, useEffect, useMemo } from 'react'
-import { supabase } from '../supabaseClient'
+import { useState, useMemo } from 'react'
 import {
   LineChart,
   Line,
@@ -14,10 +13,10 @@ import {
 import {
   startOfWeekLocal,
   addDays,
-  ymdLocal,
   buildWeeklySkeleton,
   formatDayLabel,
 } from '../utils/dateHelpers'
+import { useWeeklySales } from '../hooks/useSalesData'
 
 export default function SalesWeeklyTrends({ profile, locationId: propLocationId }) {
   const locationId = propLocationId ?? profile?.location_id ?? 'holladay-3900s'
@@ -27,93 +26,20 @@ export default function SalesWeeklyTrends({ profile, locationId: propLocationId 
   const weekEnd = useMemo(() => addDays(weekStart, 6), [weekStart])
   const weekLabel = `${weekStart.toLocaleDateString()} – ${weekEnd.toLocaleDateString()}`
 
-  const [weeklySales, setWeeklySales] = useState(() =>
-    buildWeeklySkeleton(weekStart),
+  // Use React Query for fetching (with automatic cache invalidation when data is saved)
+  const { data: weeklySales, isLoading: loadingSales, error: salesError } = useWeeklySales(
+    locationId,
+    weekStart,
+    weekEnd
   )
-  const [loadingSales, setLoadingSales] = useState(true)
-  const [salesError, setSalesError] = useState(null)
 
-  // Load daily_sales_yoy rows for this week
-  useEffect(() => {
-    let cancelled = false
-
-    async function loadWeeklySales() {
-      if (!locationId) return
-
-      setLoadingSales(true)
-      setSalesError(null)
-
-      try {
-        const from = ymdLocal(weekStart)
-        const to = ymdLocal(weekEnd)
-
-        const { data, error } = await supabase
-          .from('daily_sales_yoy')
-          .select('sales_date, net_sales_this_year, net_sales_last_year')
-          .eq('location_id', locationId)
-          .gte('sales_date', from)
-          .lte('sales_date', to)
-          .order('sales_date', { ascending: true })
-
-        if (cancelled) return
-        if (error) throw error
-
-        const byDate = new Map()
-        ;(data || []).forEach(row => {
-          byDate.set(row.sales_date, row)
-        })
-
-        const skeleton = buildWeeklySkeleton(weekStart)
-        const filled = skeleton.map(day => {
-          const row = byDate.get(day.date)
-          const thisYear =
-            row && row.net_sales_this_year != null
-              ? Number(row.net_sales_this_year)
-              : null
-          const lastYear =
-            row && row.net_sales_last_year != null
-              ? Number(row.net_sales_last_year)
-              : null
-
-          let yoyPct = null
-          if (
-            thisYear != null &&
-            lastYear != null &&
-            Number.isFinite(thisYear) &&
-            Number.isFinite(lastYear) &&
-            lastYear !== 0
-          ) {
-            yoyPct = ((thisYear - lastYear) / lastYear) * 100
-          }
-
-          return {
-            ...day,
-            thisYear,
-            lastYear,
-            yoyPct,
-          }
-        })
-
-        setWeeklySales(filled)
-      } catch (err) {
-        console.error('Failed to load weekly sales', err)
-        setSalesError(err.message || String(err))
-        setWeeklySales(buildWeeklySkeleton(weekStart))
-      } finally {
-        if (!cancelled) setLoadingSales(false)
-      }
-    }
-
-    loadWeeklySales()
-    return () => {
-      cancelled = true
-    }
-  }, [locationId, weekStart, weekEnd])
+  // Use empty skeleton when loading
+  const salesData = weeklySales || buildWeeklySkeleton(weekStart)
 
   // Weekly stats (best/worst)
   const { bestSales, worstSales, bestPct, worstPct } = useMemo(() => {
-    const withSales = weeklySales.filter(d => d.thisYear != null)
-    const withPct = weeklySales.filter(d => d.yoyPct != null)
+    const withSales = salesData.filter(d => d.thisYear != null)
+    const withPct = salesData.filter(d => d.yoyPct != null)
 
     const bestSales =
       withSales.length > 0
@@ -136,17 +62,16 @@ export default function SalesWeeklyTrends({ profile, locationId: propLocationId 
         : null
 
     return { bestSales, worstSales, bestPct, worstPct }
-  }, [weeklySales])
+  }, [salesData])
 
   const shiftWeek = deltaWeeks => {
     setWeekAnchor(prev => {
-    const start = startOfWeekLocal(prev)
-    return addDays(start, deltaWeeks * 7)
-})
-
+      const start = startOfWeekLocal(prev)
+      return addDays(start, deltaWeeks * 7)
+    })
   }
 
-  const chartData = weeklySales.map(d => ({
+  const chartData = salesData.map(d => ({
     ...d,
     dayLabel: d.label,
   }))
@@ -184,7 +109,7 @@ export default function SalesWeeklyTrends({ profile, locationId: propLocationId 
 
       {salesError && (
         <p className="text-xs text-red-700 mb-2">
-          Error loading sales: {salesError}
+          Error loading sales: {salesError.message || String(salesError)}
         </p>
       )}
 

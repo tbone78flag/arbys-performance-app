@@ -3,6 +3,8 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Training from '../components/Training'
 import TrainingSession from '../components/TrainingSession'
+import GoalsJournal from '../components/goals/GoalsJournal'
+import TeamGoalsOverview from '../components/goals/TeamGoalsOverview'
 
 export default function ExperiencePage({ profile }) {
   const navigate = useNavigate()
@@ -36,17 +38,70 @@ export default function ExperiencePage({ profile }) {
         </button>
       </div>
 
-      {/* Accessible to all team members */}
-      <div className="mb-4">
-        <h2 className="text-lg font-semibold">Daily Experience Submission</h2>
-        <p className="text-sm text-gray-600">Team members can enter experience data here.</p>
-        {/* Later: form or button */}
+      {/* Goals Journal - Accessible to all team members */}
+      <div className="border rounded-lg overflow-hidden mb-4">
+        <button
+          type="button"
+          onClick={() => toggleSection('goals-journal')}
+          className="w-full flex items-center justify-between px-4 py-3 text-left bg-white hover:bg-gray-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500"
+          aria-expanded={openSection === 'goals-journal'}
+        >
+          <div className="flex flex-col">
+            <span className="font-medium">My Goals Journal</span>
+            <span className="text-xs text-gray-500">
+              Set monthly goals, track progress, and reflect on your growth.
+            </span>
+          </div>
+          <span
+            className={`transform transition-transform ${
+              openSection === 'goals-journal' ? 'rotate-90' : ''
+            }`}
+          >
+            ▶
+          </span>
+        </button>
+
+        {openSection === 'goals-journal' && (
+          <div className="px-4 pb-4 pt-2 bg-gray-50 border-t">
+            <GoalsJournal profile={profile} />
+          </div>
+        )}
       </div>
 
       {/* Manager-only section */}
       {profile?.role === 'manager' && (
         <div className="border-t pt-4 mt-4 space-y-2">
           <h2 className="text-lg font-semibold text-red-600 mb-3">Manager Tools</h2>
+
+          {/* Team Goals Overview Accordion */}
+          <div className="border rounded-lg overflow-hidden">
+            <button
+              type="button"
+              onClick={() => toggleSection('team-goals')}
+              className="w-full flex items-center justify-between px-4 py-3 text-left bg-white hover:bg-gray-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500"
+              aria-expanded={openSection === 'team-goals'}
+            >
+              <div className="flex flex-col">
+                <span className="font-medium">Team Goals Overview</span>
+                <span className="text-xs text-gray-500">
+                  View and manage your team members' work goals.
+                </span>
+              </div>
+              <span
+                className={`transform transition-transform ${
+                  openSection === 'team-goals' ? 'rotate-90' : ''
+                }`}
+              >
+                ▶
+              </span>
+            </button>
+
+            {openSection === 'team-goals' && (
+              <div className="px-4 pb-4 pt-2 bg-gray-50 border-t">
+                <TeamGoalsOverview profile={profile} locationId={locationId} />
+              </div>
+            )}
+          </div>
 
           {/* Training Calendar Accordion */}
           <div className="border rounded-lg overflow-hidden">

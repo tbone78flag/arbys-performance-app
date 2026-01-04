@@ -1,14 +1,30 @@
 // src/components/DailySalesYoYCard.jsx
 import { useState, useEffect, useMemo } from 'react'
-import { supabase } from '../supabaseClient'
 import { addDays, ymdLocal, parseYmdLocal } from '../utils/dateHelpers'
+import { useDailySales, useSaveDailySales } from '../hooks/useSalesData'
 
 export function DailySalesYoYCard({ locationId, isEditor }) {
   const [salesDate, setSalesDate] = useState(() => ymdLocal(new Date()))
   const [salesThisYear, setSalesThisYear] = useState('')
   const [salesLastYear, setSalesLastYear] = useState('')
-  const [savingSales, setSavingSales] = useState(false)
   const [salesMsg, setSalesMsg] = useState(null)
+
+  // Use React Query for fetching
+  const { data: dailyData, isLoading: loadingSales } = useDailySales(locationId, salesDate)
+
+  // Use React Query mutation for saving (with automatic cache invalidation)
+  const saveMutation = useSaveDailySales()
+
+  // Sync local state when data loads
+  useEffect(() => {
+    if (dailyData) {
+      setSalesThisYear(dailyData.net_sales_this_year ?? '')
+      setSalesLastYear(dailyData.net_sales_last_year ?? '')
+    } else {
+      setSalesThisYear('')
+      setSalesLastYear('')
+    }
+  }, [dailyData])
 
   const shiftSalesDate = (days) => {
     const d = parseYmdLocal(salesDate)
@@ -24,76 +40,31 @@ export function DailySalesYoYCard({ locationId, isEditor }) {
     return ((thisY - lastY) / lastY) * 100
   }, [salesThisYear, salesLastYear])
 
-  // Load from Supabase when date/location changes
-  useEffect(() => {
-    if (!locationId) return
-
-    let cancelled = false
-
-    async function loadDay() {
-      setSalesMsg(null)
-      const { data, error } = await supabase
-        .from('daily_sales_yoy')
-        .select('net_sales_this_year, net_sales_last_year')
-        .eq('location_id', locationId)
-        .eq('sales_date', salesDate)
-        .maybeSingle()
-
-      if (cancelled) return
-
-      if (error && error.code !== 'PGRST116') {
-        console.error('Error loading daily sales', error)
-        setSalesMsg('Error loading day.')
-        return
-      }
-
-      if (!data) {
-        setSalesThisYear('')
-        setSalesLastYear('')
-      } else {
-        setSalesThisYear(data.net_sales_this_year ?? '')
-        setSalesLastYear(data.net_sales_last_year ?? '')
-      }
-    }
-
-    loadDay()
-    return () => {
-      cancelled = true
-    }
-  }, [locationId, salesDate])
-
   async function saveDailySales() {
     if (!isEditor || !locationId) return
 
-    setSavingSales(true)
     setSalesMsg(null)
 
     try {
-      const thisY = salesThisYear === '' ? null : Number(salesThisYear)
-      const lastY = salesLastYear === '' ? null : Number(salesLastYear)
-
-      const { error } = await supabase
-        .from('daily_sales_yoy')
-        .upsert(
-          {
-            location_id: locationId,
-            sales_date: salesDate,
-            net_sales_this_year: thisY,
-            net_sales_last_year: lastY,
-          },
-          { onConflict: 'location_id,sales_date' }
-        )
-
-      if (error) throw error
-
+      await saveMutation.mutateAsync({
+        locationId,
+        salesDate,
+        netSalesThisYear: salesThisYear,
+        netSalesLastYear: salesLastYear,
+      })
       setSalesMsg('Day saved.')
     } catch (err) {
       console.error('Error saving daily sales', err)
       setSalesMsg('Error saving day.')
-    } finally {
-      setSavingSales(false)
     }
   }
+
+  // Clear message after timeout
+  useEffect(() => {
+    if (!salesMsg) return
+    const t = setTimeout(() => setSalesMsg(null), 4000)
+    return () => clearTimeout(t)
+  }, [salesMsg])
 
   return (
     <div className="bg-white shadow rounded p-4 sm:p-6">
@@ -127,6 +98,10 @@ export function DailySalesYoYCard({ locationId, isEditor }) {
           </button>
         </div>
       </div>
+
+      {loadingSales && (
+        <p className="text-xs text-gray-500 mb-2">Loading...</p>
+      )}
 
       {/* Inputs */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-3">
@@ -179,15 +154,15 @@ export function DailySalesYoYCard({ locationId, isEditor }) {
         <button
           type="button"
           onClick={saveDailySales}
-          disabled={savingSales || !isEditor}
+          disabled={saveMutation.isPending || !isEditor}
           className="bg-red-600 text-white px-4 py-2 rounded text-sm disabled:opacity-50"
         >
-          {savingSales ? 'Saving…' : 'Save Day'}
+          {saveMutation.isPending ? 'Saving…' : 'Save Day'}
         </button>
       </div>
 
       {salesMsg && (
-        <p className="text-xs text-gray-600">
+        <p className={`text-xs ${salesMsg.includes('Error') ? 'text-red-600' : 'text-green-600'}`}>
           {salesMsg}
         </p>
       )}

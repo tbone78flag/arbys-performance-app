@@ -7,6 +7,7 @@ import BacklinePhase1Checklist, { getBacklinePhase1Fields } from './aiq/Backline
 import BacklinePhase2Checklist, { getBacklinePhase2Fields } from './aiq/BacklinePhase2Checklist'
 import FryStationChecklist, { getFryStationFields } from './aiq/FryStationChecklist'
 import CashierDiningRoomChecklist, { getCashierDiningRoomFields } from './aiq/CashierDiningRoomChecklist'
+import DriveThruChecklist, { getDriveThruFields } from './aiq/DriveThruChecklist'
 
 // Export all AIQ-related database fields needed for the query
 export function getAIQSessionFields() {
@@ -27,6 +28,8 @@ export function getAIQSessionFields() {
     ...getFryStationFields(),
     // Cashier & Dining Room fields
     ...getCashierDiningRoomFields(),
+    // Drive-Thru Operations fields
+    ...getDriveThruFields(),
     // Add more competency fields here as they are created
     // ...getFrontlineFields(),
     // ...getTeamTrainerFields(),
@@ -175,6 +178,17 @@ export default function AIQSessionContent({
     case 'Cashier & Dining Room':
       return (
         <CashierDiningRoomChecklist
+          session={session}
+          schedule={schedule}
+          saving={saving}
+          onCheckboxChange={onCheckboxChange}
+          onComplete={onComplete}
+        />
+      )
+
+    case 'Drive-Thru Operations':
+      return (
+        <DriveThruChecklist
           session={session}
           schedule={schedule}
           saving={saving}

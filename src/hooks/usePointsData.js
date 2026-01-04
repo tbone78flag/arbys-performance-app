@@ -205,6 +205,18 @@ export function useSpendPoints() {
 
   return useMutation({
     mutationFn: async ({ employeeId, locationId, reward }) => {
+      // First, check current balance
+      const { data: allPoints } = await supabase
+        .from('points_log')
+        .select('points_amount')
+        .eq('employee_id', employeeId)
+
+      const currentBalance = (allPoints || []).reduce((sum, p) => sum + p.points_amount, 0)
+
+      if (currentBalance < reward.points_cost) {
+        throw new Error(`Insufficient points. Current balance: ${currentBalance}, Required: ${reward.points_cost}`)
+      }
+
       const { error } = await supabase.from('points_log').insert({
         employee_id: employeeId,
         location_id: locationId,
@@ -347,6 +359,21 @@ export function useUndoPoints() {
 
       if (fetchError) throw fetchError
       if (!originalRecord) throw new Error('Original record not found')
+
+      // Check if employee has enough points to undo this award
+      const { data: allPoints } = await supabase
+        .from('points_log')
+        .select('points_amount')
+        .eq('employee_id', originalRecord.employee_id)
+
+      const currentBalance = (allPoints || []).reduce((sum, p) => sum + p.points_amount, 0)
+
+      // If undoing would cause negative balance, prevent it
+      if (currentBalance < originalRecord.points_amount) {
+        throw new Error(
+          `Cannot undo: Employee has already spent these points. Current balance: ${currentBalance}, Trying to remove: ${originalRecord.points_amount}`
+        )
+      }
 
       // Create an undo log entry (negative points to reverse the award)
       const { error: insertError } = await supabase.from('points_log').insert({

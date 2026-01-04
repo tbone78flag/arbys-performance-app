@@ -1,6 +1,5 @@
 // src/components/SalesPeriodSummary.jsx
-import { useState, useEffect, useMemo } from 'react'
-import { supabase } from '../supabaseClient'
+import { useState, useMemo } from 'react'
 import {
   LineChart,
   Line,
@@ -14,10 +13,8 @@ import {
 import {
   startOfMonthLocal,
   endOfMonthLocal,
-  startOfWeekLocal,
-  addDays,
-  ymdLocal,
 } from '../utils/dateHelpers'
+import { usePeriodSales } from '../hooks/useSalesData'
 
 // Exported component used by SalesPage
 export default function SalesPeriodSummary({ profile, locationId: propLocationId }) {
@@ -25,11 +22,6 @@ export default function SalesPeriodSummary({ profile, locationId: propLocationId
 
   // Core period state
   const [periodAnchor, setPeriodAnchor] = useState(() => new Date())
-  const [dailyRows, setDailyRows] = useState([]) // all days in month, with weekIndex
-  const [weeks, setWeeks] = useState([])         // [{ weekIndex, label, yoyWeekPct }]
-  const [periodSummary, setPeriodSummary] = useState(null)
-  const [loadingPeriod, setLoadingPeriod] = useState(true)
-  const [periodError, setPeriodError] = useState(null)
 
   // Export UI state
   const [exportType, setExportType] = useState('period') // 'week' | 'period' | 'week_and_period' | 'all'
@@ -52,156 +44,26 @@ export default function SalesPeriodSummary({ profile, locationId: propLocationId
     [periodStart]
   )
 
-  // Load all days in this month
-  useEffect(() => {
-    let cancelled = false
+  // Use React Query for fetching (with automatic cache invalidation when data is saved)
+  const { data: periodData, isLoading: loadingPeriod, error: periodError } = usePeriodSales(
+    locationId,
+    periodStart,
+    periodEnd
+  )
 
-    async function loadPeriod() {
-      if (!locationId) return
-
-      setLoadingPeriod(true)
-      setPeriodError(null)
-
-      try {
-        const from = ymdLocal(periodStart)
-        const to = ymdLocal(periodEnd)
-
-        const { data, error } = await supabase
-          .from('daily_sales_yoy')
-          .select('sales_date, net_sales_this_year, net_sales_last_year')
-          .eq('location_id', locationId)
-          .gte('sales_date', from)
-          .lte('sales_date', to)
-          .order('sales_date', { ascending: true })
-
-        if (cancelled) return
-        if (error) throw error
-
-        const byDate = new Map()
-        ;(data || []).forEach(row => {
-          byDate.set(row.sales_date, row)
-        })
-
-        // First week start (Mon) – may be in previous month
-        const firstWeekStart = startOfWeekLocal(periodStart)
-
-        const periodDays = []
-        const weeksMap = new Map()
-
-        let cursor = new Date(periodStart)
-        while (cursor <= periodEnd) {
-          const key = ymdLocal(cursor)
-          const row = byDate.get(key)
-          const thisYear =
-            row && row.net_sales_this_year != null
-              ? Number(row.net_sales_this_year)
-              : null
-          const lastYear =
-            row && row.net_sales_last_year != null
-              ? Number(row.net_sales_last_year)
-              : null
-
-          // Week index based on Monday-start weeks from firstWeekStart
-          const diffDays = Math.floor(
-            (cursor.getTime() - firstWeekStart.getTime()) / (1000 * 60 * 60 * 24)
-          )
-          const weekIndex = Math.floor(diffDays / 7) + 1
-
-          let yoyPct = null
-          if (
-            thisYear != null &&
-            lastYear != null &&
-            Number.isFinite(thisYear) &&
-            Number.isFinite(lastYear) &&
-            lastYear !== 0
-          ) {
-            yoyPct = ((thisYear - lastYear) / lastYear) * 100
-          }
-
-          periodDays.push({
-            date: key,
-            weekIndex,
-            thisYear,
-            lastYear,
-            yoyPct,
-          })
-
-          // Aggregate into week bucket
-          if (!weeksMap.has(weekIndex)) {
-            weeksMap.set(weekIndex, {
-              weekIndex,
-              totalThisYear: 0,
-              totalLastYear: 0,
-            })
-          }
-          const bucket = weeksMap.get(weekIndex)
-          if (thisYear != null) bucket.totalThisYear += thisYear
-          if (lastYear != null) bucket.totalLastYear += lastYear
-
-          cursor = addDays(cursor, 1)
-        }
-
-        const weeksArr = Array.from(weeksMap.values())
-          .sort((a, b) => a.weekIndex - b.weekIndex)
-          .map(w => {
-            let yoyWeekPct = null
-            if (w.totalLastYear > 0) {
-              yoyWeekPct =
-                ((w.totalThisYear - w.totalLastYear) / w.totalLastYear) * 100
-            }
-            return {
-              weekIndex: w.weekIndex,
-              label: `Wk${w.weekIndex}`,
-              yoyWeekPct,
-            }
-          })
-
-        // Period totals
-        const periodTotals = weeksArr.reduce(
-          (acc, w) => {
-            const bucket = weeksMap.get(w.weekIndex)
-            acc.totalThisYear += bucket.totalThisYear
-            acc.totalLastYear += bucket.totalLastYear
-            return acc
-          },
-          { totalThisYear: 0, totalLastYear: 0 }
-        )
-
-        let periodYoyPct = null
-        if (periodTotals.totalLastYear > 0) {
-          periodYoyPct =
-            ((periodTotals.totalThisYear - periodTotals.totalLastYear) /
-              periodTotals.totalLastYear) * 100
-        }
-
-        setDailyRows(periodDays)
-        setWeeks(weeksArr)
-        setPeriodSummary({
-          ...periodTotals,
-          yoyPct: periodYoyPct,
-        })
-        if (weeksArr.length > 0) {
-          setSelectedWeek(String(weeksArr[0].weekIndex))
-        }
-      } catch (err) {
-        console.error('Failed to load period sales', err)
-        setPeriodError(err.message || String(err))
-        setDailyRows([])
-        setWeeks([])
-        setPeriodSummary(null)
-      } finally {
-        if (!cancelled) setLoadingPeriod(false)
-      }
-    }
-
-    loadPeriod()
-    return () => {
-      cancelled = true
-    }
-  }, [locationId, periodStart, periodEnd])
+  const dailyRows = periodData?.dailyRows || []
+  const weeks = periodData?.weeks || []
+  const periodSummary = periodData?.periodSummary || null
 
   const periodChartData = weeks.map(w => ({ ...w }))
   const availableWeeks = weeks.map(w => w.weekIndex)
+
+  // Set initial selected week when data loads
+  useMemo(() => {
+    if (weeks.length > 0 && !availableWeeks.includes(Number(selectedWeek))) {
+      setSelectedWeek(String(weeks[0].weekIndex))
+    }
+  }, [weeks, availableWeeks, selectedWeek])
 
   const shiftMonth = delta => {
     setPeriodAnchor(prev => {
@@ -441,7 +303,7 @@ export default function SalesPeriodSummary({ profile, locationId: propLocationId
 
       {periodError && (
         <p className="text-xs text-red-700 mb-2">
-          Error loading period data: {periodError}
+          Error loading period data: {periodError.message || String(periodError)}
         </p>
       )}
 

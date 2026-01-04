@@ -228,7 +228,7 @@ export function SpeedWeekEntryCard({
                   inputMode="numeric"
                   value={form[key][i]}
                   onChange={(e) => handleChange(key, i, e.target.value)}
-                  className="border rounded px-2 py-1 text-center"
+                  className="border rounded px-2 py-1 text-center [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                   placeholder="sec"
                   aria-label={`${label} ${DOW[i]}`}
                 />
