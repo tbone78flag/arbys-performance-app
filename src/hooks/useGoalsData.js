@@ -51,38 +51,74 @@ export function isEndOfMonthWindow() {
 
 // Fetch employee's goals for a specific period
 async function fetchMyGoals(employeeId, periodStart) {
-  const { data, error } = await supabase
+  // Fetch goals
+  const { data: goals, error: goalsError } = await supabase
     .from('employee_goals')
-    .select(`
-      *,
-      checkins:goal_weekly_checkins(*)
-    `)
+    .select('*')
     .eq('employee_id', employeeId)
     .eq('period_start', periodStart)
     .order('created_at', { ascending: true })
 
-  if (error) throw error
-  return data || []
+  if (goalsError) throw goalsError
+  if (!goals || goals.length === 0) return []
+
+  // Fetch checkins for all goals
+  const goalIds = goals.map(g => g.id)
+  const { data: checkins, error: checkinsError } = await supabase
+    .from('goal_weekly_checkins')
+    .select('*')
+    .in('goal_id', goalIds)
+    .order('week_number', { ascending: true })
+
+  if (checkinsError) throw checkinsError
+
+  // Group checkins by goal_id
+  const checkinsByGoal = {}
+  ;(checkins || []).forEach(c => {
+    if (!checkinsByGoal[c.goal_id]) checkinsByGoal[c.goal_id] = []
+    checkinsByGoal[c.goal_id].push(c)
+  })
+
+  // Attach checkins to goals
+  return goals.map(g => ({
+    ...g,
+    checkins: checkinsByGoal[g.id] || [],
+  }))
 }
 
 // Fetch team work goals for managers
 async function fetchTeamGoals(locationId, periodStart) {
-  const { data: goals, error } = await supabase
+  // Fetch goals
+  const { data: goals, error: goalsError } = await supabase
     .from('employee_goals')
-    .select(`
-      *,
-      checkins:goal_weekly_checkins(*)
-    `)
+    .select('*')
     .eq('location_id', locationId)
     .eq('goal_type', 'work')
     .eq('period_start', periodStart)
     .order('created_at', { ascending: true })
 
-  if (error) throw error
+  if (goalsError) throw goalsError
+  if (!goals || goals.length === 0) return []
+
+  // Fetch checkins for all goals
+  const goalIds = goals.map(g => g.id)
+  const { data: checkins, error: checkinsError } = await supabase
+    .from('goal_weekly_checkins')
+    .select('*')
+    .in('goal_id', goalIds)
+    .order('week_number', { ascending: true })
+
+  if (checkinsError) throw checkinsError
+
+  // Group checkins by goal_id
+  const checkinsByGoal = {}
+  ;(checkins || []).forEach(c => {
+    if (!checkinsByGoal[c.goal_id]) checkinsByGoal[c.goal_id] = []
+    checkinsByGoal[c.goal_id].push(c)
+  })
 
   // Get employee names
-  const employeeIds = [...new Set((goals || []).map(g => g.employee_id))]
-  if (employeeIds.length === 0) return []
+  const employeeIds = [...new Set(goals.map(g => g.employee_id))]
 
   const { data: employees } = await supabase
     .from('employees')
@@ -95,9 +131,9 @@ async function fetchTeamGoals(locationId, periodStart) {
   })
 
   // Calculate trend indicator based on check-ins
-  return (goals || []).map(goal => {
-    const checkins = goal.checkins || []
-    const ratings = checkins
+  return goals.map(goal => {
+    const goalCheckins = checkinsByGoal[goal.id] || []
+    const ratings = goalCheckins
       .filter(c => c.progress_rating)
       .map(c => c.progress_rating)
 
@@ -114,6 +150,7 @@ async function fetchTeamGoals(locationId, periodStart) {
 
     return {
       ...goal,
+      checkins: goalCheckins,
       employee_name: employeeMap[goal.employee_id] || 'Unknown',
       trend,
     }
@@ -122,28 +159,35 @@ async function fetchTeamGoals(locationId, periodStart) {
 
 // Fetch goal detail with all check-ins
 async function fetchGoalDetail(goalId) {
-  const { data, error } = await supabase
+  // Fetch goal
+  const { data: goal, error: goalError } = await supabase
     .from('employee_goals')
-    .select(`
-      *,
-      checkins:goal_weekly_checkins(*)
-    `)
+    .select('*')
     .eq('id', goalId)
     .single()
 
-  if (error) throw error
+  if (goalError) throw goalError
+
+  // Fetch checkins for this goal
+  const { data: checkins, error: checkinsError } = await supabase
+    .from('goal_weekly_checkins')
+    .select('*')
+    .eq('goal_id', goalId)
+    .order('week_number', { ascending: true })
+
+  if (checkinsError) throw checkinsError
 
   // Get employee name
   const { data: employee } = await supabase
     .from('employees')
     .select('display_name')
-    .eq('id', data.employee_id)
+    .eq('id', goal.employee_id)
     .single()
 
   return {
-    ...data,
+    ...goal,
     employee_name: employee?.display_name || 'Unknown',
-    checkins: (data.checkins || []).sort((a, b) => a.week_number - b.week_number),
+    checkins: checkins || [],
   }
 }
 
@@ -206,25 +250,45 @@ async function fetchGoalAnalytics(locationId) {
   const totalEmployees = (employees || []).length
 
   // Get goals for this period
-  const { data: goals } = await supabase
+  const { data: goals, error: goalsError } = await supabase
     .from('employee_goals')
-    .select(`
-      id, employee_id, goal_text, goal_type,
-      checkins:goal_weekly_checkins(id, week_number)
-    `)
+    .select('id, employee_id, goal_text, goal_type')
     .eq('location_id', locationId)
     .eq('period_start', periodStartStr)
 
-  const goalsWithCheckins = goals || []
-  const uniqueEmployeesWithGoals = new Set(goalsWithCheckins.map(g => g.employee_id))
+  if (goalsError) throw goalsError
+
+  const goalsData = goals || []
+  const uniqueEmployeesWithGoals = new Set(goalsData.map(g => g.employee_id))
 
   // Calculate current week
   const currentWeek = getCurrentWeekNumber()
 
+  // Fetch checkins for all goals
+  let checkins = []
+  if (goalsData.length > 0) {
+    const goalIds = goalsData.map(g => g.id)
+    const { data: checkinsData, error: checkinsError } = await supabase
+      .from('goal_weekly_checkins')
+      .select('id, goal_id, week_number')
+      .in('goal_id', goalIds)
+
+    if (checkinsError) throw checkinsError
+    checkins = checkinsData || []
+  }
+
+  // Group checkins by goal_id
+  const checkinsByGoal = {}
+  checkins.forEach(c => {
+    if (!checkinsByGoal[c.goal_id]) checkinsByGoal[c.goal_id] = []
+    checkinsByGoal[c.goal_id].push(c)
+  })
+
   // Count employees with at least one check-in this week
   const employeesWithCheckins = new Set()
-  goalsWithCheckins.forEach(g => {
-    const hasCurrentWeekCheckin = (g.checkins || []).some(c => c.week_number === currentWeek)
+  goalsData.forEach(g => {
+    const goalCheckins = checkinsByGoal[g.id] || []
+    const hasCurrentWeekCheckin = goalCheckins.some(c => c.week_number === currentWeek)
     if (hasCurrentWeekCheckin) {
       employeesWithCheckins.add(g.employee_id)
     }
@@ -233,7 +297,7 @@ async function fetchGoalAnalytics(locationId) {
   // Extract goal themes (simple word frequency)
   const wordCounts = {}
   const stopWords = ['i', 'to', 'the', 'a', 'an', 'and', 'or', 'for', 'my', 'in', 'on', 'with', 'of', 'at', 'be', 'will', 'want']
-  goalsWithCheckins.forEach(g => {
+  goalsData.forEach(g => {
     const words = (g.goal_text || '').toLowerCase().split(/\s+/)
     words.forEach(word => {
       const clean = word.replace(/[^a-z]/g, '')
