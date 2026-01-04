@@ -4,6 +4,21 @@ import { useTeamGoals, getCurrentPeriod } from '../../hooks/useGoalsData'
 import { useAwardPoints } from '../../hooks/usePointsData'
 import GoalDetailModal from './GoalDetailModal'
 
+// Title hierarchy - higher number = higher rank
+const TITLE_RANK = {
+  'Team Member': 1,
+  'Shift Manager': 2,
+  'Assistant Manager': 3,
+  'General Manager': 4,
+}
+
+// Check if manager can award points to an employee (must be higher rank)
+function canAwardPointsTo(managerTitle, employeeTitle) {
+  const managerRank = TITLE_RANK[managerTitle] || 0
+  const employeeRank = TITLE_RANK[employeeTitle] || 1
+  return managerRank > employeeRank
+}
+
 export default function TeamGoalsOverview({ profile, locationId }) {
   const [selectedGoal, setSelectedGoal] = useState(null)
   const [showAwardModal, setShowAwardModal] = useState(false)
@@ -148,12 +163,15 @@ export default function TeamGoalsOverview({ profile, locationId }) {
                     >
                       Details
                     </button>
-                    <button
-                      onClick={() => handleAwardPoints(goal)}
-                      className="px-3 py-1.5 text-xs text-green-600 border border-green-600 rounded hover:bg-green-50"
-                    >
-                      Award Pts
-                    </button>
+                    {/* Only show Award Pts if manager outranks the employee */}
+                    {canAwardPointsTo(profile?.title, goal.employee_title) && (
+                      <button
+                        onClick={() => handleAwardPoints(goal)}
+                        className="px-3 py-1.5 text-xs text-green-600 border border-green-600 rounded hover:bg-green-50"
+                      >
+                        Award Pts
+                      </button>
+                    )}
                   </div>
                 </div>
 

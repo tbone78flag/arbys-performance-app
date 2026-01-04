@@ -41,8 +41,10 @@ const SMART_QUESTIONS = [
 ]
 
 export default function GoalCreationWizard({ profile, goalType, onClose, onComplete }) {
-  const [step, setStep] = useState(1) // 1: Continue/New, 2: Goal + SMART, 3: Actions, 4: Review
+  // Steps: 1: Goal text (or continuation choice), 2: SMART details, 3: Actions, 4: Review
+  const [step, setStep] = useState(1)
   const [continuationChoice, setContinuationChoice] = useState(null)
+  const [showContinuation, setShowContinuation] = useState(true) // Only show continuation options initially
 
   // Form data
   const [goalText, setGoalText] = useState('')
@@ -61,12 +63,12 @@ export default function GoalCreationWizard({ profile, goalType, onClose, onCompl
   const { periodStart } = getCurrentPeriod()
   const monthLabel = periodStart.toLocaleDateString(undefined, { month: 'long', year: 'numeric' })
 
-  // If there's a previous goal and we're on step 1, show continuation choice
-  const showContinuationStep = previousGoal && step === 1
+  // Determine if we should show continuation choice
+  const hasPreviousGoal = previousGoal && showContinuation && step === 1
 
   const handleContinue = (choice) => {
     setContinuationChoice(choice)
-    if (choice === 'continue') {
+    if (choice === 'continue' || choice === 'adjust') {
       // Pre-fill with previous goal data
       setGoalText(previousGoal.goal_text)
       setSmartAnswers({
@@ -77,20 +79,9 @@ export default function GoalCreationWizard({ profile, goalType, onClose, onCompl
         smart_timebound: previousGoal.smart_timebound,
       })
       setActionSteps(previousGoal.action_steps?.map(s => s.step) || ['', ''])
-    } else if (choice === 'adjust') {
-      // Pre-fill but let them edit
-      setGoalText(previousGoal.goal_text)
-      setSmartAnswers({
-        smart_specific: previousGoal.smart_specific,
-        smart_measurable: previousGoal.smart_measurable,
-        smart_achievable: previousGoal.smart_achievable,
-        smart_relevant: previousGoal.smart_relevant,
-        smart_timebound: previousGoal.smart_timebound,
-      })
-      setActionSteps(previousGoal.action_steps?.map(s => s.step) || ['', ''])
     }
-    // For 'new', leave everything blank
-    setStep(2)
+    setShowContinuation(false)
+    // Stay on step 1 to show goal text input
   }
 
   const handleAddAction = () => {
@@ -111,8 +102,11 @@ export default function GoalCreationWizard({ profile, goalType, onClose, onCompl
     setActionSteps(updated)
   }
 
+  const validateStep1 = () => {
+    return goalText.trim().length > 0
+  }
+
   const validateStep2 = () => {
-    if (!goalText.trim()) return false
     return Object.values(smartAnswers).every(v => v.trim())
   }
 
@@ -172,26 +166,28 @@ export default function GoalCreationWizard({ profile, goalType, onClose, onCompl
         </div>
 
         {/* Progress Indicator */}
-        <div className="px-4 pt-4">
-          <div className="flex gap-2">
-            {[1, 2, 3, 4].map(s => (
-              <div
-                key={s}
-                className={`flex-1 h-1 rounded ${
-                  s <= step ? 'bg-red-600' : 'bg-gray-200'
-                }`}
-              />
-            ))}
+        {!hasPreviousGoal && (
+          <div className="px-4 pt-4">
+            <div className="flex gap-2">
+              {[1, 2, 3, 4].map(s => (
+                <div
+                  key={s}
+                  className={`flex-1 h-1 rounded ${
+                    s <= step ? 'bg-red-600' : 'bg-gray-200'
+                  }`}
+                />
+              ))}
+            </div>
+            <p className="text-xs text-gray-500 mt-1">
+              Step {step} of 4
+            </p>
           </div>
-          <p className="text-xs text-gray-500 mt-1">
-            Step {step} of 4
-          </p>
-        </div>
+        )}
 
         {/* Content */}
         <div className="p-4">
-          {/* Step 1: Continuation Choice */}
-          {showContinuationStep && (
+          {/* Continuation Choice (only if previous goal exists and not yet chosen) */}
+          {hasPreviousGoal && (
             <div className="space-y-4">
               <div className="bg-gray-50 border rounded-lg p-4">
                 <p className="text-sm text-gray-600 mb-2">Last month's goal:</p>
@@ -230,18 +226,20 @@ export default function GoalCreationWizard({ profile, goalType, onClose, onCompl
             </div>
           )}
 
-          {/* Step 2: Goal + S.M.A.R.T. (or Step 1 if no previous goal) */}
-          {((step === 2) || (!previousGoal && step === 1)) && (
-            <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-2">
-              {/* Goal Text */}
+          {/* Step 1: Goal Text */}
+          {!hasPreviousGoal && step === 1 && (
+            <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   What is your main {goalType === 'work' ? 'work' : 'personal'} goal for this month?
                 </label>
+                <p className="text-xs text-gray-500 mb-3">
+                  Write it in your own words first. We'll help you make it more specific in the next step.
+                </p>
                 <textarea
                   value={goalText}
                   onChange={(e) => setGoalText(e.target.value)}
-                  rows={2}
+                  rows={3}
                   className="w-full border rounded-lg px-3 py-2 text-sm"
                   placeholder={
                     goalType === 'work'
@@ -251,33 +249,46 @@ export default function GoalCreationWizard({ profile, goalType, onClose, onCompl
                 />
               </div>
 
-              {/* S.M.A.R.T. Questions */}
-              <div className="border-t pt-4">
-                <p className="text-sm font-medium text-gray-800 mb-3">
-                  Let's make it a S.M.A.R.T. goal:
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                <p className="text-sm text-blue-800">
+                  <span className="font-medium">Tip:</span> Think about something you want to get better at or accomplish this month. It doesn't need to be perfect - we'll refine it together.
                 </p>
-
-                {SMART_QUESTIONS.map((q) => (
-                  <div key={q.key} className="mb-4">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      <span className="text-red-600">{q.label[0]}</span>
-                      {q.label.slice(1)}: {q.question}
-                    </label>
-                    <textarea
-                      value={smartAnswers[q.key]}
-                      onChange={(e) =>
-                        setSmartAnswers({ ...smartAnswers, [q.key]: e.target.value })
-                      }
-                      rows={2}
-                      className="w-full border rounded-lg px-3 py-2 text-sm"
-                      placeholder={q.placeholder}
-                    />
-                    <p className="text-xs text-gray-400 italic mt-1">
-                      Example: {q.example}
-                    </p>
-                  </div>
-                ))}
               </div>
+            </div>
+          )}
+
+          {/* Step 2: S.M.A.R.T. Details */}
+          {step === 2 && (
+            <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-2">
+              <div className="bg-gray-50 border rounded-lg p-3 mb-4">
+                <p className="text-xs text-gray-500">Your goal:</p>
+                <p className="font-medium text-gray-800">{goalText}</p>
+              </div>
+
+              <p className="text-sm font-medium text-gray-800 mb-3">
+                Let's make it a S.M.A.R.T. goal:
+              </p>
+
+              {SMART_QUESTIONS.map((q) => (
+                <div key={q.key} className="mb-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <span className="text-red-600">{q.label[0]}</span>
+                    {q.label.slice(1)}: {q.question}
+                  </label>
+                  <textarea
+                    value={smartAnswers[q.key]}
+                    onChange={(e) =>
+                      setSmartAnswers({ ...smartAnswers, [q.key]: e.target.value })
+                    }
+                    rows={2}
+                    className="w-full border rounded-lg px-3 py-2 text-sm"
+                    placeholder={q.placeholder}
+                  />
+                  <p className="text-xs text-gray-400 italic mt-1">
+                    Example: {q.example}
+                  </p>
+                </div>
+              ))}
             </div>
           )}
 
@@ -378,7 +389,7 @@ export default function GoalCreationWizard({ profile, goalType, onClose, onCompl
 
         {/* Footer */}
         <div className="p-4 border-t flex justify-between">
-          {step > 1 && !showContinuationStep && (
+          {!hasPreviousGoal && step > 1 && (
             <button
               onClick={() => setStep(step - 1)}
               className="px-4 py-2 text-sm text-gray-600 hover:text-gray-800"
@@ -387,12 +398,12 @@ export default function GoalCreationWizard({ profile, goalType, onClose, onCompl
             </button>
           )}
 
-          {showContinuationStep ? (
-            <div /> // Empty div for spacing
-          ) : step < 4 || (!previousGoal && step === 1) ? (
+          {hasPreviousGoal ? (
+            <div /> // Empty div for spacing when showing continuation choices
+          ) : step < 4 ? (
             <button
               onClick={() => {
-                if (!previousGoal && step === 1) {
+                if (step === 1 && validateStep1()) {
                   setStep(2)
                 } else if (step === 2 && validateStep2()) {
                   setStep(3)
@@ -401,12 +412,13 @@ export default function GoalCreationWizard({ profile, goalType, onClose, onCompl
                 }
               }}
               disabled={
+                (step === 1 && !validateStep1()) ||
                 (step === 2 && !validateStep2()) ||
                 (step === 3 && !validateStep3())
               }
               className="ml-auto px-4 py-2 bg-red-600 text-white rounded text-sm font-medium hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {!previousGoal && step === 1 ? 'Get Started' : 'Next'}
+              {step === 1 ? 'Get Started' : 'Next'}
             </button>
           ) : (
             <button

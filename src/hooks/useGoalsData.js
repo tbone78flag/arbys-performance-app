@@ -117,17 +117,17 @@ async function fetchTeamGoals(locationId, periodStart) {
     checkinsByGoal[c.goal_id].push(c)
   })
 
-  // Get employee names
+  // Get employee names and titles
   const employeeIds = [...new Set(goals.map(g => g.employee_id))]
 
   const { data: employees } = await supabase
     .from('employees')
-    .select('id, display_name')
+    .select('id, display_name, title')
     .in('id', employeeIds)
 
   const employeeMap = {}
   ;(employees || []).forEach(e => {
-    employeeMap[e.id] = e.display_name
+    employeeMap[e.id] = { name: e.display_name, title: e.title }
   })
 
   // Calculate trend indicator based on check-ins
@@ -148,10 +148,13 @@ async function fetchTeamGoals(locationId, periodStart) {
       else trend = 'mixed'
     }
 
+    const employeeInfo = employeeMap[goal.employee_id] || { name: 'Unknown', title: 'Team Member' }
+
     return {
       ...goal,
       checkins: goalCheckins,
-      employee_name: employeeMap[goal.employee_id] || 'Unknown',
+      employee_name: employeeInfo.name,
+      employee_title: employeeInfo.title,
       trend,
     }
   })
