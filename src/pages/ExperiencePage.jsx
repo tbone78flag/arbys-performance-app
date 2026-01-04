@@ -73,36 +73,6 @@ export default function ExperiencePage({ profile }) {
         <div className="border-t pt-4 mt-4 space-y-2">
           <h2 className="text-lg font-semibold text-red-600 mb-3">Manager Tools</h2>
 
-          {/* Team Goals Overview Accordion */}
-          <div className="border rounded-lg overflow-hidden">
-            <button
-              type="button"
-              onClick={() => toggleSection('team-goals')}
-              className="w-full flex items-center justify-between px-4 py-3 text-left bg-white hover:bg-gray-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500"
-              aria-expanded={openSection === 'team-goals'}
-            >
-              <div className="flex flex-col">
-                <span className="font-medium">Team Goals Overview</span>
-                <span className="text-xs text-gray-500">
-                  View and manage your team members' work goals.
-                </span>
-              </div>
-              <span
-                className={`transform transition-transform ${
-                  openSection === 'team-goals' ? 'rotate-90' : ''
-                }`}
-              >
-                ▶
-              </span>
-            </button>
-
-            {openSection === 'team-goals' && (
-              <div className="px-4 pb-4 pt-2 bg-gray-50 border-t">
-                <TeamGoalsOverview profile={profile} locationId={locationId} />
-              </div>
-            )}
-          </div>
-
           {/* Training Calendar Accordion */}
           <div className="border rounded-lg overflow-hidden">
             <button
@@ -159,6 +129,36 @@ export default function ExperiencePage({ profile }) {
             {openSection === 'session' && (
               <div className="px-4 pb-4 pt-2 bg-gray-50 border-t">
                 <TrainingSession profile={profile} />
+              </div>
+            )}
+          </div>
+
+          {/* Team Goals Overview Accordion */}
+          <div className="border rounded-lg overflow-hidden">
+            <button
+              type="button"
+              onClick={() => toggleSection('team-goals')}
+              className="w-full flex items-center justify-between px-4 py-3 text-left bg-white hover:bg-gray-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500"
+              aria-expanded={openSection === 'team-goals'}
+            >
+              <div className="flex flex-col">
+                <span className="font-medium">Team Goals Overview</span>
+                <span className="text-xs text-gray-500">
+                  View and manage your team members' work goals.
+                </span>
+              </div>
+              <span
+                className={`transform transition-transform ${
+                  openSection === 'team-goals' ? 'rotate-90' : ''
+                }`}
+              >
+                ▶
+              </span>
+            </button>
+
+            {openSection === 'team-goals' && (
+              <div className="px-4 pb-4 pt-2 bg-gray-50 border-t">
+                <TeamGoalsOverview profile={profile} locationId={locationId} />
               </div>
             )}
           </div>

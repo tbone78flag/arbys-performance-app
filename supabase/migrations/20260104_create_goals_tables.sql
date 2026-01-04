@@ -137,7 +137,6 @@ CREATE POLICY "Employees can update own goals"
   USING (auth.uid() = employee_id);
 
 -- Managers can view work goals of employees at their location
--- (This requires checking the manager's location and role)
 CREATE POLICY "Managers can view work goals at location"
   ON employee_goals FOR SELECT
   USING (
@@ -146,7 +145,7 @@ CREATE POLICY "Managers can view work goals at location"
       SELECT 1 FROM employees e
       WHERE e.id = auth.uid()
       AND e.location_id = employee_goals.location_id
-      AND e.role = 'MANAGER'
+      AND e.role = 'manager'
     )
   );
 
@@ -159,7 +158,7 @@ CREATE POLICY "Managers can update work goals at location"
       SELECT 1 FROM employees e
       WHERE e.id = auth.uid()
       AND e.location_id = employee_goals.location_id
-      AND e.role = 'MANAGER'
+      AND e.role = 'manager'
     )
   );
 
@@ -210,7 +209,7 @@ CREATE POLICY "Managers can view work goal checkins"
       WHERE g.id = goal_weekly_checkins.goal_id
       AND g.goal_type = 'work'
       AND g.location_id = e.location_id
-      AND e.role = 'MANAGER'
+      AND e.role = 'manager'
     )
   );
 
@@ -224,7 +223,7 @@ CREATE POLICY "Managers can update work goal checkins"
       WHERE g.id = goal_weekly_checkins.goal_id
       AND g.goal_type = 'work'
       AND g.location_id = e.location_id
-      AND e.role = 'MANAGER'
+      AND e.role = 'manager'
     )
   );
 
