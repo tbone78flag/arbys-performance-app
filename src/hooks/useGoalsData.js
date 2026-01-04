@@ -118,17 +118,17 @@ async function fetchTeamGoals(locationId, periodStart) {
     checkinsByGoal[c.goal_id].push(c)
   })
 
-  // Get employee names and titles
+  // Get employee names and titles from profiles table
   const employeeIds = [...new Set(goals.map(g => g.employee_id))]
 
   const { data: employees } = await supabase
-    .from('employees')
-    .select('id, display_name, title')
+    .from('profiles')
+    .select('id, full_name, title')
     .in('id', employeeIds)
 
   const employeeMap = {}
   ;(employees || []).forEach(e => {
-    employeeMap[e.id] = { name: e.display_name, title: e.title }
+    employeeMap[e.id] = { name: e.full_name, title: e.title }
   })
 
   // Calculate trend indicator based on check-ins
@@ -181,16 +181,16 @@ async function fetchGoalDetail(goalId) {
 
   if (checkinsError) throw checkinsError
 
-  // Get employee name
+  // Get employee name from profiles table
   const { data: employee } = await supabase
-    .from('employees')
-    .select('display_name')
+    .from('profiles')
+    .select('full_name')
     .eq('id', goal.employee_id)
     .single()
 
   return {
     ...goal,
-    employee_name: employee?.display_name || 'Unknown',
+    employee_name: employee?.full_name || 'Unknown',
     checkins: checkins || [],
   }
 }
@@ -244,12 +244,11 @@ async function fetchGoalAnalytics(locationId) {
   const { periodStart } = getCurrentPeriod()
   const periodStartStr = ymdLocal(periodStart)
 
-  // Get all employees at location
+  // Get all employees at location from profiles table
   const { data: employees } = await supabase
-    .from('employees')
+    .from('profiles')
     .select('id')
     .eq('location_id', locationId)
-    .eq('is_active', true)
 
   const totalEmployees = (employees || []).length
 
