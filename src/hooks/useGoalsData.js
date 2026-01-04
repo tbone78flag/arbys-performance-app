@@ -1,4 +1,5 @@
 // src/hooks/useGoalsData.js
+import { useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../supabaseClient'
 import { startOfMonthLocal, endOfMonthLocal, ymdLocal, startOfWeekLocal } from '../utils/dateHelpers'
@@ -555,4 +556,63 @@ export function useDismissReminder() {
       queryClient.invalidateQueries({ queryKey: goalsKeys.all })
     },
   })
+}
+
+// ============================================
+// Real-time Subscription Hook
+// ============================================
+
+/**
+ * Sets up real-time subscriptions for goals and check-ins.
+ * Call this hook in components that need live updates.
+ * It will invalidate the React Query cache when changes occur.
+ */
+export function useGoalsRealtime(locationId) {
+  const queryClient = useQueryClient()
+
+  useEffect(() => {
+    if (!locationId) return
+
+    // Subscribe to employee_goals changes for this location
+    const goalsChannel = supabase
+      .channel(`goals-${locationId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*', // Listen to INSERT, UPDATE, DELETE
+          schema: 'public',
+          table: 'employee_goals',
+          filter: `location_id=eq.${locationId}`,
+        },
+        () => {
+          // Invalidate all goals queries to refetch fresh data
+          queryClient.invalidateQueries({ queryKey: goalsKeys.all })
+        }
+      )
+      .subscribe()
+
+    // Subscribe to goal_weekly_checkins changes
+    // We can't filter by location directly, so we invalidate on any checkin change
+    const checkinsChannel = supabase
+      .channel(`checkins-${locationId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'goal_weekly_checkins',
+        },
+        () => {
+          // Invalidate goals queries since check-ins affect the trend calculations
+          queryClient.invalidateQueries({ queryKey: goalsKeys.all })
+        }
+      )
+      .subscribe()
+
+    // Cleanup subscriptions on unmount
+    return () => {
+      supabase.removeChannel(goalsChannel)
+      supabase.removeChannel(checkinsChannel)
+    }
+  }, [locationId, queryClient])
 }

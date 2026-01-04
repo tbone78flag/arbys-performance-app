@@ -1,6 +1,6 @@
 // src/components/goals/TeamGoalsOverview.jsx
 import { useState } from 'react'
-import { useTeamGoals, getCurrentPeriod } from '../../hooks/useGoalsData'
+import { useTeamGoals, useGoalsRealtime, getCurrentPeriod } from '../../hooks/useGoalsData'
 import { useAwardPoints } from '../../hooks/usePointsData'
 import GoalDetailModal from './GoalDetailModal'
 
@@ -28,6 +28,9 @@ export default function TeamGoalsOverview({ profile, locationId }) {
 
   const { data: teamGoals, isLoading, error } = useTeamGoals(locationId)
   const awardPointsMutation = useAwardPoints()
+
+  // Enable real-time updates for team goals
+  useGoalsRealtime(locationId)
 
   const { periodStart } = getCurrentPeriod()
   const monthLabel = periodStart.toLocaleDateString(undefined, {
