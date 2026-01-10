@@ -1,13 +1,10 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../supabaseClient'
 import { useNavigate } from 'react-router-dom'
-import { BeefVarianceCard } from '../components/BeefVarianceCard'
 import RewardsManager from '../components/RewardsManager'
 import PointsHistory from '../components/PointsHistory'
 import TrainingScheduleForm from '../components/TrainingScheduleForm'
-import GoalAnalytics from '../components/goals/GoalAnalytics'
 import StoreGoalsEditor from '../components/goals/StoreGoalsEditor'
-import { startOfWeekLocal, addDays } from '../utils/dateHelpers'
 
 export default function GoalsPage({ profile }) {
   const navigate = useNavigate()
@@ -20,7 +17,13 @@ export default function GoalsPage({ profile }) {
   // Average check state
   const [averageCheck, setAverageCheck] = useState('')
   const [loading, setLoading] = useState(true)
-  const [savingAvg, setSavingAvg] = useState(false)
+  const [savingSettings, setSavingSettings] = useState(false)
+
+  // Beef pricing state
+  const [beefCost, setBeefCost] = useState('')
+  const [pClassic, setPClassic] = useState('')
+  const [pDouble, setPDouble] = useState('')
+  const [pHalf, setPHalf] = useState('')
 
   // Accordion state for all sections
   const [openSection, setOpenSection] = useState(null)
@@ -29,52 +32,67 @@ export default function GoalsPage({ profile }) {
     setOpenSection((current) => (current === id ? null : id))
   }
 
-  // Shared week anchor (for speed + beef)
-  const [weekAnchor, setWeekAnchor] = useState(() => new Date())
-  const weekStart = startOfWeekLocal(weekAnchor)
-  const weekEnd = addDays(weekStart, 6)
-  const weekLabel = `${weekStart.toLocaleDateString()} – ${weekEnd.toLocaleDateString()}`
-
-  // Load existing average check
+  // Load existing settings
   useEffect(() => {
     if (!profile) return
 
     const load = async () => {
-      const { data: avgData } = await supabase
-        .from('location_settings')
-        .select('value')
-        .eq('location_id', 'default')
-        .eq('key', 'average_check')
-        .single()
+      const keys = [
+        'average_check',
+        'beef_cost_per_lb',
+        'profit_rb_classic',
+        'profit_rb_double',
+        'profit_rb_half',
+      ]
 
-      if (avgData) setAverageCheck(Number(avgData.value).toFixed(2))
+      const { data, error } = await supabase
+        .from('location_settings')
+        .select('key, value')
+        .eq('location_id', 'default')
+        .in('key', keys)
+
+      if (!error && data) {
+        const map = Object.fromEntries(data.map((r) => [r.key, r.value]))
+        if (map.average_check != null) setAverageCheck(Number(map.average_check).toFixed(2))
+        if (map.beef_cost_per_lb != null) setBeefCost(String(map.beef_cost_per_lb))
+        if (map.profit_rb_classic != null) setPClassic(String(map.profit_rb_classic))
+        if (map.profit_rb_double != null) setPDouble(String(map.profit_rb_double))
+        if (map.profit_rb_half != null) setPHalf(String(map.profit_rb_half))
+      }
+
       setLoading(false)
     }
 
     load()
   }, [profile])
 
-  const saveAverage = async () => {
+  const saveAllSettings = async () => {
     if (!isEditor) return
-    if (isNaN(Number(averageCheck)) || Number(averageCheck) < 0) return
+    setSavingSettings(true)
 
-    setSavingAvg(true)
-    const numeric = parseFloat(averageCheck)
+    try {
+      const rows = [
+        { key: 'average_check', value: Number(averageCheck || 0) },
+        { key: 'beef_cost_per_lb', value: Number(beefCost || 0) },
+        { key: 'profit_rb_classic', value: Number(pClassic || 0) },
+        { key: 'profit_rb_double', value: Number(pDouble || 0) },
+        { key: 'profit_rb_half', value: Number(pHalf || 0) },
+      ].map((r) => ({
+        location_id: 'default',
+        ...r,
+        updated_by: profile.id,
+      }))
 
-    const { error } = await supabase
-      .from('location_settings')
-      .upsert(
-        {
-          location_id: 'default',
-          key: 'average_check',
-          value: numeric,
-          updated_by: profile.id,
-        },
-        { onConflict: ['location_id', 'key'] }
-      )
+      const { error } = await supabase
+        .from('location_settings')
+        .upsert(rows, { onConflict: ['location_id', 'key'] })
 
-    setSavingAvg(false)
-    if (error) console.error('Failed to save average check', error)
+      if (error) throw error
+    } catch (error) {
+      console.error('Failed to save settings', error)
+    } finally {
+      setSavingSettings(false)
+    }
   }
 
   if (!profile) return <div className="p-6">Loading…</div>
@@ -100,48 +118,10 @@ export default function GoalsPage({ profile }) {
 
       {/* Flat accordion list */}
       <div className="space-y-2">
-        {/* Beef Variance Accordion */}
-        <div className="border rounded-lg overflow-hidden">
-          <button
-            type="button"
-            onClick={() => toggleSection('beef-variance')}
-            className="w-full flex items-center justify-between px-4 py-3 text-left bg-white hover:bg-gray-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500"
-            aria-expanded={openSection === 'beef-variance'}
-          >
-            <div className="flex flex-col">
-              <span className="font-medium">Beef Variance & Pricing</span>
-              <span className="text-xs text-gray-500">
-                Track beef usage variance and pricing data.
-              </span>
-            </div>
-            <span
-              className={`transform transition-transform ${
-                openSection === 'beef-variance' ? 'rotate-90' : ''
-              }`}
-            >
-              ▶
-            </span>
-          </button>
-
-          {openSection === 'beef-variance' && (
-            <div className="px-4 pb-4 pt-2 bg-gray-50 border-t">
-              <BeefVarianceCard
-                locationId={locationId}
-                profile={profile}
-                weekStart={weekStart}
-                weekLabel={weekLabel}
-                onPrevWeek={() => setWeekAnchor(addDays(weekStart, -1))}
-                onNextWeek={() => setWeekAnchor(addDays(weekEnd, 1))}
-              />
-            </div>
-          )}
-        </div>
-
-
-        {/* Manager-only tools below */}
+        {/* Manager-only tools */}
         {isEditor && (
           <>
-            {/* Store Goals Accordion - First for visibility */}
+            {/* 1. Store Goals Accordion */}
             <div className="border rounded-lg overflow-hidden border-red-200">
               <button
                 type="button"
@@ -171,88 +151,37 @@ export default function GoalsPage({ profile }) {
               )}
             </div>
 
-            {/* Team Goal Analytics Accordion */}
+            {/* 2. Training Scheduler Accordion */}
             <div className="border rounded-lg overflow-hidden">
               <button
                 type="button"
-                onClick={() => toggleSection('goal-analytics')}
+                onClick={() => toggleSection('training-scheduler')}
                 className="w-full flex items-center justify-between px-4 py-3 text-left bg-white hover:bg-gray-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500"
-                aria-expanded={openSection === 'goal-analytics'}
+                aria-expanded={openSection === 'training-scheduler'}
               >
                 <div className="flex flex-col">
-                  <span className="font-medium">Team Goal Analytics</span>
+                  <span className="font-medium">Training Scheduler</span>
                   <span className="text-xs text-gray-500">
-                    View goal adoption rates, check-in metrics, and common themes.
+                    Schedule training sessions for team members.
                   </span>
                 </div>
                 <span
                   className={`transform transition-transform ${
-                    openSection === 'goal-analytics' ? 'rotate-90' : ''
+                    openSection === 'training-scheduler' ? 'rotate-90' : ''
                   }`}
                 >
                   ▶
                 </span>
               </button>
 
-              {openSection === 'goal-analytics' && (
+              {openSection === 'training-scheduler' && (
                 <div className="px-4 pb-4 pt-2 bg-gray-50 border-t">
-                  <GoalAnalytics locationId={locationId} />
+                  <TrainingScheduleForm profile={profile} locationId={locationId} />
                 </div>
               )}
             </div>
 
-            {/* Average Check Editor Accordion */}
-            <div className="border rounded-lg overflow-hidden">
-              <button
-                type="button"
-                onClick={() => toggleSection('average-check')}
-                className="w-full flex items-center justify-between px-4 py-3 text-left bg-white hover:bg-gray-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500"
-                aria-expanded={openSection === 'average-check'}
-              >
-                <div className="flex flex-col">
-                  <span className="font-medium">Location Average Check</span>
-                  <span className="text-xs text-gray-500">
-                    Set the average check value used for sales calculations.
-                  </span>
-                </div>
-                <span
-                  className={`transform transition-transform ${
-                    openSection === 'average-check' ? 'rotate-90' : ''
-                  }`}
-                >
-                  ▶
-                </span>
-              </button>
-
-              {openSection === 'average-check' && (
-                <div className="px-4 pb-4 pt-2 bg-gray-50 border-t">
-                  <div className="flex items-center gap-3">
-                    <div>
-                      <label className="block text-sm">Average Check ($)</label>
-                      <input
-                        type="number"
-                        step="0.01"
-                        value={averageCheck}
-                        onChange={(e) => setAverageCheck(e.target.value)}
-                        className="border rounded px-2 py-1 w-32"
-                      />
-                    </div>
-                    <button
-                      onClick={saveAverage}
-                      disabled={savingAvg}
-                      className="px-4 py-2 bg-blue-600 text-white rounded disabled:opacity-50"
-                    >
-                      {savingAvg ? 'Saving…' : 'Save Average'}
-                    </button>
-                  </div>
-                  <p className="text-sm text-gray-500 mt-2">
-                    This value is used on the Sales page for the "what if" calculator.
-                  </p>
-                </div>
-              )}
-            </div>
-
-            {/* Points Rewards Manager Accordion */}
+            {/* 3. Points Rewards Manager Accordion */}
             <div className="border rounded-lg overflow-hidden">
               <button
                 type="button"
@@ -282,7 +211,7 @@ export default function GoalsPage({ profile }) {
               )}
             </div>
 
-            {/* Points History Accordion */}
+            {/* 4. Points History Accordion */}
             <div className="border rounded-lg overflow-hidden">
               <button
                 type="button"
@@ -312,32 +241,119 @@ export default function GoalsPage({ profile }) {
               )}
             </div>
 
-            {/* Training Scheduler Accordion */}
+            {/* 5. Location Pricing Settings Accordion */}
             <div className="border rounded-lg overflow-hidden">
               <button
                 type="button"
-                onClick={() => toggleSection('training-scheduler')}
+                onClick={() => toggleSection('pricing-settings')}
                 className="w-full flex items-center justify-between px-4 py-3 text-left bg-white hover:bg-gray-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500"
-                aria-expanded={openSection === 'training-scheduler'}
+                aria-expanded={openSection === 'pricing-settings'}
               >
                 <div className="flex flex-col">
-                  <span className="font-medium">Training Scheduler</span>
+                  <span className="font-medium">Location Pricing Settings</span>
                   <span className="text-xs text-gray-500">
-                    Schedule training sessions for team members.
+                    Set average check and beef pricing for calculations.
                   </span>
                 </div>
                 <span
                   className={`transform transition-transform ${
-                    openSection === 'training-scheduler' ? 'rotate-90' : ''
+                    openSection === 'pricing-settings' ? 'rotate-90' : ''
                   }`}
                 >
                   ▶
                 </span>
               </button>
 
-              {openSection === 'training-scheduler' && (
-                <div className="px-4 pb-4 pt-2 bg-gray-50 border-t">
-                  <TrainingScheduleForm profile={profile} locationId={locationId} />
+              {openSection === 'pricing-settings' && (
+                <div className="px-4 pb-4 pt-2 bg-gray-50 border-t space-y-4">
+                  {/* Average Check */}
+                  <div>
+                    <h3 className="text-sm font-medium text-gray-700 mb-2">Average Check</h3>
+                    <div className="flex items-center gap-3">
+                      <div>
+                        <label className="block text-xs text-gray-600 mb-1">Average Check ($)</label>
+                        <input
+                          type="number"
+                          step="0.01"
+                          value={averageCheck}
+                          onChange={(e) => setAverageCheck(e.target.value)}
+                          className="border rounded px-2 py-1 w-28"
+                        />
+                      </div>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Used on the Sales page for the "what if" calculator.
+                    </p>
+                  </div>
+
+                  <hr />
+
+                  {/* Beef Pricing */}
+                  <div>
+                    <h3 className="text-sm font-medium text-gray-700 mb-2">Beef Pricing</h3>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                      <div>
+                        <label className="block text-xs text-gray-600 mb-1">
+                          Beef cost ($/lb)
+                        </label>
+                        <input
+                          type="number"
+                          step="0.01"
+                          inputMode="decimal"
+                          className="border rounded px-2 py-1 w-full"
+                          value={beefCost}
+                          onChange={(e) => setBeefCost(e.target.value)}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-gray-600 mb-1">
+                          Profit / Classic RB
+                        </label>
+                        <input
+                          type="number"
+                          step="0.01"
+                          inputMode="decimal"
+                          className="border rounded px-2 py-1 w-full"
+                          value={pClassic}
+                          onChange={(e) => setPClassic(e.target.value)}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-gray-600 mb-1">
+                          Profit / Double RB
+                        </label>
+                        <input
+                          type="number"
+                          step="0.01"
+                          inputMode="decimal"
+                          className="border rounded px-2 py-1 w-full"
+                          value={pDouble}
+                          onChange={(e) => setPDouble(e.target.value)}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-gray-600 mb-1">
+                          Profit / Half-Lb RB
+                        </label>
+                        <input
+                          type="number"
+                          step="0.01"
+                          inputMode="decimal"
+                          className="border rounded px-2 py-1 w-full"
+                          value={pHalf}
+                          onChange={(e) => setPHalf(e.target.value)}
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={saveAllSettings}
+                    disabled={savingSettings}
+                    className="px-4 py-2 bg-blue-600 text-white rounded disabled:opacity-50"
+                  >
+                    {savingSettings ? 'Saving…' : 'Save All Settings'}
+                  </button>
                 </div>
               )}
             </div>

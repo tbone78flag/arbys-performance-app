@@ -5,6 +5,7 @@ import CashControl from '../components/CashControl'
 import TeamManagement from '../components/TeamManagement'
 import { DailySalesYoYCard } from '../components/DailySalesYoYCard'
 import { SpeedWeekEntryCard } from '../components/SpeedWeekEntryCard'
+import { BeefVarianceEntry } from '../components/BeefVarianceEntry'
 import { startOfWeekLocal, addDays } from '../utils/dateHelpers'
 
 export default function ManagerPage({ profile }) {
@@ -66,6 +67,21 @@ export default function ManagerPage({ profile }) {
           locationId={locationId}
           weekStart={weekStart}
           weekEnd={weekEnd}
+          weekLabel={weekLabel}
+          onPrevWeek={() => setWeekAnchor(addDays(weekStart, -1))}
+          onNextWeek={() => setWeekAnchor(addDays(weekEnd, 1))}
+        />
+      ),
+    },
+    {
+      id: 'beef-variance',
+      title: 'Beef Variance',
+      summary: 'Enter weekly beef usage variance.',
+      component: (
+        <BeefVarianceEntry
+          locationId={locationId}
+          profile={profile}
+          weekStart={weekStart}
           weekLabel={weekLabel}
           onPrevWeek={() => setWeekAnchor(addDays(weekStart, -1))}
           onNextWeek={() => setWeekAnchor(addDays(weekEnd, 1))}
