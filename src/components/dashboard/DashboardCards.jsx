@@ -253,7 +253,7 @@ export function QuickLinks({ profile }) {
     { label: 'Speed', path: '/speed', icon: '🏎️' },
     { label: 'Games', path: '/games', icon: '🎮' },
     { label: 'Food', path: '/food', icon: '🍔' },
-    { label: 'Experience', path: '/experience', icon: '📋' },
+    { label: 'My Growth', path: '/experience', icon: '🌱' },
   ]
 
   const managerLinks = [

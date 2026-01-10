@@ -67,6 +67,7 @@ function App() {
             <p className="font-semibold">
               {profile?.full_name ?? 'Employee'}
             </p>
+            <p className="text-xs opacity-75">{profile?.title}</p>
           </div>
           <button
             onClick={async () => {
