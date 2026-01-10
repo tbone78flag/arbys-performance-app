@@ -245,6 +245,10 @@ export function useSaveDailySales() {
       const thisY = netSalesThisYear === '' || netSalesThisYear == null ? null : Number(netSalesThisYear)
       const lastY = netSalesLastYear === '' || netSalesLastYear == null ? null : Number(netSalesLastYear)
 
+      // Get current user ID for updated_by field
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) throw new Error('Not authenticated')
+
       const { error } = await supabase
         .from('daily_sales_yoy')
         .upsert(
@@ -253,6 +257,7 @@ export function useSaveDailySales() {
             sales_date: salesDate,
             net_sales_this_year: thisY,
             net_sales_last_year: lastY,
+            updated_by: user.id,
           },
           { onConflict: 'location_id,sales_date' }
         )
