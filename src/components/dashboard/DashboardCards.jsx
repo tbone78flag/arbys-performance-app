@@ -1,10 +1,12 @@
 // src/components/dashboard/DashboardCards.jsx
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { supabase } from '../../supabaseClient'
 import { useWeeklySales } from '../../hooks/useSalesData'
 import { useMyPoints, useLeaderboards } from '../../hooks/usePointsData'
 import { useMyGoals, getCurrentWeekNumber } from '../../hooks/useGoalsData'
 import { useCurrentStoreGoals } from '../../hooks/useStoreGoals'
-import { startOfWeekLocal, endOfWeekLocal } from '../../utils/dateHelpers'
+import { startOfWeekLocal, endOfWeekLocal, ymdLocal } from '../../utils/dateHelpers'
 
 // ============================================
 // Store Focus Banner
@@ -232,6 +234,131 @@ export function GoalsSummaryCard({ profile }) {
             <p className="text-sm text-green-600">All caught up!</p>
           ) : (
             <p className="text-sm text-gray-400">No goals set</p>
+          )}
+        </>
+      )}
+    </div>
+  )
+}
+
+// ============================================
+// Training Summary Card
+// ============================================
+export function TrainingSummaryCard({ profile, locationId }) {
+  const navigate = useNavigate()
+  const [trainingData, setTrainingData] = useState(null)
+  const [isLoading, setIsLoading] = useState(true)
+
+  const todayStr = ymdLocal(new Date())
+
+  useEffect(() => {
+    if (!profile?.id || !locationId) return
+
+    async function fetchTraining() {
+      setIsLoading(true)
+
+      // Fetch today's training where user is trainee OR trainer
+      const { data, error } = await supabase
+        .from('training_schedule')
+        .select(`
+          id,
+          training_type,
+          training_date,
+          shift_start,
+          shift_end,
+          status,
+          trainee_id,
+          trainer_id,
+          trainee:trainee_id(id, display_name),
+          trainer:trainer_id(id, display_name)
+        `)
+        .eq('location_id', locationId)
+        .eq('training_date', todayStr)
+        .or(`trainee_id.eq.${profile.id},trainer_id.eq.${profile.id}`)
+
+      if (error) {
+        console.error('Error fetching training:', error)
+        setTrainingData({ asTrainee: [], asTrainer: [] })
+      } else {
+        const asTrainee = (data || []).filter(
+          (t) => t.trainee_id === profile.id && t.status !== 'completed'
+        )
+        const asTrainer = (data || []).filter(
+          (t) => t.trainer_id === profile.id && t.status !== 'completed'
+        )
+        setTrainingData({ asTrainee, asTrainer })
+      }
+      setIsLoading(false)
+    }
+
+    fetchTraining()
+  }, [profile?.id, locationId, todayStr])
+
+  const formatTime = (time) => {
+    if (!time) return ''
+    const [hours, minutes] = time.split(':')
+    const h = parseInt(hours, 10)
+    const ampm = h >= 12 ? 'PM' : 'AM'
+    const h12 = h % 12 || 12
+    return `${h12}:${minutes} ${ampm}`
+  }
+
+  const isManager = profile?.role === 'manager'
+  const hasTrainingAsTrainee = trainingData?.asTrainee?.length > 0
+  const hasTrainingAsTrainer = trainingData?.asTrainer?.length > 0
+  const hasAnyTraining = hasTrainingAsTrainee || hasTrainingAsTrainer
+
+  return (
+    <div
+      onClick={() => navigate('/experience')}
+      className="bg-white border rounded-lg p-4 cursor-pointer hover:shadow-md transition-shadow"
+    >
+      <div className="flex items-center gap-2 mb-2">
+        <span className="text-lg">📚</span>
+        <h3 className="text-sm font-medium text-gray-600">Training Today</h3>
+      </div>
+
+      {isLoading ? (
+        <div className="animate-pulse">
+          <div className="h-6 bg-gray-200 rounded w-16 mb-1"></div>
+          <div className="h-4 bg-gray-100 rounded w-24"></div>
+        </div>
+      ) : (
+        <>
+          {hasTrainingAsTrainee && (
+            <>
+              <p className="text-xl font-bold text-amber-600">
+                {trainingData.asTrainee.length} session{trainingData.asTrainee.length > 1 ? 's' : ''}
+              </p>
+              <p className="text-sm text-amber-700">
+                {formatTime(trainingData.asTrainee[0].shift_start)} w/{' '}
+                {trainingData.asTrainee[0].trainer?.display_name?.split(' ')[0]}
+              </p>
+            </>
+          )}
+
+          {hasTrainingAsTrainer && !hasTrainingAsTrainee && (
+            <>
+              <p className="text-xl font-bold text-blue-600">
+                {trainingData.asTrainer.length} trainee{trainingData.asTrainer.length > 1 ? 's' : ''}
+              </p>
+              <p className="text-sm text-blue-700">
+                {trainingData.asTrainer.map((t) => t.trainee?.display_name?.split(' ')[0]).join(', ')}
+              </p>
+            </>
+          )}
+
+          {hasTrainingAsTrainee && hasTrainingAsTrainer && (
+            <p className="text-xs text-gray-500 mt-1">
+              +{trainingData.asTrainer.length} trainee{trainingData.asTrainer.length > 1 ? 's' : ''} to train
+            </p>
+          )}
+
+          {!hasAnyTraining && (
+            <>
+              <p className="text-xl font-bold text-gray-800">None</p>
+              <p className="text-sm text-gray-400">No training today</p>
+            </>
           )}
         </>
       )}

@@ -6,6 +6,7 @@ import {
   SalesSummaryCard,
   PointsSummaryCard,
   GoalsSummaryCard,
+  TrainingSummaryCard,
   QuickLinks,
 } from './components/dashboard/DashboardCards'
 
@@ -94,18 +95,7 @@ function App() {
           <SalesSummaryCard locationId={locationId} />
           <PointsSummaryCard profile={profile} locationId={locationId} />
           <GoalsSummaryCard profile={profile} />
-          {/* Speed Card - placeholder for now */}
-          <div
-            onClick={() => navigate('/speed')}
-            className="bg-white border rounded-lg p-4 cursor-pointer hover:shadow-md transition-shadow"
-          >
-            <div className="flex items-center gap-2 mb-2">
-              <span className="text-lg">🏎️</span>
-              <h3 className="text-sm font-medium text-gray-600">DT Speed</h3>
-            </div>
-            <p className="text-xl font-bold text-gray-800">--</p>
-            <p className="text-sm text-gray-400">View speed data</p>
-          </div>
+          <TrainingSummaryCard profile={profile} locationId={locationId} />
         </div>
 
         {/* Quick Links */}
