@@ -75,8 +75,8 @@ export default function ManagerPage({ profile }) {
     },
     {
       id: 'beef-variance',
-      title: 'Beef Variance',
-      summary: 'Enter weekly beef usage variance.',
+      title: 'Beef Counts & Variance',
+      summary: 'Enter daily beef counts by daypart and track weekly variance.',
       component: (
         <BeefVarianceEntry
           locationId={locationId}
