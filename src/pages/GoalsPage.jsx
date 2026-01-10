@@ -17,12 +17,9 @@ export default function GoalsPage({ profile }) {
 
   const locationId = profile?.location_id ?? 'holladay-3900'
 
-  // Average check + goals state
+  // Average check state
   const [averageCheck, setAverageCheck] = useState('')
-  const [goalText, setGoalText] = useState('')
-  const [goals, setGoals] = useState([])
   const [loading, setLoading] = useState(true)
-  const [savingGoal, setSavingGoal] = useState(false)
   const [savingAvg, setSavingAvg] = useState(false)
 
   // Accordion state for all sections
@@ -38,7 +35,7 @@ export default function GoalsPage({ profile }) {
   const weekEnd = addDays(weekStart, 6)
   const weekLabel = `${weekStart.toLocaleDateString()} – ${weekEnd.toLocaleDateString()}`
 
-  // Load existing average check + goals
+  // Load existing average check
   useEffect(() => {
     if (!profile) return
 
@@ -51,14 +48,6 @@ export default function GoalsPage({ profile }) {
         .single()
 
       if (avgData) setAverageCheck(Number(avgData.value).toFixed(2))
-
-      const { data: goalsData } = await supabase
-        .from('goals')
-        .select('id, goal_text, created_at')
-        .eq('user_id', profile.id)
-        .order('created_at', { ascending: false })
-
-      if (goalsData) setGoals(goalsData)
       setLoading(false)
     }
 
@@ -88,35 +77,8 @@ export default function GoalsPage({ profile }) {
     if (error) console.error('Failed to save average check', error)
   }
 
-  const saveGoal = async () => {
-    if (!goalText.trim()) return
-
-    setSavingGoal(true)
-
-    const { error } = await supabase
-      .from('goals')
-      .insert({ user_id: profile.id, goal_text: goalText })
-
-    setSavingGoal(false)
-
-    if (error) {
-      console.error('Failed to save goal', error)
-      return
-    }
-
-    setGoalText('')
-
-    const { data: updatedGoals } = await supabase
-      .from('goals')
-      .select('id, goal_text, created_at')
-      .eq('user_id', profile.id)
-      .order('created_at', { ascending: false })
-
-    if (updatedGoals) setGoals(updatedGoals)
-  }
-
   if (!profile) return <div className="p-6">Loading…</div>
-  if (loading) return <div className="p-6">Loading goals…</div>
+  if (loading) return <div className="p-6">Loading…</div>
 
   return (
     <div className="w-full max-w-3xl mx-auto bg-white shadow p-4 sm:p-6 rounded px-4 sm:px-6">
@@ -175,62 +137,6 @@ export default function GoalsPage({ profile }) {
           )}
         </div>
 
-        {/* Your Goals Accordion */}
-        <div className="border rounded-lg overflow-hidden">
-          <button
-            type="button"
-            onClick={() => toggleSection('your-goals')}
-            className="w-full flex items-center justify-between px-4 py-3 text-left bg-white hover:bg-gray-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500"
-            aria-expanded={openSection === 'your-goals'}
-          >
-            <div className="flex flex-col">
-              <span className="font-medium">Your Goals</span>
-              <span className="text-xs text-gray-500">
-                Set and track your personal sales goals.
-              </span>
-            </div>
-            <span
-              className={`transform transition-transform ${
-                openSection === 'your-goals' ? 'rotate-90' : ''
-              }`}
-            >
-              ▶
-            </span>
-          </button>
-
-          {openSection === 'your-goals' && (
-            <div className="px-4 pb-4 pt-2 bg-gray-50 border-t space-y-3">
-              <div className="flex gap-2">
-                <textarea
-                  rows={2}
-                  value={goalText}
-                  onChange={(e) => setGoalText(e.target.value)}
-                  placeholder="Enter a sales goal..."
-                  className="flex-1 border rounded p-2 text-sm"
-                />
-                <button
-                  onClick={saveGoal}
-                  disabled={savingGoal}
-                  className="px-4 py-2 bg-green-600 text-white rounded text-sm disabled:opacity-50"
-                >
-                  {savingGoal ? 'Saving…' : 'Add Goal'}
-                </button>
-              </div>
-              {goals.length > 0 && (
-                <ul className="list-disc list-inside space-y-1">
-                  {goals.map((g) => (
-                    <li key={g.id} className="text-sm">
-                      {g.goal_text}{' '}
-                      <span className="text-xs text-gray-400">
-                        ({new Date(g.created_at).toLocaleDateString()})
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-          )}
-        </div>
 
         {/* Manager-only tools below */}
         {isEditor && (
