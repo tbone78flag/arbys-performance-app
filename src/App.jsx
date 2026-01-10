@@ -1,10 +1,13 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from './supabaseClient'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
-import Layout from './components/Layout'
+import {
+  StoreFocusBanner,
+  SalesSummaryCard,
+  PointsSummaryCard,
+  GoalsSummaryCard,
+  QuickLinks,
+} from './components/dashboard/DashboardCards'
 
 function App() {
   const [loading, setLoading] = useState(true)
@@ -41,93 +44,79 @@ function App() {
   }, [navigate])
 
   if (loading) {
-    return <p className="text-center p-8">Loading...</p>
+    return (
+      <div className="min-h-screen bg-red-100 flex items-center justify-center">
+        <p className="text-gray-600">Loading...</p>
+      </div>
+    )
   }
 
+  const locationId = profile?.location_id ?? 'holladay-3900'
+  const isManager = profile?.role === 'manager'
+  const canAccessGoalsPage = ['Assistant Manager', 'General Manager'].includes(
+    profile?.title
+  )
+
   return (
-    <div className="min-h-screen bg-red-100 flex flex-col items-center justify-center p-4">
-      <p className="text-gray-800 text-lg mb-4">
-          Welcome, <span className="font-semibold">{profile?.full_name ?? 'Employee'}</span>!
-      <br />
-          Title: <span className="font-medium">{profile?.title ?? 'Unknown'}</span>
-      </p>
+    <div className="min-h-screen bg-red-100">
+      {/* Header */}
+      <div className="bg-red-700 text-white px-4 py-3">
+        <div className="max-w-lg mx-auto flex items-center justify-between">
+          <div>
+            <p className="text-sm opacity-90">Welcome back,</p>
+            <p className="font-semibold">
+              {profile?.full_name ?? 'Employee'}
+            </p>
+          </div>
+          <button
+            onClick={async () => {
+              await supabase.auth.signOut()
+              navigate('/')
+            }}
+            className="text-sm bg-red-800 hover:bg-red-900 px-3 py-1.5 rounded transition-colors"
+          >
+            Log Out
+          </button>
+        </div>
+      </div>
 
-      <h1 className="text-3xl font-bold text-red-700 mb-4">
-        Arby’s Performance App
-      </h1>
+      {/* Main Content */}
+      <div className="max-w-lg mx-auto p-4 space-y-4">
+        {/* Store Focus Banner */}
+        <StoreFocusBanner
+          locationId={locationId}
+          isManager={canAccessGoalsPage}
+        />
 
-    <button
-      className="bg-white text-red-600 border border-red-600 px-4 py-2 rounded hover:bg-red-50 mt-4"
-      onClick={() => navigate('/points')}
-    >
-      Go to Points Page
-    </button>
+        {/* Summary Cards Grid */}
+        <div className="grid grid-cols-2 gap-3">
+          <SalesSummaryCard locationId={locationId} />
+          <PointsSummaryCard profile={profile} locationId={locationId} />
+          <GoalsSummaryCard profile={profile} />
+          {/* Speed Card - placeholder for now */}
+          <div
+            onClick={() => navigate('/speed')}
+            className="bg-white border rounded-lg p-4 cursor-pointer hover:shadow-md transition-shadow"
+          >
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-lg">🏎️</span>
+              <h3 className="text-sm font-medium text-gray-600">DT Speed</h3>
+            </div>
+            <p className="text-xl font-bold text-gray-800">--</p>
+            <p className="text-sm text-gray-400">View speed data</p>
+          </div>
+        </div>
 
-    <button
-      className="bg-white text-red-600 border border-red-600 px-4 py-2 rounded hover:bg-red-50 mt-4"
-      onClick={() => navigate('/games')}
-    >
-      Go to Games Page
-    </button>
+        {/* Quick Links */}
+        <QuickLinks profile={profile} />
 
-    <button
-      className="bg-white text-red-600 border border-red-600 px-4 py-2 rounded hover:bg-red-50 mt-4"
-      onClick={() => navigate('/sales')}
-    >
-      Go to Sales Page
-    </button>
-
-    <button
-      className="bg-white text-red-600 border border-red-600 px-4 py-2 rounded hover:bg-red-50 mt-4"
-      onClick={() => navigate('/speed')}
-    >
-      Go to Speed Page
-    </button>
-
-    <button
-      className="bg-white text-red-600 border border-red-600 px-4 py-2 rounded hover:bg-red-50 mt-4"
-      onClick={() => navigate('/food')}
-    >
-      Go to Food Page
-    </button>
-
-    <button
-      className="bg-white text-red-600 border border-red-600 px-4 py-2 rounded hover:bg-red-50 mt-4"
-      onClick={() => navigate('/experience')}
-    >
-      Go to Experience Page
-    </button>
-
-    {profile?.role === 'manager' && (
-      <button 
-      className="bg-white text-red-600 border border-red-600 px-4 py-2 rounded hover:bg-red-50 mt-4"
-      onClick={() => navigate('/manager')}
-    >
-      Go to Manager Page
-      </button>
-    )}
-
-    {['Assistant Manager', 'General Manager'].includes(profile?.title) && (
-      <button
-      className="bg-white text-red-600 border border-red-600 px-4 py-2 rounded hover:bg-red-50 mt-4"
-      onClick={() => navigate('/goals')}
-    >
-      Go to Goal Management Page
-      </button>
-    )}
-
-  
-    <button
-        className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700 mt-4"
-        onClick={async () => {
-          await supabase.auth.signOut()
-          navigate('/')
-        }}
-      >
-        Log Out
-      </button>
+        {/* Footer */}
+        <p className="text-center text-xs text-gray-500 pt-4">
+          {profile?.title} • {locationId}
+        </p>
+      </div>
     </div>
-  );
+  )
 }
 
-export default App;
+export default App

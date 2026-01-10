@@ -9,6 +9,14 @@ export function startOfWeekLocal(d = new Date()) {
   return start
 }
 
+export function endOfWeekLocal(d = new Date()) {
+  const start = startOfWeekLocal(d)
+  const end = new Date(start)
+  end.setDate(end.getDate() + 6)
+  end.setHours(23, 59, 59, 999)
+  return end
+}
+
 export function parseYmdLocal(ymdStr) {
   if (!ymdStr) return new Date();
   const [y, m, d] = ymdStr.split('-').map(Number);

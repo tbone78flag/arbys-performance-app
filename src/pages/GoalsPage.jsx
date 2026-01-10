@@ -6,6 +6,7 @@ import RewardsManager from '../components/RewardsManager'
 import PointsHistory from '../components/PointsHistory'
 import TrainingScheduleForm from '../components/TrainingScheduleForm'
 import GoalAnalytics from '../components/goals/GoalAnalytics'
+import StoreGoalsEditor from '../components/goals/StoreGoalsEditor'
 import { startOfWeekLocal, addDays } from '../utils/dateHelpers'
 
 export default function GoalsPage({ profile }) {
@@ -234,6 +235,36 @@ export default function GoalsPage({ profile }) {
         {/* Manager-only tools below */}
         {isEditor && (
           <>
+            {/* Store Goals Accordion - First for visibility */}
+            <div className="border rounded-lg overflow-hidden border-red-200">
+              <button
+                type="button"
+                onClick={() => toggleSection('store-goals')}
+                className="w-full flex items-center justify-between px-4 py-3 text-left bg-red-50 hover:bg-red-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500"
+                aria-expanded={openSection === 'store-goals'}
+              >
+                <div className="flex flex-col">
+                  <span className="font-medium text-red-700">Store Goals</span>
+                  <span className="text-xs text-red-600">
+                    Set weekly and period focus for the entire team.
+                  </span>
+                </div>
+                <span
+                  className={`transform transition-transform text-red-600 ${
+                    openSection === 'store-goals' ? 'rotate-90' : ''
+                  }`}
+                >
+                  ▶
+                </span>
+              </button>
+
+              {openSection === 'store-goals' && (
+                <div className="px-4 pb-4 pt-2 bg-gray-50 border-t">
+                  <StoreGoalsEditor profile={profile} locationId={locationId} />
+                </div>
+              )}
+            </div>
+
             {/* Team Goal Analytics Accordion */}
             <div className="border rounded-lg overflow-hidden">
               <button
