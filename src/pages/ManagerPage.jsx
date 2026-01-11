@@ -3,7 +3,6 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
 import CashControl from '../components/CashControl'
-import TeamManagement from '../components/TeamManagement'
 import { DailySalesYoYCard } from '../components/DailySalesYoYCard'
 import { SpeedWeekEntryCard } from '../components/SpeedWeekEntryCard'
 import { BeefVarianceEntry } from '../components/BeefVarianceEntry'
@@ -108,11 +107,6 @@ export default function ManagerPage({ profile }) {
     profile?.role === 'admin' ||
     profile?.role === 'ADMIN'
 
-  // Only Assistant Manager and General Manager can add/edit/delete employees
-  const canManageEmployees = ['Assistant Manager', 'General Manager'].includes(
-    profile?.title
-  )
-
   const toggleTool = (id) => {
     setOpenTool((current) => (current === id ? null : id))
   }
@@ -164,17 +158,6 @@ export default function ManagerPage({ profile }) {
         />
       ),
     },
-    // Only show Team Management for Assistant Manager and General Manager
-    ...(canManageEmployees
-      ? [
-          {
-            id: 'team-management',
-            title: 'Team Management',
-            summary: 'Add, edit, and remove team members for this location.',
-            component: <TeamManagement profile={profile} locationId={locationId} />,
-          },
-        ]
-      : []),
   ]
 
   // Format helpers

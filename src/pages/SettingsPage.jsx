@@ -164,8 +164,37 @@ export default function SettingsPage({ profile }) {
 
               {openSection === 'location-settings' && (
                 <div className="px-4 pb-4 pt-2 bg-white border-t space-y-4">
-                  {/* Average Check */}
+                  {/* Beef Count Dayparts */}
                   <div>
+                    <h4 className="text-sm font-medium text-gray-700 mb-2">Beef Count Dayparts</h4>
+                    <p className="text-xs text-gray-500 mb-3">
+                      Select which dayparts your location uses for beef counts.
+                    </p>
+                    <div className="flex flex-wrap gap-3">
+                      {ALL_DAYPARTS.map(({ key, label }) => (
+                        <label
+                          key={key}
+                          className="flex items-center gap-2 text-sm cursor-pointer"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={enabledDayparts.includes(key)}
+                            onChange={() => toggleDaypart(key)}
+                            className="w-4 h-4 text-red-600 border-gray-300 rounded focus:ring-red-500"
+                          />
+                          {label}
+                        </label>
+                      ))}
+                    </div>
+                    {enabledDayparts.length === 1 && (
+                      <p className="text-xs text-amber-600 mt-2">
+                        At least one daypart must be selected.
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Average Check */}
+                  <div className="border-t pt-4">
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Average Check ($)
                     </label>
@@ -220,35 +249,6 @@ export default function SettingsPage({ profile }) {
                     <p className="text-xs text-gray-500 mt-1">
                       Used for variance cost calculations.
                     </p>
-                  </div>
-
-                  {/* Beef Count Dayparts */}
-                  <div className="border-t pt-4">
-                    <h4 className="text-sm font-medium text-gray-700 mb-2">Beef Count Dayparts</h4>
-                    <p className="text-xs text-gray-500 mb-3">
-                      Select which dayparts your location uses for beef counts.
-                    </p>
-                    <div className="flex flex-wrap gap-3">
-                      {ALL_DAYPARTS.map(({ key, label }) => (
-                        <label
-                          key={key}
-                          className="flex items-center gap-2 text-sm cursor-pointer"
-                        >
-                          <input
-                            type="checkbox"
-                            checked={enabledDayparts.includes(key)}
-                            onChange={() => toggleDaypart(key)}
-                            className="w-4 h-4 text-red-600 border-gray-300 rounded focus:ring-red-500"
-                          />
-                          {label}
-                        </label>
-                      ))}
-                    </div>
-                    {enabledDayparts.length === 1 && (
-                      <p className="text-xs text-amber-600 mt-2">
-                        At least one daypart must be selected.
-                      </p>
-                    )}
                   </div>
 
                   {/* Save Button */}

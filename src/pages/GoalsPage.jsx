@@ -4,6 +4,7 @@ import RewardsManager from '../components/RewardsManager'
 import PointsHistory from '../components/PointsHistory'
 import TrainingScheduleForm from '../components/TrainingScheduleForm'
 import StoreGoalsEditor from '../components/goals/StoreGoalsEditor'
+import TeamManagement from '../components/TeamManagement'
 
 export default function GoalsPage({ profile }) {
   const navigate = useNavigate()
@@ -163,6 +164,36 @@ export default function GoalsPage({ profile }) {
               {openSection === 'points-history' && (
                 <div className="px-4 pb-4 pt-2 bg-gray-50 border-t">
                   <PointsHistory locationId={locationId} profile={profile} />
+                </div>
+              )}
+            </div>
+
+            {/* 5. Team Management Accordion */}
+            <div className="border rounded-lg overflow-hidden">
+              <button
+                type="button"
+                onClick={() => toggleSection('team-management')}
+                className="w-full flex items-center justify-between px-4 py-3 text-left bg-white hover:bg-gray-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500"
+                aria-expanded={openSection === 'team-management'}
+              >
+                <div className="flex flex-col">
+                  <span className="font-medium">Team Management</span>
+                  <span className="text-xs text-gray-500">
+                    Add, edit, and remove team members for this location.
+                  </span>
+                </div>
+                <span
+                  className={`transform transition-transform ${
+                    openSection === 'team-management' ? 'rotate-90' : ''
+                  }`}
+                >
+                  ▶
+                </span>
+              </button>
+
+              {openSection === 'team-management' && (
+                <div className="px-4 pb-4 pt-2 bg-gray-50 border-t">
+                  <TeamManagement profile={profile} locationId={locationId} />
                 </div>
               )}
             </div>
