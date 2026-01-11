@@ -12,6 +12,7 @@ import ExperiencePageWrapper from './pages/ExperiencePageWrapper'
 import ManagerPageWrapper from './pages/ManagerPageWrapper'
 import GoalsPageWrapper from './pages/GoalsPageWrapper'
 import GamesPageWrapper from './pages/GamesPageWrapper'
+import SettingsPageWrapper from './pages/SettingsPageWrapper'
 import './index.css';
 
 const queryClient = new QueryClient({
@@ -38,6 +39,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(
         <Route path="/goals" element={<GoalsPageWrapper />} />
         <Route path="/manager" element={<ManagerPageWrapper />} />
         <Route path="/games" element={<GamesPageWrapper />} />
+        <Route path="/settings" element={<SettingsPageWrapper />} />
       </Routes>
     </BrowserRouter>
     </QueryClientProvider>

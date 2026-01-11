@@ -29,13 +29,17 @@ export default function ManagerPage({ profile }) {
   const weekEnd = addDays(weekStart, 6)
   const weekLabel = `${weekStart.toLocaleDateString()} – ${weekEnd.toLocaleDateString()}`
 
+  // String versions for stable useEffect dependencies
+  const weekStartStr = ymdLocal(weekStart)
+  const weekEndStr = ymdLocal(weekEnd)
+
   useEffect(() => {
     if (!profile) {
       navigate('/')
     }
   }, [profile, navigate])
 
-  // Load summary data
+  // Load summary data - only runs once on mount (not when week changes)
   useEffect(() => {
     if (!locationId) return
 
@@ -43,8 +47,9 @@ export default function ManagerPage({ profile }) {
       setLoadingSummary(true)
 
       const today = ymdLocal(new Date())
-      const wsStart = ymdLocal(weekStart)
-      const wsEnd = ymdLocal(weekEnd)
+      // Use current week for beef variance summary
+      const currentWeekStart = ymdLocal(startOfWeekLocal(new Date()))
+      const currentWeekEnd = ymdLocal(addDays(startOfWeekLocal(new Date()), 6))
 
       // Fetch in parallel
       const [salesRes, beefRes, teamRes] = await Promise.all([
@@ -55,13 +60,13 @@ export default function ManagerPage({ profile }) {
           .eq('location_id', locationId)
           .eq('sales_date', today)
           .maybeSingle(),
-        // This week's beef variance
+        // This week's beef variance (always current week for summary)
         supabase
           .from('beef_variance_daypart')
           .select('lbs_delta')
           .eq('location_id', locationId)
-          .gte('variance_date', wsStart)
-          .lte('variance_date', wsEnd),
+          .gte('variance_date', currentWeekStart)
+          .lte('variance_date', currentWeekEnd),
         // Team count
         supabase
           .from('profiles')
@@ -95,7 +100,7 @@ export default function ManagerPage({ profile }) {
     }
 
     loadSummary()
-  }, [locationId, weekStart, weekEnd])
+  }, [locationId]) // Only re-run when locationId changes
 
   const isManager =
     profile?.role === 'manager' ||

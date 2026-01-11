@@ -386,7 +386,10 @@ export function QuickLinks({ profile }) {
   const managerLinks = [
     ...(isManager ? [{ label: 'Manager', path: '/manager', icon: '👔' }] : []),
     ...(canAccessGoalsPage
-      ? [{ label: 'Goals Mgmt', path: '/goals', icon: '⚙️' }]
+      ? [
+          { label: 'Sr Mgr Tools', path: '/goals', icon: '🛠️' },
+          { label: 'Settings', path: '/settings', icon: '⚙️' },
+        ]
       : []),
   ]
 
