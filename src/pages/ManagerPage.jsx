@@ -14,7 +14,8 @@ export default function ManagerPage({ profile }) {
 
   // Summary card data
   const [summaryData, setSummaryData] = useState({
-    todaySales: null,
+    weekSalesThisYear: null,
+    weekSalesLastYear: null,
     weekBeefVariance: null,
     teamCount: null,
   })
@@ -45,20 +46,19 @@ export default function ManagerPage({ profile }) {
     const loadSummary = async () => {
       setLoadingSummary(true)
 
-      const today = ymdLocal(new Date())
-      // Use current week for beef variance summary
+      // Use current week for all summary data
       const currentWeekStart = ymdLocal(startOfWeekLocal(new Date()))
       const currentWeekEnd = ymdLocal(addDays(startOfWeekLocal(new Date()), 6))
 
       // Fetch in parallel
       const [salesRes, beefRes, teamRes] = await Promise.all([
-        // Today's sales
+        // Current week's sales (all days)
         supabase
           .from('daily_sales_yoy')
           .select('net_sales_this_year, net_sales_last_year')
           .eq('location_id', locationId)
-          .eq('sales_date', today)
-          .maybeSingle(),
+          .gte('sales_date', currentWeekStart)
+          .lte('sales_date', currentWeekEnd),
         // This week's beef variance (always current week for summary)
         supabase
           .from('beef_variance_daypart')
@@ -73,10 +73,20 @@ export default function ManagerPage({ profile }) {
           .eq('location_id', locationId),
       ])
 
-      // Process sales
-      let todaySales = null
-      if (salesRes.data?.net_sales_this_year != null) {
-        todaySales = Number(salesRes.data.net_sales_this_year)
+      // Process week's sales (sum all days)
+      let weekSalesThisYear = null
+      let weekSalesLastYear = null
+      if (salesRes.data && salesRes.data.length > 0) {
+        weekSalesThisYear = 0
+        weekSalesLastYear = 0
+        salesRes.data.forEach((day) => {
+          if (day.net_sales_this_year != null) {
+            weekSalesThisYear += Number(day.net_sales_this_year)
+          }
+          if (day.net_sales_last_year != null) {
+            weekSalesLastYear += Number(day.net_sales_last_year)
+          }
+        })
       }
 
       // Process beef variance (sum of all dayparts this week)
@@ -91,7 +101,8 @@ export default function ManagerPage({ profile }) {
       const teamCount = teamRes.count || 0
 
       setSummaryData({
-        todaySales,
+        weekSalesThisYear,
+        weekSalesLastYear,
         weekBeefVariance,
         teamCount,
       })
@@ -199,17 +210,27 @@ export default function ManagerPage({ profile }) {
       {/* Summary Cards */}
       {isManager && (
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          {/* Today's Sales Card */}
+          {/* Week Sales Card */}
           <div className="bg-white shadow rounded p-4">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center text-green-600">
                 <span className="text-lg">$</span>
               </div>
               <div>
-                <p className="text-xs text-gray-500 uppercase tracking-wide">Today's Sales</p>
+                <p className="text-xs text-gray-500 uppercase tracking-wide">Week Sales</p>
                 <p className="text-lg font-semibold text-gray-900">
-                  {loadingSummary ? '...' : formatCurrency(summaryData.todaySales)}
+                  {loadingSummary ? '...' : formatCurrency(summaryData.weekSalesThisYear)}
                 </p>
+                {!loadingSummary && summaryData.weekSalesLastYear != null && summaryData.weekSalesLastYear > 0 && (
+                  <p className={`text-xs font-medium ${
+                    ((summaryData.weekSalesThisYear - summaryData.weekSalesLastYear) / summaryData.weekSalesLastYear) >= 0
+                      ? 'text-green-600'
+                      : 'text-red-600'
+                  }`}>
+                    {((summaryData.weekSalesThisYear - summaryData.weekSalesLastYear) / summaryData.weekSalesLastYear) >= 0 ? '↑' : '↓'}{' '}
+                    {Math.abs(((summaryData.weekSalesThisYear - summaryData.weekSalesLastYear) / summaryData.weekSalesLastYear) * 100).toFixed(1)}% YoY
+                  </p>
+                )}
               </div>
             </div>
           </div>
