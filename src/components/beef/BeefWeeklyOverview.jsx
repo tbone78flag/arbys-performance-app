@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { supabase } from '../../supabaseClient'
 import { ymdLocal, addDays } from '../../utils/dateHelpers'
 
-const DAYPARTS = [
+const ALL_DAYPARTS = [
   { key: '10am', label: '10 AM' },
   { key: '2pm', label: '2 PM' },
   { key: '5pm', label: '5 PM' },
@@ -22,6 +22,41 @@ export function BeefWeeklyOverview({
   const [countsData, setCountsData] = useState({})
   const [varianceData, setVarianceData] = useState({})
   const [weekTotals, setWeekTotals] = useState({ lbs: 0, varianceLbs: 0 })
+  const [enabledDayparts, setEnabledDayparts] = useState(['close']) // default
+
+  // Filter dayparts based on location settings
+  const activeDayparts = useMemo(() => {
+    return ALL_DAYPARTS.filter(({ key }) => enabledDayparts.includes(key))
+  }, [enabledDayparts])
+
+  // Load location settings for dayparts
+  useEffect(() => {
+    if (!locationId) return
+
+    const loadSettings = async () => {
+      const { data, error } = await supabase
+        .from('location_settings')
+        .select('value')
+        .eq('location_id', 'default')
+        .eq('key', 'beef_dayparts')
+        .single()
+
+      if (!error && data?.value) {
+        try {
+          const parsed = typeof data.value === 'string'
+            ? JSON.parse(data.value)
+            : data.value
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setEnabledDayparts(parsed)
+          }
+        } catch {
+          // Keep default
+        }
+      }
+    }
+
+    loadSettings()
+  }, [locationId])
 
   // Load week data
   useEffect(() => {
@@ -59,7 +94,7 @@ export function BeefWeeklyOverview({
       // Process counts data
       const counts = {}
       let totalLbs = 0
-      DAYPARTS.forEach(({ key }) => {
+      ALL_DAYPARTS.forEach(({ key }) => {
         counts[key] = Array(7).fill(null).map(() => ({ cases: null, roasts: null, lbs: null }))
       })
 
@@ -81,7 +116,7 @@ export function BeefWeeklyOverview({
       // Process variance data
       const variance = {}
       let totalVarianceLbs = 0
-      DAYPARTS.forEach(({ key }) => {
+      ALL_DAYPARTS.forEach(({ key }) => {
         variance[key] = Array(7).fill(null).map(() => ({ lbs: null, pct: null }))
       })
 
@@ -168,9 +203,9 @@ export function BeefWeeklyOverview({
             </div>
           </div>
 
-          {/* Data grid by daypart */}
+          {/* Data grid by daypart - only show enabled dayparts */}
           <div className="space-y-3 overflow-x-auto">
-            {DAYPARTS.map(({ key, label }) => (
+            {activeDayparts.map(({ key, label }) => (
               <div key={key} className="border rounded">
                 <div className="bg-gray-100 px-3 py-2 font-medium text-sm border-b">
                   {label}

@@ -25,6 +25,9 @@ export default function GoalsPage({ profile }) {
   const [pDouble, setPDouble] = useState('')
   const [pHalf, setPHalf] = useState('')
 
+  // Beef dayparts state - which dayparts this location uses for beef counts
+  const [beefDayparts, setBeefDayparts] = useState(['close']) // default to close only
+
   // Accordion state for all sections
   const [openSection, setOpenSection] = useState(null)
 
@@ -43,6 +46,7 @@ export default function GoalsPage({ profile }) {
         'profit_rb_classic',
         'profit_rb_double',
         'profit_rb_half',
+        'beef_dayparts',
       ]
 
       const { data, error } = await supabase
@@ -58,6 +62,19 @@ export default function GoalsPage({ profile }) {
         if (map.profit_rb_classic != null) setPClassic(String(map.profit_rb_classic))
         if (map.profit_rb_double != null) setPDouble(String(map.profit_rb_double))
         if (map.profit_rb_half != null) setPHalf(String(map.profit_rb_half))
+        if (map.beef_dayparts != null) {
+          // Parse the stored JSON array or use default
+          try {
+            const parsed = typeof map.beef_dayparts === 'string'
+              ? JSON.parse(map.beef_dayparts)
+              : map.beef_dayparts
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              setBeefDayparts(parsed)
+            }
+          } catch {
+            // Keep default if parsing fails
+          }
+        }
       }
 
       setLoading(false)
@@ -77,6 +94,7 @@ export default function GoalsPage({ profile }) {
         { key: 'profit_rb_classic', value: Number(pClassic || 0) },
         { key: 'profit_rb_double', value: Number(pDouble || 0) },
         { key: 'profit_rb_half', value: Number(pHalf || 0) },
+        { key: 'beef_dayparts', value: JSON.stringify(beefDayparts) },
       ].map((r) => ({
         location_id: 'default',
         ...r,
@@ -345,6 +363,46 @@ export default function GoalsPage({ profile }) {
                         />
                       </div>
                     </div>
+                  </div>
+
+                  <hr />
+
+                  {/* Beef Count Dayparts */}
+                  <div>
+                    <h3 className="text-sm font-medium text-gray-700 mb-2">Beef Count Dayparts</h3>
+                    <p className="text-xs text-gray-500 mb-3">
+                      Select which dayparts your location uses for beef counts.
+                    </p>
+                    <div className="flex flex-wrap gap-3">
+                      {[
+                        { key: '10am', label: '10 AM' },
+                        { key: '2pm', label: '2 PM' },
+                        { key: '5pm', label: '5 PM' },
+                        { key: 'close', label: 'Close' },
+                      ].map(({ key, label }) => (
+                        <label key={key} className="flex items-center gap-2 text-sm">
+                          <input
+                            type="checkbox"
+                            checked={beefDayparts.includes(key)}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setBeefDayparts((prev) => [...prev, key])
+                              } else {
+                                // Don't allow unchecking if it's the last one
+                                if (beefDayparts.length > 1) {
+                                  setBeefDayparts((prev) => prev.filter((d) => d !== key))
+                                }
+                              }
+                            }}
+                            className="rounded"
+                          />
+                          {label}
+                        </label>
+                      ))}
+                    </div>
+                    <p className="text-xs text-gray-500 mt-2">
+                      At least one daypart must be selected. Common setups: Close only, or all four (10 AM, 2 PM, 5 PM, Close).
+                    </p>
                   </div>
 
                   <button

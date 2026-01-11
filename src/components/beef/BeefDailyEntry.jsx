@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { supabase } from '../../supabaseClient'
 import { ymdLocal, addDays, parseYmdLocal } from '../../utils/dateHelpers'
 
-const DAYPARTS = [
+const ALL_DAYPARTS = [
   { key: '10am', label: '10 AM' },
   { key: '2pm', label: '2 PM' },
   { key: '5pm', label: '5 PM' },
@@ -16,6 +16,7 @@ export function BeefDailyEntry({ locationId, profile }) {
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState(null)
+  const [enabledDayparts, setEnabledDayparts] = useState(['close']) // default
 
   const canEdit =
     profile &&
@@ -25,9 +26,14 @@ export function BeefDailyEntry({ locationId, profile }) {
   const selectedDate = parseYmdLocal(entryDate)
   const isSunday = selectedDate.getDay() === 0
 
+  // Filter dayparts based on location settings
+  const activeDayparts = useMemo(() => {
+    return ALL_DAYPARTS.filter(({ key }) => enabledDayparts.includes(key))
+  }, [enabledDayparts])
+
   function createEmptyForm() {
     const empty = {}
-    DAYPARTS.forEach(({ key }) => {
+    ALL_DAYPARTS.forEach(({ key }) => {
       empty[key] = {
         cases: '',
         roasts: '',
@@ -38,6 +44,35 @@ export function BeefDailyEntry({ locationId, profile }) {
     })
     return empty
   }
+
+  // Load location settings for dayparts
+  useEffect(() => {
+    if (!locationId) return
+
+    const loadSettings = async () => {
+      const { data, error } = await supabase
+        .from('location_settings')
+        .select('value')
+        .eq('location_id', 'default')
+        .eq('key', 'beef_dayparts')
+        .single()
+
+      if (!error && data?.value) {
+        try {
+          const parsed = typeof data.value === 'string'
+            ? JSON.parse(data.value)
+            : data.value
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setEnabledDayparts(parsed)
+          }
+        } catch {
+          // Keep default
+        }
+      }
+    }
+
+    loadSettings()
+  }, [locationId])
 
   // Load data for selected date
   useEffect(() => {
@@ -143,7 +178,8 @@ export function BeefDailyEntry({ locationId, profile }) {
       const countsPayload = []
       const variancePayload = []
 
-      for (const { key } of DAYPARTS) {
+      // Only save for enabled dayparts
+      for (const { key } of activeDayparts) {
         const row = form[key]
 
         // Counts - only include if at least one count field has data
@@ -288,9 +324,9 @@ export function BeefDailyEntry({ locationId, profile }) {
         </div>
       )}
 
-      {/* Daypart entries */}
+      {/* Daypart entries - only show enabled dayparts */}
       <div className="space-y-3">
-        {DAYPARTS.map(({ key, label }) => (
+        {activeDayparts.map(({ key, label }) => (
           <fieldset key={key} className="border rounded p-3">
             <legend className="text-sm font-medium px-1">{label}</legend>
 
