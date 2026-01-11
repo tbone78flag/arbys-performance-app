@@ -1,10 +1,10 @@
 import { useState } from 'react'
-import { BeefCountsEntry } from './beef/BeefCountsEntry'
-import { BeefVarianceDaypart } from './beef/BeefVarianceDaypart'
+import { BeefDailyEntry } from './beef/BeefDailyEntry'
+import { BeefWeeklyOverview } from './beef/BeefWeeklyOverview'
 
 const TABS = [
-  { key: 'counts', label: 'Daily Counts' },
-  { key: 'variance', label: 'Weekly Variance' },
+  { key: 'daily', label: 'Daily Entry' },
+  { key: 'weekly', label: 'Weekly Overview' },
 ]
 
 export function BeefVarianceEntry({
@@ -15,7 +15,7 @@ export function BeefVarianceEntry({
   onPrevWeek,
   onNextWeek,
 }) {
-  const [activeTab, setActiveTab] = useState('counts')
+  const [activeTab, setActiveTab] = useState('daily')
 
   return (
     <div className="space-y-4">
@@ -38,14 +38,13 @@ export function BeefVarianceEntry({
       </div>
 
       {/* Tab content */}
-      {activeTab === 'counts' && (
-        <BeefCountsEntry locationId={locationId} profile={profile} />
+      {activeTab === 'daily' && (
+        <BeefDailyEntry locationId={locationId} profile={profile} />
       )}
 
-      {activeTab === 'variance' && (
-        <BeefVarianceDaypart
+      {activeTab === 'weekly' && (
+        <BeefWeeklyOverview
           locationId={locationId}
-          profile={profile}
           weekStart={weekStart}
           weekLabel={weekLabel}
           onPrevWeek={onPrevWeek}
