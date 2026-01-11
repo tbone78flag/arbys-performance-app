@@ -81,31 +81,32 @@ function toSeries(rows, weekStart) {
 
 function DaypartCard({ title, data, targetSeconds }) {
   return (
-    <div className="bg-white shadow rounded p-4 sm:p-6 overflow-hidden">
+    <div className="border rounded p-3 bg-gray-50">
       <div className="flex items-center justify-between mb-2">
-        <h3 className="font-semibold text-red-700">{title}</h3>
+        <h3 className="text-sm font-medium text-gray-800">{title}</h3>
         {Number.isFinite(targetSeconds) && (
-          <span className="text-xs text-gray-600">Target: {targetSeconds}s</span>
+          <span className="text-xs text-gray-500">Target: {targetSeconds}s</span>
         )}
       </div>
-      <div className="h-56 md:h-64">
+      <div className="h-44">
         <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={data} margin={{ left: 8, right: 8, top: 8, bottom: 8 }}>
+          <LineChart data={data} margin={{ left: 0, right: 8, top: 8, bottom: 8 }}>
             <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="dow" />
-            <YAxis unit="s" allowDecimals={false} domain={[0, 'auto']} />
+            <XAxis dataKey="dow" tick={{ fontSize: 11 }} />
+            <YAxis unit="s" allowDecimals={false} domain={[0, 'auto']} tick={{ fontSize: 11 }} width={40} />
             <Tooltip
-            formatter={(v, _name, props) => {
-              const miss = props?.payload?.missing;
-              return [`${v} s${miss ? ' (no entry)' : ''}`, 'Avg time'];
-            }}
+              formatter={(v, _name, props) => {
+                const miss = props?.payload?.missing;
+                return [`${v} s${miss ? ' (no entry)' : ''}`, 'Avg time'];
+              }}
             />
             {Number.isFinite(targetSeconds) && (
-              <ReferenceLine y={targetSeconds} strokeDasharray="4 4" />
+              <ReferenceLine y={targetSeconds} stroke="#dc2626" strokeDasharray="4 4" />
             )}
             <Line
               type="monotone"
               dataKey="seconds"
+              stroke="#dc2626"
               dot={{ r: 3 }}
               strokeWidth={2}
               connectNulls

@@ -449,11 +449,10 @@ export default function PointsPage({ profile }) {
           </div>
         </div>
       )}
-      </div>
 
       {/* Manager-only section */}
       {isManager && (
-        <div className="border-t pt-4 mt-6">
+        <div className="border-t pt-4 mt-4">
           <h2 className="text-lg font-semibold text-red-600 mb-2">Manager Tools</h2>
           <p className="text-sm text-gray-600 mb-4">Only visible to managers.</p>
 
@@ -483,6 +482,7 @@ export default function PointsPage({ profile }) {
           </div>
         </div>
       )}
+      </div>
     </div>
   )
 }
