@@ -111,27 +111,92 @@ export default function PointsPage({ profile }) {
     return detail || source || 'Points'
   }
 
+  // Find user's weekly rank
+  const myWeeklyRank = weeklyData.findIndex((e) => e.id === profile?.id) + 1 || null
+  const myWeeklyPoints = weeklyData.find((e) => e.id === profile?.id)?.points || 0
+
+  // Get week leader
+  const weekLeader = weeklyData.length > 0 ? weeklyData[0] : null
+
   if (!profile) return null
 
   return (
-    <div className="w-full max-w-3xl mx-auto bg-white shadow p-4 sm:p-6 rounded px-4 sm:px-6">
-      {/* Header row */}
-      <div className="mb-4 sm:mb-6 flex items-center justify-between gap-3">
-        <h1 className="text-2xl font-bold text-red-700">Points Leaderboard</h1>
-
-        <button
-          className="bg-red-600 text-white px-3 sm:px-4 py-2 rounded hover:bg-red-700 shrink-0"
-          onClick={() => navigate('/App')}
-          aria-label="Go back"
-        >
-          Go Back
-        </button>
+    <div className="w-full max-w-3xl mx-auto px-4 sm:px-6 space-y-6">
+      {/* Header */}
+      <div className="bg-white shadow rounded p-4 sm:p-6">
+        <div className="flex items-center justify-between gap-3">
+          <h1 className="text-2xl font-bold text-red-700">Points Leaderboard</h1>
+          <button
+            className="bg-red-600 text-white px-3 sm:px-4 py-2 rounded hover:bg-red-700 shrink-0"
+            onClick={() => navigate('/App')}
+            aria-label="Go back"
+          >
+            Go Back
+          </button>
+        </div>
       </div>
 
-      {loading ? (
-        <p className="text-gray-600">Loading points data...</p>
-      ) : (
-        <div className="space-y-3">
+      {/* Summary Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        {/* My Total Points Card */}
+        <div className="bg-white shadow rounded p-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center text-red-600">
+              <span className="text-lg">⭐</span>
+            </div>
+            <div>
+              <p className="text-xs text-gray-500 uppercase tracking-wide">My Total Points</p>
+              <p className="text-lg font-semibold text-gray-900">
+                {loading ? '...' : `${myTotalPoints.toLocaleString()} pts`}
+              </p>
+              <p className="text-xs text-gray-500">available to spend</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Weekly Rank Card */}
+        <div className="bg-white shadow rounded p-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600">
+              <span className="text-lg">🏅</span>
+            </div>
+            <div>
+              <p className="text-xs text-gray-500 uppercase tracking-wide">My Weekly Rank</p>
+              <p className="text-lg font-semibold text-gray-900">
+                {loading ? '...' : myWeeklyRank ? `#${myWeeklyRank}` : '—'}
+              </p>
+              {!loading && myWeeklyRank && (
+                <p className="text-xs text-gray-500">{myWeeklyPoints} pts this week</p>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Week Leader Card */}
+        <div className="bg-white shadow rounded p-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-yellow-100 flex items-center justify-center text-yellow-600">
+              <span className="text-lg">🏆</span>
+            </div>
+            <div>
+              <p className="text-xs text-gray-500 uppercase tracking-wide">Week Leader</p>
+              <p className="text-lg font-semibold text-gray-900">
+                {loading ? '...' : weekLeader ? weekLeader.name.split(' ')[0] : '—'}
+              </p>
+              {!loading && weekLeader && (
+                <p className="text-xs text-gray-500">{weekLeader.points} pts</p>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Main Content */}
+      <div className="bg-white shadow rounded p-4 sm:p-6">
+        {loading ? (
+          <p className="text-gray-600">Loading points data...</p>
+        ) : (
+          <div className="space-y-3">
           {/* Weekly Points Leaderboard */}
           <div className="border rounded-lg overflow-hidden">
             <button
@@ -384,6 +449,7 @@ export default function PointsPage({ profile }) {
           </div>
         </div>
       )}
+      </div>
 
       {/* Manager-only section */}
       {isManager && (

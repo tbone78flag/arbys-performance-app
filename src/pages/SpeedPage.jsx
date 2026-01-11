@@ -268,29 +268,120 @@ export default function SpeedPage({ profile, targets = {} }) {
 
   const weekLabel = `${weekStart.toLocaleDateString()} – ${weekEnd.toLocaleDateString()}`;
 
+  // Calculate week average speed
+  const weekAvgSpeed = useMemo(() => {
+    const vals = rows?.map(r => r?.avg_time_seconds).filter(x => Number.isFinite(x)) ?? [];
+    if (!vals.length) return null;
+    return Math.round(vals.reduce((a, b) => a + b, 0) / vals.length);
+  }, [rows]);
+
+  // Find best daypart this week
+  const bestDaypartThisWeek = useMemo(() => {
+    let best = null;
+    for (const r of rows) {
+      if (!Number.isFinite(r?.avg_time_seconds)) continue;
+      if (best == null || r.avg_time_seconds < best.seconds) {
+        best = { daypart: r.daypart, seconds: r.avg_time_seconds, day: r.day };
+      }
+    }
+    return best;
+  }, [rows]);
+
+  // Format daypart label
+  const getDaypartLabel = (key) => {
+    const dp = DAYPARTS.find(d => d.key === key);
+    return dp ? dp.label : key;
+  };
+
   return (
-    <div className="w-full max-w-6xl mx-auto px-4 sm:px-6 py-4 sm:py-6">
+    <div className="w-full max-w-6xl mx-auto px-4 sm:px-6 space-y-6">
+      {/* Header */}
       <div className="bg-white shadow rounded p-4 sm:p-6">
-        {/* header + week nav */}
-        <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+        <div className="flex items-center justify-between gap-3">
           <h1 className="text-2xl font-bold text-red-700">Speed — Drive-Thru</h1>
           <button
-          className="bg-red-600 text-white px-3 sm:px-4 py-2 rounded hover:bg-red-700 shrink-0"
-          onClick={() => navigate('/App')}
-          aria-label="Go back"
-        >
-          Go Back
-        </button>
+            className="bg-red-600 text-white px-3 sm:px-4 py-2 rounded hover:bg-red-700 shrink-0"
+            onClick={() => navigate('/App')}
+            aria-label="Go back"
+          >
+            Go Back
+          </button>
         </div>
-          <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 min-w-0">
-            <button className="px-3 py-2 rounded border" onClick={() => setWeekAnchor(addDays(weekStart, -1))}>
-              ← Prev
-            </button>
-            <div className="text-sm text-gray-700 min-w-[12ch] text-center">{weekLabel}</div>
-            <button className="px-3 py-2 rounded border" onClick={() => setWeekAnchor(addDays(weekEnd, 1))}>
-              Next →
-            </button>
+      </div>
+
+      {/* Summary Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        {/* Week Avg Speed Card */}
+        <div className="bg-white shadow rounded p-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600">
+              <span className="text-lg">🏎️</span>
+            </div>
+            <div>
+              <p className="text-xs text-gray-500 uppercase tracking-wide">Week Avg Speed</p>
+              <p className="text-lg font-semibold text-gray-900">
+                {loading ? '...' : weekAvgSpeed != null ? `${weekAvgSpeed}s` : '—'}
+              </p>
+              {!loading && weekAvgSpeed != null && (
+                <p className="text-xs text-gray-500">
+                  {carsPerHour(weekAvgSpeed).toFixed(1)} cars/hour
+                </p>
+              )}
+            </div>
           </div>
+        </div>
+
+        {/* Best Time This Week Card */}
+        <div className="bg-white shadow rounded p-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center text-green-600">
+              <span className="text-lg">⚡</span>
+            </div>
+            <div>
+              <p className="text-xs text-gray-500 uppercase tracking-wide">Best This Week</p>
+              <p className="text-lg font-semibold text-gray-900">
+                {loading ? '...' : bestDaypartThisWeek ? `${bestDaypartThisWeek.seconds}s` : '—'}
+              </p>
+              {!loading && bestDaypartThisWeek && (
+                <p className="text-xs text-gray-500">
+                  {getDaypartLabel(bestDaypartThisWeek.daypart)}
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Revenue Potential Card */}
+        <div className="bg-white shadow rounded p-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center text-amber-600">
+              <span className="text-lg">💰</span>
+            </div>
+            <div>
+              <p className="text-xs text-gray-500 uppercase tracking-wide">Hourly Potential</p>
+              <p className="text-lg font-semibold text-gray-900">
+                {loading ? '...' : weekAvgSpeed != null ? formatMoney(carsPerHour(weekAvgSpeed) * avgCheck) : '—'}
+              </p>
+              <p className="text-xs text-gray-500">
+                @ ${avgCheck.toFixed(2)} avg check
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Main Content */}
+      <div className="bg-white shadow rounded p-4 sm:p-6">
+        {/* Week navigation */}
+        <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 mb-4">
+          <button className="px-3 py-2 rounded border" onClick={() => setWeekAnchor(addDays(weekStart, -1))}>
+            ← Prev
+          </button>
+          <div className="text-sm text-gray-700 min-w-[12ch] text-center">{weekLabel}</div>
+          <button className="px-3 py-2 rounded border" onClick={() => setWeekAnchor(addDays(weekEnd, 1))}>
+            Next →
+          </button>
+        </div>
 
         {err && <div className="text-amber-700 mb-2 text-sm">Error: {err}</div>}
         {loading ? (
