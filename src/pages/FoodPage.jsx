@@ -49,7 +49,12 @@ export default function FoodPage({ profile }) {
   const weekEnd = useMemo(() => addDays(weekStart, 6), [weekStart])
 
   const [variance, setVariance] = useState(null) // { lbs_delta, pct_delta }
-  const [pricing, setPricing] = useState({ cost: 0, pClassic: 0, pDouble: 0, pHalf: 0 })
+  const [pricing, setPricing] = useState({
+    beefCostPerLb: 0,
+    classic: { menuPrice: 0, foodCost: 0 },
+    double: { menuPrice: 0, foodCost: 0 },
+    half_lb: { menuPrice: 0, foodCost: 0 },
+  })
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -64,22 +69,39 @@ export default function FoodPage({ profile }) {
         .eq('week_start', ymdLocal(weekStart))
         .maybeSingle()
 
-      // 2) pricing keys
+      // 2) pricing keys - fetch new sandwich pricing settings
       const { data: ks } = await supabase
         .from('location_settings')
         .select('key, value')
         .eq('location_id', 'default')
-        .in('key', ['beef_cost_per_lb', 'profit_rb_classic', 'profit_rb_double', 'profit_rb_half'])
+        .in('key', [
+          'beef_cost_per_lb',
+          'sandwich_classic_price',
+          'sandwich_classic_cost',
+          'sandwich_double_price',
+          'sandwich_double_cost',
+          'sandwich_half_lb_price',
+          'sandwich_half_lb_cost',
+        ])
 
       if (cancelled) return
 
       setVariance(v ?? null)
-      const map = Object.fromEntries((ks ?? []).map((r) => [r.key, Number(r.value)]))
+      const map = Object.fromEntries((ks ?? []).map((r) => [r.key, Number(r.value) || 0]))
       setPricing({
-        cost: map.beef_cost_per_lb || 0,
-        pClassic: map.profit_rb_classic || 0,
-        pDouble: map.profit_rb_double || 0,
-        pHalf: map.profit_rb_half || 0,
+        beefCostPerLb: map.beef_cost_per_lb || 0,
+        classic: {
+          menuPrice: map.sandwich_classic_price || 0,
+          foodCost: map.sandwich_classic_cost || 0,
+        },
+        double: {
+          menuPrice: map.sandwich_double_price || 0,
+          foodCost: map.sandwich_double_cost || 0,
+        },
+        half_lb: {
+          menuPrice: map.sandwich_half_lb_price || 0,
+          foodCost: map.sandwich_half_lb_cost || 0,
+        },
       })
       setLoading(false)
     })()
@@ -87,6 +109,15 @@ export default function FoodPage({ profile }) {
       cancelled = true
     }
   }, [locationId, weekStart])
+
+  // Calculate profit per sandwich (menuPrice - foodCost)
+  const getProfit = (sandwichKey) => {
+    const sw = pricing[sandwichKey]
+    if (sw.menuPrice > 0 && sw.foodCost > 0) {
+      return sw.menuPrice - sw.foodCost
+    }
+    return 0
+  }
 
   // Calculate summary values
   const lbs = variance ? Math.abs(Number(variance.lbs_delta || 0)) : 0
@@ -97,9 +128,13 @@ export default function FoodPage({ profile }) {
         ? 'over'
         : 'even'
     : null
-  const costLost = lbs * (pricing.cost || 0)
+  const costLost = lbs * (pricing.beefCostPerLb || 0)
   const ounces = lbs * 16
   const classicCount = ounces / 3
+
+  // Calculate potential profit lost based on sandwich profit
+  const classicProfit = getProfit('classic')
+  const potentialProfitLost = classicCount * classicProfit
 
   const getVarianceColor = () => {
     if (!variance || variance.lbs_delta == null) return 'text-gray-500'
@@ -108,6 +143,9 @@ export default function FoodPage({ profile }) {
     if (val > 0) return 'text-amber-600'
     return 'text-green-600'
   }
+
+  // Check if pricing is configured
+  const hasPricingConfigured = classicProfit > 0
 
   return (
     <div className="w-full max-w-3xl mx-auto px-4 sm:px-6 space-y-6">
@@ -152,27 +190,29 @@ export default function FoodPage({ profile }) {
               <span className="text-lg">💰</span>
             </div>
             <div>
-              <p className="text-xs text-gray-500 uppercase tracking-wide">Cost Impact</p>
+              <p className="text-xs text-gray-500 uppercase tracking-wide">Beef Cost</p>
               <p className="text-lg font-semibold text-gray-900">
                 {loading ? '...' : variance ? money(costLost) : '—'}
               </p>
-              <p className="text-xs text-gray-500">product cost</p>
+              <p className="text-xs text-gray-500">raw product cost</p>
             </div>
           </div>
         </div>
 
-        {/* Equivalent Classic RBs Card */}
+        {/* Potential Profit Lost Card */}
         <div className="bg-white shadow rounded p-4">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center text-green-600">
-              <span className="text-lg">🍔</span>
+              <span className="text-lg">📉</span>
             </div>
             <div>
-              <p className="text-xs text-gray-500 uppercase tracking-wide">Equiv. Classic RBs</p>
+              <p className="text-xs text-gray-500 uppercase tracking-wide">Profit Impact</p>
               <p className="text-lg font-semibold text-gray-900">
-                {loading ? '...' : variance ? Math.round(classicCount) : '—'}
+                {loading ? '...' : variance && hasPricingConfigured ? money(potentialProfitLost) : '—'}
               </p>
-              <p className="text-xs text-gray-500">sandwiches (3 oz)</p>
+              <p className="text-xs text-gray-500">
+                {hasPricingConfigured ? `~${Math.round(classicCount)} Classic RBs` : 'configure pricing'}
+              </p>
             </div>
           </div>
         </div>
@@ -227,10 +267,16 @@ export default function FoodPage({ profile }) {
               const doubleCount = ouncesVal / 6
               const halfCount = ouncesVal / 8
 
-              const costLostVal = lbsVal * (pricing.cost || 0)
-              const revClassic = classicCountVal * (pricing.pClassic || 0)
-              const revDouble = doubleCount * (pricing.pDouble || 0)
-              const revHalf = halfCount * (pricing.pHalf || 0)
+              const costLostVal = lbsVal * (pricing.beefCostPerLb || 0)
+
+              // Calculate profit lost per sandwich type
+              const classicProfitPer = getProfit('classic')
+              const doubleProfitPer = getProfit('double')
+              const halfProfitPer = getProfit('half_lb')
+
+              const profitLostClassic = classicCountVal * classicProfitPer
+              const profitLostDouble = doubleCount * doubleProfitPer
+              const profitLostHalf = halfCount * halfProfitPer
 
               return (
                 <div className="space-y-3 text-sm">
@@ -259,35 +305,71 @@ export default function FoodPage({ profile }) {
                     <div className="bg-white rounded border p-2">
                       <div className="font-semibold">Classic RB (3 oz)</div>
                       <div>Count: {classicCountVal.toFixed(0)}</div>
-                      <div>Potential profit: {money(revClassic)}</div>
+                      {classicProfitPer > 0 ? (
+                        <div className="text-green-600">Profit lost: {money(profitLostClassic)}</div>
+                      ) : (
+                        <div className="text-gray-400 text-xs">Set pricing in Settings</div>
+                      )}
                     </div>
                     <div className="bg-white rounded border p-2">
                       <div className="font-semibold">Double RB (6 oz)</div>
                       <div>Count: {doubleCount.toFixed(0)}</div>
-                      <div>Potential profit: {money(revDouble)}</div>
+                      {doubleProfitPer > 0 ? (
+                        <div className="text-green-600">Profit lost: {money(profitLostDouble)}</div>
+                      ) : (
+                        <div className="text-gray-400 text-xs">Set pricing in Settings</div>
+                      )}
                     </div>
                     <div className="bg-white rounded border p-2">
                       <div className="font-semibold">Half-Pound RB (8 oz)</div>
                       <div>Count: {halfCount.toFixed(0)}</div>
-                      <div>Potential profit: {money(revHalf)}</div>
+                      {halfProfitPer > 0 ? (
+                        <div className="text-green-600">Profit lost: {money(profitLostHalf)}</div>
+                      ) : (
+                        <div className="text-gray-400 text-xs">Set pricing in Settings</div>
+                      )}
                     </div>
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     <div className="bg-red-50 rounded p-2 border border-red-200">
-                      <div className="text-gray-700">Product cost lost</div>
+                      <div className="text-gray-700">Raw beef cost</div>
                       <div className="font-semibold">{money(costLostVal)}</div>
                       <div className="text-xs text-gray-500">
-                        Based on beef cost ${pricing.cost?.toFixed?.(2) ?? pricing.cost}/lb
+                        @ ${pricing.beefCostPerLb?.toFixed?.(2) ?? pricing.beefCostPerLb}/lb
                       </div>
                     </div>
-                    <div className="bg-green-50 rounded p-2 border border-green-200">
-                      <div className="text-gray-700">Max potential profit (by item)</div>
-                      <div className="text-xs text-gray-600">
-                        See totals above per sandwich type.
+                    <div className="bg-amber-50 rounded p-2 border border-amber-200">
+                      <div className="text-gray-700">Profit impact (Classic RB basis)</div>
+                      <div className="font-semibold">
+                        {classicProfitPer > 0 ? money(profitLostClassic) : '—'}
                       </div>
+                      {classicProfitPer > 0 ? (
+                        <div className="text-xs text-gray-500">
+                          ${classicProfitPer.toFixed(2)} profit × {classicCountVal.toFixed(0)} sandwiches
+                        </div>
+                      ) : (
+                        <div className="text-xs text-gray-500">
+                          Configure sandwich pricing in Settings
+                        </div>
+                      )}
                     </div>
                   </div>
+
+                  {!hasPricingConfigured && (
+                    <div className="bg-blue-50 rounded p-3 border border-blue-200">
+                      <p className="text-sm text-blue-800">
+                        <strong>Tip:</strong> Set up sandwich pricing in Settings to see accurate profit impact calculations.
+                        Enter the menu price and food cost for each sandwich type.
+                      </p>
+                      <button
+                        onClick={() => navigate('/settings')}
+                        className="mt-2 text-sm text-blue-600 hover:text-blue-800 underline"
+                      >
+                        Go to Settings →
+                      </button>
+                    </div>
+                  )}
                 </div>
               )
             })()

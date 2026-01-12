@@ -9,6 +9,13 @@ const ALL_DAYPARTS = [
   { key: 'close', label: 'Close' },
 ]
 
+// Sandwich types for pricing
+const SANDWICH_TYPES = [
+  { key: 'classic', label: 'Classic RB', oz: 3 },
+  { key: 'double', label: 'Double RB', oz: 6 },
+  { key: 'half_lb', label: 'Half-Pound RB', oz: 8 },
+]
+
 export default function SettingsPage({ profile }) {
   const navigate = useNavigate()
   const isEditor = ['Assistant Manager', 'General Manager'].includes(
@@ -23,10 +30,16 @@ export default function SettingsPage({ profile }) {
   // Location Settings state
   const [avgCheck, setAvgCheck] = useState('')
   const [beefCostPerLb, setBeefCostPerLb] = useState('')
-  const [beefProfitMargin, setBeefProfitMargin] = useState('')
   const [enabledDayparts, setEnabledDayparts] = useState(['close'])
   const [settingsSaving, setSettingsSaving] = useState(false)
   const [settingsMsg, setSettingsMsg] = useState(null)
+
+  // Per-sandwich pricing state
+  const [sandwichPricing, setSandwichPricing] = useState({
+    classic: { menuPrice: '', foodCost: '' },
+    double: { menuPrice: '', foodCost: '' },
+    half_lb: { menuPrice: '', foodCost: '' },
+  })
 
   const toggleSection = (id) => {
     setOpenSection((current) => (current === id ? null : id))
@@ -41,13 +54,23 @@ export default function SettingsPage({ profile }) {
         .from('location_settings')
         .select('key, value')
         .eq('location_id', 'default')
-        .in('key', ['average_check', 'beef_cost_per_lb', 'beef_profit_margin', 'beef_dayparts'])
+        .in('key', [
+          'average_check',
+          'beef_cost_per_lb',
+          'beef_dayparts',
+          'sandwich_classic_price',
+          'sandwich_classic_cost',
+          'sandwich_double_price',
+          'sandwich_double_cost',
+          'sandwich_half_lb_price',
+          'sandwich_half_lb_cost',
+        ])
 
       if (!error && data) {
+        const newPricing = { ...sandwichPricing }
         data.forEach((row) => {
           if (row.key === 'average_check') setAvgCheck(row.value || '')
           if (row.key === 'beef_cost_per_lb') setBeefCostPerLb(row.value || '')
-          if (row.key === 'beef_profit_margin') setBeefProfitMargin(row.value || '')
           if (row.key === 'beef_dayparts') {
             try {
               const parsed = typeof row.value === 'string'
@@ -60,7 +83,15 @@ export default function SettingsPage({ profile }) {
               // Keep default
             }
           }
+          // Sandwich pricing
+          if (row.key === 'sandwich_classic_price') newPricing.classic.menuPrice = row.value || ''
+          if (row.key === 'sandwich_classic_cost') newPricing.classic.foodCost = row.value || ''
+          if (row.key === 'sandwich_double_price') newPricing.double.menuPrice = row.value || ''
+          if (row.key === 'sandwich_double_cost') newPricing.double.foodCost = row.value || ''
+          if (row.key === 'sandwich_half_lb_price') newPricing.half_lb.menuPrice = row.value || ''
+          if (row.key === 'sandwich_half_lb_cost') newPricing.half_lb.foodCost = row.value || ''
         })
+        setSandwichPricing(newPricing)
       }
     }
 
@@ -75,8 +106,14 @@ export default function SettingsPage({ profile }) {
       const rows = [
         { location_id: 'default', key: 'average_check', value: avgCheck },
         { location_id: 'default', key: 'beef_cost_per_lb', value: beefCostPerLb },
-        { location_id: 'default', key: 'beef_profit_margin', value: beefProfitMargin },
         { location_id: 'default', key: 'beef_dayparts', value: JSON.stringify(enabledDayparts) },
+        // Sandwich pricing
+        { location_id: 'default', key: 'sandwich_classic_price', value: sandwichPricing.classic.menuPrice },
+        { location_id: 'default', key: 'sandwich_classic_cost', value: sandwichPricing.classic.foodCost },
+        { location_id: 'default', key: 'sandwich_double_price', value: sandwichPricing.double.menuPrice },
+        { location_id: 'default', key: 'sandwich_double_cost', value: sandwichPricing.double.foodCost },
+        { location_id: 'default', key: 'sandwich_half_lb_price', value: sandwichPricing.half_lb.menuPrice },
+        { location_id: 'default', key: 'sandwich_half_lb_cost', value: sandwichPricing.half_lb.foodCost },
       ]
 
       const { error } = await supabase
@@ -110,6 +147,27 @@ export default function SettingsPage({ profile }) {
         return [...prev, daypart]
       }
     })
+  }
+
+  const updateSandwichPricing = (sandwichKey, field, value) => {
+    setSandwichPricing((prev) => ({
+      ...prev,
+      [sandwichKey]: {
+        ...prev[sandwichKey],
+        [field]: value,
+      },
+    }))
+  }
+
+  // Calculate profit for display
+  const calculateProfit = (sandwichKey) => {
+    const pricing = sandwichPricing[sandwichKey]
+    const menuPrice = parseFloat(pricing.menuPrice) || 0
+    const foodCost = parseFloat(pricing.foodCost) || 0
+    if (menuPrice > 0 && foodCost > 0) {
+      return (menuPrice - foodCost).toFixed(2)
+    }
+    return null
   }
 
   if (!profile) return <div className="p-6">Loading…</div>
@@ -212,43 +270,85 @@ export default function SettingsPage({ profile }) {
                     </p>
                   </div>
 
-                  {/* Beef Pricing */}
+                  {/* Beef Cost */}
                   <div className="border-t pt-4">
-                    <h4 className="text-sm font-medium text-gray-700 mb-2">Beef Pricing</h4>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-xs text-gray-500 mb-1">
-                          Cost per Lb ($)
-                        </label>
-                        <input
-                          type="number"
-                          step="0.01"
-                          min="0"
-                          value={beefCostPerLb}
-                          onChange={(e) => setBeefCostPerLb(e.target.value)}
-                          placeholder="e.g. 4.50"
-                          className="border rounded px-3 py-2 w-full text-sm"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs text-gray-500 mb-1">
-                          Profit Margin (%)
-                        </label>
-                        <input
-                          type="number"
-                          step="0.1"
-                          min="0"
-                          max="100"
-                          value={beefProfitMargin}
-                          onChange={(e) => setBeefProfitMargin(e.target.value)}
-                          placeholder="e.g. 25"
-                          className="border rounded px-3 py-2 w-full text-sm"
-                        />
-                      </div>
-                    </div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Beef Cost per Lb ($)
+                    </label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={beefCostPerLb}
+                      onChange={(e) => setBeefCostPerLb(e.target.value)}
+                      placeholder="e.g. 4.50"
+                      className="border rounded px-3 py-2 w-full max-w-xs text-sm"
+                    />
                     <p className="text-xs text-gray-500 mt-1">
-                      Used for variance cost calculations.
+                      Raw beef cost used for variance calculations.
                     </p>
+                  </div>
+
+                  {/* Sandwich Pricing */}
+                  <div className="border-t pt-4">
+                    <h4 className="text-sm font-medium text-gray-700 mb-2">Sandwich Pricing</h4>
+                    <p className="text-xs text-gray-500 mb-3">
+                      Enter the menu price and total food cost for each sandwich type.
+                      This is used to calculate potential profit lost from beef variance.
+                    </p>
+
+                    <div className="space-y-4">
+                      {SANDWICH_TYPES.map(({ key, label, oz }) => {
+                        const profit = calculateProfit(key)
+                        return (
+                          <div key={key} className="bg-gray-50 rounded p-3">
+                            <div className="flex items-center justify-between mb-2">
+                              <span className="text-sm font-medium text-gray-700">
+                                {label} ({oz} oz beef)
+                              </span>
+                              {profit && (
+                                <span className="text-xs text-green-600 font-medium">
+                                  Profit: ${profit}
+                                </span>
+                              )}
+                            </div>
+                            <div className="grid grid-cols-2 gap-3">
+                              <div>
+                                <label className="block text-xs text-gray-500 mb-1">
+                                  Menu Price ($)
+                                </label>
+                                <input
+                                  type="number"
+                                  step="0.01"
+                                  min="0"
+                                  value={sandwichPricing[key].menuPrice}
+                                  onChange={(e) => updateSandwichPricing(key, 'menuPrice', e.target.value)}
+                                  placeholder="e.g. 5.99"
+                                  className="border rounded px-3 py-2 w-full text-sm"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-xs text-gray-500 mb-1">
+                                  Food Cost ($)
+                                </label>
+                                <input
+                                  type="number"
+                                  step="0.01"
+                                  min="0"
+                                  value={sandwichPricing[key].foodCost}
+                                  onChange={(e) => updateSandwichPricing(key, 'foodCost', e.target.value)}
+                                  placeholder="e.g. 2.50"
+                                  className="border rounded px-3 py-2 w-full text-sm"
+                                />
+                              </div>
+                            </div>
+                            <p className="text-xs text-gray-400 mt-1">
+                              Food cost includes beef, bun, sauce, wrap, etc.
+                            </p>
+                          </div>
+                        )
+                      })}
+                    </div>
                   </div>
 
                   {/* Save Button */}
