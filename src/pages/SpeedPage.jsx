@@ -242,7 +242,13 @@ export default function SpeedPage({ profile }) {
         .select('key, value')
         .eq('location_id', 'default')
         .in('key', [
-          'speed_dayparts',
+          // Speed daypart enabled flags (1 = enabled, 0 = disabled)
+          'speed_daypart_breakfast',
+          'speed_daypart_lunch',
+          'speed_daypart_afternoon',
+          'speed_daypart_dinner',
+          'speed_daypart_late_night',
+          // Speed goals
           'speed_goal_breakfast',
           'speed_goal_lunch',
           'speed_goal_afternoon',
@@ -251,18 +257,19 @@ export default function SpeedPage({ profile }) {
         ]);
       if (!cancelled && !error && data) {
         const goals = { breakfast: null, lunch: null, afternoon: null, dinner: null, late_night: null };
+        const newEnabledDayparts = [];
+        let hasSpeedDaypartSettings = false;
+
         data.forEach((row) => {
-          // Parse enabled dayparts
-          if (row.key === 'speed_dayparts') {
-            try {
-              const parsed = typeof row.value === 'string' ? JSON.parse(row.value) : row.value;
-              if (Array.isArray(parsed) && parsed.length > 0) {
-                setEnabledDayparts(parsed);
+          // Parse enabled dayparts (stored as individual keys with 1 = enabled)
+          ALL_SPEED_DAYPARTS.forEach(({ key }) => {
+            if (row.key === `speed_daypart_${key}`) {
+              hasSpeedDaypartSettings = true;
+              if (Number(row.value) === 1) {
+                newEnabledDayparts.push(key);
               }
-            } catch {
-              // Keep default
             }
-          }
+          });
           // Parse speed goals
           const v = Number(row.value);
           if (row.key === 'speed_goal_breakfast' && Number.isFinite(v) && v > 0) goals.breakfast = v;
@@ -272,6 +279,10 @@ export default function SpeedPage({ profile }) {
           if (row.key === 'speed_goal_late_night' && Number.isFinite(v) && v > 0) goals.late_night = v;
         });
         setSpeedGoals(goals);
+        // Only update enabled dayparts if we found settings in the database
+        if (hasSpeedDaypartSettings && newEnabledDayparts.length > 0) {
+          setEnabledDayparts(newEnabledDayparts);
+        }
       }
     })();
     return () => { cancelled = true; };

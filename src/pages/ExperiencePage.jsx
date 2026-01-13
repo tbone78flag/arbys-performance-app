@@ -19,6 +19,7 @@ export default function ExperiencePage({ profile }) {
   const [todaysTrainingAsTrainee, setTodaysTrainingAsTrainee] = useState([])
   const [todaysTrainingAsTrainer, setTodaysTrainingAsTrainer] = useState([])
   const [loadingTraining, setLoadingTraining] = useState(true)
+  const [trainingFetched, setTrainingFetched] = useState(false) // Track if we've completed initial fetch
   const [trainingViewMode, setTrainingViewMode] = useState('trainee') // 'trainee' or 'trainer'
   const [trainingIndex, setTrainingIndex] = useState(0) // For cycling through multiple trainings
 
@@ -40,7 +41,7 @@ export default function ExperiencePage({ profile }) {
       setLoadingTraining(true)
       const today = new Date().toISOString().split('T')[0]
 
-      // Fetch trainings where user is the trainee
+      // Fetch trainings where user is the trainee (not completed)
       const { data: traineeData } = await supabase
         .from('training_schedule')
         .select(`
@@ -51,12 +52,14 @@ export default function ExperiencePage({ profile }) {
           training_date,
           shift_start,
           shift_end,
+          status,
           trainer:trainer_id(id, display_name)
         `)
         .eq('trainee_id', profile.id)
         .eq('training_date', today)
+        .neq('status', 'completed')
 
-      // Fetch trainings where user is the trainer
+      // Fetch trainings where user is the trainer (not completed)
       const { data: trainerData } = await supabase
         .from('training_schedule')
         .select(`
@@ -67,22 +70,29 @@ export default function ExperiencePage({ profile }) {
           training_date,
           shift_start,
           shift_end,
+          status,
           trainee:trainee_id(id, display_name)
         `)
         .eq('trainer_id', profile.id)
         .eq('training_date', today)
+        .neq('status', 'completed')
 
-      setTodaysTrainingAsTrainee(traineeData || [])
-      setTodaysTrainingAsTrainer(trainerData || [])
+      // Filter out null results (in case status is null, include those)
+      const filteredTraineeData = (traineeData || []).filter(t => t.status !== 'completed')
+      const filteredTrainerData = (trainerData || []).filter(t => t.status !== 'completed')
+
+      setTodaysTrainingAsTrainee(filteredTraineeData)
+      setTodaysTrainingAsTrainer(filteredTrainerData)
 
       // Set initial view mode based on what's available
-      if (traineeData?.length > 0) {
+      if (filteredTraineeData.length > 0) {
         setTrainingViewMode('trainee')
-      } else if (trainerData?.length > 0) {
+      } else if (filteredTrainerData.length > 0) {
         setTrainingViewMode('trainer')
       }
 
       setLoadingTraining(false)
+      setTrainingFetched(true)
     }
 
     fetchTodaysTraining()
@@ -158,17 +168,8 @@ export default function ExperiencePage({ profile }) {
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {/* Today's Training / My Goals Card */}
         <div className="bg-white shadow rounded p-4">
-          {loadingTraining ? (
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600">
-                <span className="text-lg">📚</span>
-              </div>
-              <div>
-                <p className="text-xs text-gray-500 uppercase tracking-wide">Today's Training</p>
-                <p className="text-sm text-gray-500">Loading...</p>
-              </div>
-            </div>
-          ) : hasTodayTraining ? (
+          {/* Show training card only after fetch completes AND training exists */}
+          {trainingFetched && hasTodayTraining ? (
             <div>
               {/* Toggle between trainee/trainer if user has both roles today */}
               {hasBothRoles && (
@@ -252,17 +253,17 @@ export default function ExperiencePage({ profile }) {
               )}
             </div>
           ) : (
-            // No training today - show goals count
+            // No training today
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600">
-                <span className="text-lg">🎯</span>
+              <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-400">
+                <span className="text-lg">📚</span>
               </div>
               <div>
-                <p className="text-xs text-gray-500 uppercase tracking-wide">My Goals</p>
-                <p className="text-lg font-semibold text-gray-900">
-                  {isLoading ? '...' : activeGoals.length}
+                <p className="text-xs text-gray-500 uppercase tracking-wide">Today's Training</p>
+                <p className="text-sm font-medium text-gray-500">
+                  {!trainingFetched ? 'Loading...' : 'No training today'}
                 </p>
-                <p className="text-xs text-gray-500">active this month</p>
+                <p className="text-xs text-gray-400">Check back tomorrow</p>
               </div>
             </div>
           )}

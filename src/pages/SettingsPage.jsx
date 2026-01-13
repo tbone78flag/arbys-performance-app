@@ -86,7 +86,13 @@ export default function SettingsPage({ profile }) {
           'sandwich_double_cost',
           'sandwich_half_lb_price',
           'sandwich_half_lb_cost',
-          'speed_dayparts',
+          // Speed daypart enabled flags (1 = enabled, 0 = disabled)
+          'speed_daypart_breakfast',
+          'speed_daypart_lunch',
+          'speed_daypart_afternoon',
+          'speed_daypart_dinner',
+          'speed_daypart_late_night',
+          // Speed goals
           'speed_goal_breakfast',
           'speed_goal_lunch',
           'speed_goal_afternoon',
@@ -97,6 +103,9 @@ export default function SettingsPage({ profile }) {
       if (!error && data) {
         const newPricing = { ...sandwichPricing }
         const newSpeedGoals = { ...speedGoals }
+        const newEnabledSpeedDayparts = []
+        let hasSpeedDaypartSettings = false
+
         data.forEach((row) => {
           if (row.key === 'average_check') setAvgCheck(row.value || '')
           if (row.key === 'beef_cost_per_lb') setBeefCostPerLb(row.value || '')
@@ -119,19 +128,15 @@ export default function SettingsPage({ profile }) {
           if (row.key === 'sandwich_double_cost') newPricing.double.foodCost = row.value || ''
           if (row.key === 'sandwich_half_lb_price') newPricing.half_lb.menuPrice = row.value || ''
           if (row.key === 'sandwich_half_lb_cost') newPricing.half_lb.foodCost = row.value || ''
-          // Speed dayparts enabled
-          if (row.key === 'speed_dayparts') {
-            try {
-              const parsed = typeof row.value === 'string'
-                ? JSON.parse(row.value)
-                : row.value
-              if (Array.isArray(parsed) && parsed.length > 0) {
-                setEnabledSpeedDayparts(parsed)
+          // Speed dayparts enabled (stored as individual keys with 1 = enabled)
+          SPEED_DAYPARTS.forEach(({ key }) => {
+            if (row.key === `speed_daypart_${key}`) {
+              hasSpeedDaypartSettings = true
+              if (Number(row.value) === 1) {
+                newEnabledSpeedDayparts.push(key)
               }
-            } catch {
-              // Keep default
             }
-          }
+          })
           // Speed goals
           if (row.key === 'speed_goal_breakfast') newSpeedGoals.breakfast = row.value || ''
           if (row.key === 'speed_goal_lunch') newSpeedGoals.lunch = row.value || ''
@@ -141,6 +146,10 @@ export default function SettingsPage({ profile }) {
         })
         setSandwichPricing(newPricing)
         setSpeedGoals(newSpeedGoals)
+        // Only update enabled dayparts if we found settings in the database
+        if (hasSpeedDaypartSettings && newEnabledSpeedDayparts.length > 0) {
+          setEnabledSpeedDayparts(newEnabledSpeedDayparts)
+        }
       }
     }
 
@@ -153,10 +162,13 @@ export default function SettingsPage({ profile }) {
     setSpeedMsg(null)
 
     try {
-      // Build rows, only include goals that have values
-      const rows = [
-        { location_id: 'default', key: 'speed_dayparts', value: JSON.stringify(enabledSpeedDayparts) },
-      ]
+      const rows = []
+
+      // Save each speed daypart enabled state as individual key (1 = enabled, 0 = disabled)
+      SPEED_DAYPARTS.forEach(({ key }) => {
+        const isEnabled = enabledSpeedDayparts.includes(key) ? 1 : 0
+        rows.push({ location_id: 'default', key: `speed_daypart_${key}`, value: isEnabled })
+      })
 
       // Only save goals that have actual numeric values
       SPEED_DAYPARTS.forEach(({ key }) => {
