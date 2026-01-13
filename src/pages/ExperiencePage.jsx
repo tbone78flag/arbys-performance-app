@@ -1,6 +1,7 @@
 // src/pages/ExperiencePage.jsx
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { supabase } from '../supabaseClient'
 import Training from '../components/Training'
 import TrainingSession from '../components/TrainingSession'
 import GoalsJournal from '../components/goals/GoalsJournal'
@@ -14,6 +15,13 @@ export default function ExperiencePage({ profile }) {
   // Accordion state
   const [openSection, setOpenSection] = useState(null)
 
+  // Today's training state
+  const [todaysTrainingAsTrainee, setTodaysTrainingAsTrainee] = useState([])
+  const [todaysTrainingAsTrainer, setTodaysTrainingAsTrainer] = useState([])
+  const [loadingTraining, setLoadingTraining] = useState(true)
+  const [trainingViewMode, setTrainingViewMode] = useState('trainee') // 'trainee' or 'trainer'
+  const [trainingIndex, setTrainingIndex] = useState(0) // For cycling through multiple trainings
+
   const toggleSection = (id) => {
     setOpenSection((current) => (current === id ? null : id))
   }
@@ -23,6 +31,62 @@ export default function ExperiencePage({ profile }) {
       navigate('/')
     }
   }, [profile, navigate])
+
+  // Fetch today's training sessions for this user
+  useEffect(() => {
+    if (!profile?.id) return
+
+    const fetchTodaysTraining = async () => {
+      setLoadingTraining(true)
+      const today = new Date().toISOString().split('T')[0]
+
+      // Fetch trainings where user is the trainee
+      const { data: traineeData } = await supabase
+        .from('training_schedule')
+        .select(`
+          id,
+          training_type,
+          competency_type,
+          competency_phase,
+          training_date,
+          shift_start,
+          shift_end,
+          trainer:trainer_id(id, display_name)
+        `)
+        .eq('trainee_id', profile.id)
+        .eq('training_date', today)
+
+      // Fetch trainings where user is the trainer
+      const { data: trainerData } = await supabase
+        .from('training_schedule')
+        .select(`
+          id,
+          training_type,
+          competency_type,
+          competency_phase,
+          training_date,
+          shift_start,
+          shift_end,
+          trainee:trainee_id(id, display_name)
+        `)
+        .eq('trainer_id', profile.id)
+        .eq('training_date', today)
+
+      setTodaysTrainingAsTrainee(traineeData || [])
+      setTodaysTrainingAsTrainer(trainerData || [])
+
+      // Set initial view mode based on what's available
+      if (traineeData?.length > 0) {
+        setTrainingViewMode('trainee')
+      } else if (trainerData?.length > 0) {
+        setTrainingViewMode('trainer')
+      }
+
+      setLoadingTraining(false)
+    }
+
+    fetchTodaysTraining()
+  }, [profile?.id])
 
   // Fetch user's goals for summary cards
   const { data: myGoals = [], isLoading } = useMyGoals(profile?.id)
@@ -40,6 +104,39 @@ export default function ExperiencePage({ profile }) {
   const goalsNeedingCheckin = activeGoals.filter(
     (goal) => !goal.checkins?.some((c) => c.week_number === currentWeek)
   )
+
+  // Helper to format time for display
+  const formatTime = (time) => {
+    if (!time) return ''
+    const [hours, minutes] = time.split(':')
+    const h = parseInt(hours, 10)
+    const ampm = h >= 12 ? 'PM' : 'AM'
+    const h12 = h % 12 || 12
+    return `${h12}:${minutes} ${ampm}`
+  }
+
+  // Helper to get competency display text
+  const getCompetencyText = (training) => {
+    if (!training.competency_type) return training.training_type
+    let text = training.competency_type
+    if (training.competency_phase) {
+      text += ` (${training.competency_phase})`
+    }
+    return text
+  }
+
+  // Determine what to show in the training card
+  const hasTodayTraining = todaysTrainingAsTrainee.length > 0 || todaysTrainingAsTrainer.length > 0
+  const hasBothRoles = todaysTrainingAsTrainee.length > 0 && todaysTrainingAsTrainer.length > 0
+  const currentTrainings = trainingViewMode === 'trainee' ? todaysTrainingAsTrainee : todaysTrainingAsTrainer
+  const currentTraining = currentTrainings[trainingIndex]
+
+  // Reset training index when switching modes or if index is out of bounds
+  useEffect(() => {
+    if (trainingIndex >= currentTrainings.length) {
+      setTrainingIndex(0)
+    }
+  }, [trainingViewMode, currentTrainings.length, trainingIndex])
 
   return (
     <div className="w-full max-w-3xl mx-auto px-4 sm:px-6 space-y-6">
@@ -59,20 +156,116 @@ export default function ExperiencePage({ profile }) {
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        {/* Active Goals Card */}
+        {/* Today's Training / My Goals Card */}
         <div className="bg-white shadow rounded p-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600">
-              <span className="text-lg">🎯</span>
+          {loadingTraining ? (
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600">
+                <span className="text-lg">📚</span>
+              </div>
+              <div>
+                <p className="text-xs text-gray-500 uppercase tracking-wide">Today's Training</p>
+                <p className="text-sm text-gray-500">Loading...</p>
+              </div>
             </div>
+          ) : hasTodayTraining ? (
             <div>
-              <p className="text-xs text-gray-500 uppercase tracking-wide">My Goals</p>
-              <p className="text-lg font-semibold text-gray-900">
-                {isLoading ? '...' : activeGoals.length}
-              </p>
-              <p className="text-xs text-gray-500">active this month</p>
+              {/* Toggle between trainee/trainer if user has both roles today */}
+              {hasBothRoles && (
+                <div className="flex justify-center gap-1 mb-2">
+                  <button
+                    onClick={() => { setTrainingViewMode('trainee'); setTrainingIndex(0); }}
+                    className={`px-2 py-0.5 text-xs rounded ${
+                      trainingViewMode === 'trainee'
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    }`}
+                  >
+                    I'm Learning
+                  </button>
+                  <button
+                    onClick={() => { setTrainingViewMode('trainer'); setTrainingIndex(0); }}
+                    className={`px-2 py-0.5 text-xs rounded ${
+                      trainingViewMode === 'trainer'
+                        ? 'bg-green-600 text-white'
+                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    }`}
+                  >
+                    I'm Training
+                  </button>
+                </div>
+              )}
+
+              <div className="flex items-center gap-3">
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                  trainingViewMode === 'trainee'
+                    ? 'bg-blue-100 text-blue-600'
+                    : 'bg-green-100 text-green-600'
+                }`}>
+                  <span className="text-lg">{trainingViewMode === 'trainee' ? '📚' : '🎓'}</span>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs text-gray-500 uppercase tracking-wide">
+                    {trainingViewMode === 'trainee' ? "Today's Training" : "Training Today"}
+                  </p>
+                  {currentTraining && (
+                    <>
+                      <p className="text-sm font-semibold text-gray-900 truncate">
+                        {getCompetencyText(currentTraining)}
+                      </p>
+                      <p className="text-xs text-gray-600">
+                        {trainingViewMode === 'trainee' ? (
+                          <>with <span className="font-medium">{currentTraining.trainer?.display_name}</span></>
+                        ) : (
+                          <><span className="font-medium">{currentTraining.trainee?.display_name}</span></>
+                        )}
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        {formatTime(currentTraining.shift_start)} - {formatTime(currentTraining.shift_end)}
+                      </p>
+                    </>
+                  )}
+                </div>
+              </div>
+
+              {/* Navigation for multiple trainings */}
+              {currentTrainings.length > 1 && (
+                <div className="flex items-center justify-center gap-2 mt-2 pt-2 border-t">
+                  <button
+                    onClick={() => setTrainingIndex((prev) => (prev - 1 + currentTrainings.length) % currentTrainings.length)}
+                    className="p-1 text-gray-500 hover:text-gray-700"
+                    aria-label="Previous training"
+                  >
+                    ◀
+                  </button>
+                  <span className="text-xs text-gray-500">
+                    {trainingIndex + 1} of {currentTrainings.length}
+                  </span>
+                  <button
+                    onClick={() => setTrainingIndex((prev) => (prev + 1) % currentTrainings.length)}
+                    className="p-1 text-gray-500 hover:text-gray-700"
+                    aria-label="Next training"
+                  >
+                    ▶
+                  </button>
+                </div>
+              )}
             </div>
-          </div>
+          ) : (
+            // No training today - show goals count
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600">
+                <span className="text-lg">🎯</span>
+              </div>
+              <div>
+                <p className="text-xs text-gray-500 uppercase tracking-wide">My Goals</p>
+                <p className="text-lg font-semibold text-gray-900">
+                  {isLoading ? '...' : activeGoals.length}
+                </p>
+                <p className="text-xs text-gray-500">active this month</p>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Current Week Card */}
