@@ -9,6 +9,14 @@ const ALL_DAYPARTS = [
   { key: 'close', label: 'Close' },
 ]
 
+// Speed dayparts (different from beef count dayparts)
+const SPEED_DAYPARTS = [
+  { key: 'lunch', label: 'Lunch (11a–2p)' },
+  { key: 'afternoon', label: 'Afternoon (2p–5p)' },
+  { key: 'dinner', label: 'Dinner (5p–8p)' },
+  { key: 'late_night', label: 'Late Night (8p–close)' },
+]
+
 // Sandwich types for pricing
 const SANDWICH_TYPES = [
   { key: 'classic', label: 'Classic RB', oz: 3 },
@@ -41,6 +49,14 @@ export default function SettingsPage({ profile }) {
     half_lb: { menuPrice: '', foodCost: '' },
   })
 
+  // Speed goals state (seconds per order for each daypart)
+  const [speedGoals, setSpeedGoals] = useState({
+    lunch: '',
+    afternoon: '',
+    dinner: '',
+    late_night: '',
+  })
+
   const toggleSection = (id) => {
     setOpenSection((current) => (current === id ? null : id))
   }
@@ -64,6 +80,10 @@ export default function SettingsPage({ profile }) {
           'sandwich_double_cost',
           'sandwich_half_lb_price',
           'sandwich_half_lb_cost',
+          'speed_goal_lunch',
+          'speed_goal_afternoon',
+          'speed_goal_dinner',
+          'speed_goal_late_night',
         ])
 
       if (!error && data) {
@@ -90,6 +110,11 @@ export default function SettingsPage({ profile }) {
           if (row.key === 'sandwich_double_cost') newPricing.double.foodCost = row.value || ''
           if (row.key === 'sandwich_half_lb_price') newPricing.half_lb.menuPrice = row.value || ''
           if (row.key === 'sandwich_half_lb_cost') newPricing.half_lb.foodCost = row.value || ''
+          // Speed goals
+          if (row.key === 'speed_goal_lunch') setSpeedGoals(prev => ({ ...prev, lunch: row.value || '' }))
+          if (row.key === 'speed_goal_afternoon') setSpeedGoals(prev => ({ ...prev, afternoon: row.value || '' }))
+          if (row.key === 'speed_goal_dinner') setSpeedGoals(prev => ({ ...prev, dinner: row.value || '' }))
+          if (row.key === 'speed_goal_late_night') setSpeedGoals(prev => ({ ...prev, late_night: row.value || '' }))
         })
         setSandwichPricing(newPricing)
       }
@@ -114,6 +139,11 @@ export default function SettingsPage({ profile }) {
         { location_id: 'default', key: 'sandwich_double_cost', value: sandwichPricing.double.foodCost },
         { location_id: 'default', key: 'sandwich_half_lb_price', value: sandwichPricing.half_lb.menuPrice },
         { location_id: 'default', key: 'sandwich_half_lb_cost', value: sandwichPricing.half_lb.foodCost },
+        // Speed goals
+        { location_id: 'default', key: 'speed_goal_lunch', value: speedGoals.lunch },
+        { location_id: 'default', key: 'speed_goal_afternoon', value: speedGoals.afternoon },
+        { location_id: 'default', key: 'speed_goal_dinner', value: speedGoals.dinner },
+        { location_id: 'default', key: 'speed_goal_late_night', value: speedGoals.late_night },
       ]
 
       const { error } = await supabase
@@ -348,6 +378,36 @@ export default function SettingsPage({ profile }) {
                           </div>
                         )
                       })}
+                    </div>
+                  </div>
+
+                  {/* Speed Goals */}
+                  <div className="border-t pt-4">
+                    <h4 className="text-sm font-medium text-gray-700 mb-2">Drive-Thru Speed Goals</h4>
+                    <p className="text-xs text-gray-500 mb-3">
+                      Set target speed (in seconds per order) for each daypart. These goals will appear as reference lines on the Speed page charts.
+                    </p>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      {SPEED_DAYPARTS.map(({ key, label }) => (
+                        <div key={key} className="bg-gray-50 rounded p-3">
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            {label}
+                          </label>
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="number"
+                              step="1"
+                              min="0"
+                              value={speedGoals[key]}
+                              onChange={(e) => setSpeedGoals(prev => ({ ...prev, [key]: e.target.value }))}
+                              placeholder="e.g. 45"
+                              className="border rounded px-3 py-2 w-24 text-sm"
+                            />
+                            <span className="text-sm text-gray-500">seconds</span>
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   </div>
 

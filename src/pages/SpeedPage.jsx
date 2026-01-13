@@ -119,7 +119,7 @@ function DaypartCard({ title, data, targetSeconds }) {
   );
 }
 
-export default function SpeedPage({ profile, targets = {} }) {
+export default function SpeedPage({ profile }) {
   const navigate = useNavigate();
 
   // keep your redirect behavior
@@ -128,6 +128,14 @@ export default function SpeedPage({ profile, targets = {} }) {
   }, [profile, navigate]);
 
   const locationId = profile?.location_id ?? 'holladay-3900s';
+
+  // Speed goals from location_settings
+  const [speedGoals, setSpeedGoals] = useState({
+    lunch: null,
+    afternoon: null,
+    dinner: null,
+    late_night: null,
+  });
 
   // week selector (Monday-Sunday)
   const [weekAnchor, setWeekAnchor] = useState(() => new Date());
@@ -214,6 +222,35 @@ export default function SpeedPage({ profile, targets = {} }) {
     }
     return out;
   }, [rows]);
+
+  // ---------- Fetch Speed Goals from Settings ----------
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const { data, error } = await supabase
+        .from('location_settings')
+        .select('key, value')
+        .eq('location_id', 'default')
+        .in('key', [
+          'speed_goal_lunch',
+          'speed_goal_afternoon',
+          'speed_goal_dinner',
+          'speed_goal_late_night',
+        ]);
+      if (!cancelled && !error && data) {
+        const goals = { lunch: null, afternoon: null, dinner: null, late_night: null };
+        data.forEach((row) => {
+          const v = Number(row.value);
+          if (row.key === 'speed_goal_lunch' && Number.isFinite(v) && v > 0) goals.lunch = v;
+          if (row.key === 'speed_goal_afternoon' && Number.isFinite(v) && v > 0) goals.afternoon = v;
+          if (row.key === 'speed_goal_dinner' && Number.isFinite(v) && v > 0) goals.dinner = v;
+          if (row.key === 'speed_goal_late_night' && Number.isFinite(v) && v > 0) goals.late_night = v;
+        });
+        setSpeedGoals(goals);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   // ---------- What-If: Average Check + Baseline ----------
   // Average Check (pulled from the same place your Goals page writes to)
@@ -394,7 +431,7 @@ export default function SpeedPage({ profile, targets = {} }) {
                 key={key}
                 title={label}
                 data={seriesByPart[key] ?? DOW.map(dow => ({ dow, seconds: 0, missing: true }))}
-                targetSeconds={targets[key]} // e.g., { lunch:220, afternoon:230, dinner:240, late_night:260 }
+                targetSeconds={speedGoals[key]}
               />
             ))}
           </div>
