@@ -1,11 +1,34 @@
 // src/components/goals/GoalCard.jsx
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 
-export default function GoalCard({ goal, showEmployeeName = false, onViewDetail }) {
+const EDIT_WINDOW_DAYS = 3
+
+export default function GoalCard({ goal, showEmployeeName = false, onViewDetail, onEdit }) {
   const [expanded, setExpanded] = useState(false)
 
   const actionSteps = goal.action_steps || []
   const checkins = goal.checkins || []
+
+  // Check if goal is within the 3-day edit window
+  const canEdit = useMemo(() => {
+    if (!goal.created_at) return false
+    const createdAt = new Date(goal.created_at)
+    const now = new Date()
+    const diffTime = now.getTime() - createdAt.getTime()
+    const diffDays = diffTime / (1000 * 60 * 60 * 24)
+    return diffDays <= EDIT_WINDOW_DAYS && goal.status === 'active'
+  }, [goal.created_at, goal.status])
+
+  // Calculate days remaining for editing
+  const daysLeftToEdit = useMemo(() => {
+    if (!goal.created_at) return 0
+    const createdAt = new Date(goal.created_at)
+    const now = new Date()
+    const diffTime = now.getTime() - createdAt.getTime()
+    const diffDays = diffTime / (1000 * 60 * 60 * 24)
+    const remaining = EDIT_WINDOW_DAYS - diffDays
+    return Math.max(0, Math.ceil(remaining))
+  }, [goal.created_at])
 
   // Calculate completed action steps across all check-ins
   const completedSteps = new Set()
@@ -50,6 +73,21 @@ export default function GoalCard({ goal, showEmployeeName = false, onViewDetail 
             </span>
           </div>
         </div>
+
+        {/* Edit Button (only within 3-day window) */}
+        {canEdit && onEdit && (
+          <div className="mt-2 flex items-center gap-2">
+            <button
+              onClick={() => onEdit(goal)}
+              className="text-xs text-blue-600 hover:text-blue-800 flex items-center gap-1"
+            >
+              <span>✏️</span> Edit Goal
+            </button>
+            <span className="text-xs text-gray-400">
+              ({daysLeftToEdit} day{daysLeftToEdit !== 1 ? 's' : ''} left to edit)
+            </span>
+          </div>
+        )}
 
         {/* Action Steps Progress */}
         {actionSteps.length > 0 && (
