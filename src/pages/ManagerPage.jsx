@@ -21,6 +21,14 @@ export default function ManagerPage({ profile }) {
   })
   const [loadingSummary, setLoadingSummary] = useState(true)
 
+  // Daily data entry status
+  const [dailyStatus, setDailyStatus] = useState({
+    speedEntered: false,
+    salesEntered: false,
+    beefEntered: false,
+  })
+  const [loadingDailyStatus, setLoadingDailyStatus] = useState(true)
+
   const locationId = profile?.location_id || 'holladay-3900'
 
   // Week navigation state for speed entry
@@ -111,6 +119,50 @@ export default function ManagerPage({ profile }) {
 
     loadSummary()
   }, [locationId]) // Only re-run when locationId changes
+
+  // Check today's data entry status
+  useEffect(() => {
+    if (!locationId) return
+
+    const checkDailyStatus = async () => {
+      setLoadingDailyStatus(true)
+      const today = ymdLocal(new Date())
+
+      // Fetch in parallel
+      const [speedRes, salesRes, beefRes] = await Promise.all([
+        // Check if speed data exists for today
+        supabase
+          .from('speed_dayparts')
+          .select('id')
+          .eq('location_id', locationId)
+          .eq('day', today)
+          .limit(1),
+        // Check if sales data exists for today
+        supabase
+          .from('daily_sales_yoy')
+          .select('id')
+          .eq('location_id', locationId)
+          .eq('sales_date', today)
+          .limit(1),
+        // Check if beef variance exists for today
+        supabase
+          .from('beef_variance_daypart')
+          .select('id')
+          .eq('location_id', locationId)
+          .eq('variance_date', today)
+          .limit(1),
+      ])
+
+      setDailyStatus({
+        speedEntered: (speedRes.data?.length ?? 0) > 0,
+        salesEntered: (salesRes.data?.length ?? 0) > 0,
+        beefEntered: (beefRes.data?.length ?? 0) > 0,
+      })
+      setLoadingDailyStatus(false)
+    }
+
+    checkDailyStatus()
+  }, [locationId])
 
   const isManager =
     profile?.role === 'manager' ||
@@ -250,19 +302,48 @@ export default function ManagerPage({ profile }) {
             </div>
           </div>
 
-          {/* Team Size Card */}
+          {/* Daily Data Entry Status Card */}
           <div className="bg-white shadow rounded p-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600">
-                <span className="text-lg">👥</span>
+            <p className="text-xs text-gray-500 uppercase tracking-wide mb-2">Today's Data</p>
+            {loadingDailyStatus ? (
+              <p className="text-sm text-gray-400">Loading...</p>
+            ) : (
+              <div className="space-y-1.5">
+                <button
+                  onClick={() => setOpenTool('speed-entry')}
+                  className="w-full flex items-center gap-2 text-left hover:bg-gray-50 rounded px-1 py-0.5 -mx-1"
+                >
+                  <span className={`text-sm ${dailyStatus.speedEntered ? 'text-green-600' : 'text-amber-600'}`}>
+                    {dailyStatus.speedEntered ? '✓' : '○'}
+                  </span>
+                  <span className={`text-sm ${dailyStatus.speedEntered ? 'text-gray-600' : 'text-gray-800 font-medium'}`}>
+                    Speed times
+                  </span>
+                </button>
+                <button
+                  onClick={() => setOpenTool('daily-sales')}
+                  className="w-full flex items-center gap-2 text-left hover:bg-gray-50 rounded px-1 py-0.5 -mx-1"
+                >
+                  <span className={`text-sm ${dailyStatus.salesEntered ? 'text-green-600' : 'text-amber-600'}`}>
+                    {dailyStatus.salesEntered ? '✓' : '○'}
+                  </span>
+                  <span className={`text-sm ${dailyStatus.salesEntered ? 'text-gray-600' : 'text-gray-800 font-medium'}`}>
+                    Daily sales
+                  </span>
+                </button>
+                <button
+                  onClick={() => setOpenTool('beef-variance')}
+                  className="w-full flex items-center gap-2 text-left hover:bg-gray-50 rounded px-1 py-0.5 -mx-1"
+                >
+                  <span className={`text-sm ${dailyStatus.beefEntered ? 'text-green-600' : 'text-amber-600'}`}>
+                    {dailyStatus.beefEntered ? '✓' : '○'}
+                  </span>
+                  <span className={`text-sm ${dailyStatus.beefEntered ? 'text-gray-600' : 'text-gray-800 font-medium'}`}>
+                    Beef counts
+                  </span>
+                </button>
               </div>
-              <div>
-                <p className="text-xs text-gray-500 uppercase tracking-wide">Team Members</p>
-                <p className="text-lg font-semibold text-gray-900">
-                  {loadingSummary ? '...' : summaryData.teamCount}
-                </p>
-              </div>
-            </div>
+            )}
           </div>
         </div>
       )}
