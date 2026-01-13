@@ -11,11 +11,15 @@ const ALL_DAYPARTS = [
 
 // Speed dayparts (different from beef count dayparts)
 const SPEED_DAYPARTS = [
+  { key: 'breakfast', label: 'Breakfast (open–11a)' },
   { key: 'lunch', label: 'Lunch (11a–2p)' },
   { key: 'afternoon', label: 'Afternoon (2p–5p)' },
   { key: 'dinner', label: 'Dinner (5p–8p)' },
   { key: 'late_night', label: 'Late Night (8p–close)' },
 ]
+
+// Default enabled speed dayparts (no breakfast by default)
+const DEFAULT_SPEED_DAYPARTS = ['lunch', 'afternoon', 'dinner', 'late_night']
 
 // Sandwich types for pricing
 const SANDWICH_TYPES = [
@@ -35,27 +39,29 @@ export default function SettingsPage({ profile }) {
   // Accordion state
   const [openSection, setOpenSection] = useState(null)
 
-  // Location Settings state
-  const [avgCheck, setAvgCheck] = useState('')
-  const [beefCostPerLb, setBeefCostPerLb] = useState('')
-  const [enabledDayparts, setEnabledDayparts] = useState(['close'])
-  const [settingsSaving, setSettingsSaving] = useState(false)
-  const [settingsMsg, setSettingsMsg] = useState(null)
-
-  // Per-sandwich pricing state
-  const [sandwichPricing, setSandwichPricing] = useState({
-    classic: { menuPrice: '', foodCost: '' },
-    double: { menuPrice: '', foodCost: '' },
-    half_lb: { menuPrice: '', foodCost: '' },
-  })
-
-  // Speed goals state (seconds per order for each daypart)
+  // Speed settings state
+  const [enabledSpeedDayparts, setEnabledSpeedDayparts] = useState(DEFAULT_SPEED_DAYPARTS)
   const [speedGoals, setSpeedGoals] = useState({
+    breakfast: '',
     lunch: '',
     afternoon: '',
     dinner: '',
     late_night: '',
   })
+  const [speedSaving, setSpeedSaving] = useState(false)
+  const [speedMsg, setSpeedMsg] = useState(null)
+
+  // Beef/Food settings state
+  const [avgCheck, setAvgCheck] = useState('')
+  const [beefCostPerLb, setBeefCostPerLb] = useState('')
+  const [enabledDayparts, setEnabledDayparts] = useState(['close'])
+  const [sandwichPricing, setSandwichPricing] = useState({
+    classic: { menuPrice: '', foodCost: '' },
+    double: { menuPrice: '', foodCost: '' },
+    half_lb: { menuPrice: '', foodCost: '' },
+  })
+  const [beefSaving, setBeefSaving] = useState(false)
+  const [beefMsg, setBeefMsg] = useState(null)
 
   const toggleSection = (id) => {
     setOpenSection((current) => (current === id ? null : id))
@@ -80,6 +86,8 @@ export default function SettingsPage({ profile }) {
           'sandwich_double_cost',
           'sandwich_half_lb_price',
           'sandwich_half_lb_cost',
+          'speed_dayparts',
+          'speed_goal_breakfast',
           'speed_goal_lunch',
           'speed_goal_afternoon',
           'speed_goal_dinner',
@@ -88,6 +96,7 @@ export default function SettingsPage({ profile }) {
 
       if (!error && data) {
         const newPricing = { ...sandwichPricing }
+        const newSpeedGoals = { ...speedGoals }
         data.forEach((row) => {
           if (row.key === 'average_check') setAvgCheck(row.value || '')
           if (row.key === 'beef_cost_per_lb') setBeefCostPerLb(row.value || '')
@@ -110,67 +119,137 @@ export default function SettingsPage({ profile }) {
           if (row.key === 'sandwich_double_cost') newPricing.double.foodCost = row.value || ''
           if (row.key === 'sandwich_half_lb_price') newPricing.half_lb.menuPrice = row.value || ''
           if (row.key === 'sandwich_half_lb_cost') newPricing.half_lb.foodCost = row.value || ''
+          // Speed dayparts enabled
+          if (row.key === 'speed_dayparts') {
+            try {
+              const parsed = typeof row.value === 'string'
+                ? JSON.parse(row.value)
+                : row.value
+              if (Array.isArray(parsed) && parsed.length > 0) {
+                setEnabledSpeedDayparts(parsed)
+              }
+            } catch {
+              // Keep default
+            }
+          }
           // Speed goals
-          if (row.key === 'speed_goal_lunch') setSpeedGoals(prev => ({ ...prev, lunch: row.value || '' }))
-          if (row.key === 'speed_goal_afternoon') setSpeedGoals(prev => ({ ...prev, afternoon: row.value || '' }))
-          if (row.key === 'speed_goal_dinner') setSpeedGoals(prev => ({ ...prev, dinner: row.value || '' }))
-          if (row.key === 'speed_goal_late_night') setSpeedGoals(prev => ({ ...prev, late_night: row.value || '' }))
+          if (row.key === 'speed_goal_breakfast') newSpeedGoals.breakfast = row.value || ''
+          if (row.key === 'speed_goal_lunch') newSpeedGoals.lunch = row.value || ''
+          if (row.key === 'speed_goal_afternoon') newSpeedGoals.afternoon = row.value || ''
+          if (row.key === 'speed_goal_dinner') newSpeedGoals.dinner = row.value || ''
+          if (row.key === 'speed_goal_late_night') newSpeedGoals.late_night = row.value || ''
         })
         setSandwichPricing(newPricing)
+        setSpeedGoals(newSpeedGoals)
       }
     }
 
     loadSettings()
   }, [locationId])
 
-  const saveLocationSettings = async () => {
-    setSettingsSaving(true)
-    setSettingsMsg(null)
+  // Save speed settings only
+  const saveSpeedSettings = async () => {
+    setSpeedSaving(true)
+    setSpeedMsg(null)
 
     try {
+      // Build rows, only include goals that have values
       const rows = [
-        { location_id: 'default', key: 'average_check', value: avgCheck },
-        { location_id: 'default', key: 'beef_cost_per_lb', value: beefCostPerLb },
-        { location_id: 'default', key: 'beef_dayparts', value: JSON.stringify(enabledDayparts) },
-        // Sandwich pricing
-        { location_id: 'default', key: 'sandwich_classic_price', value: sandwichPricing.classic.menuPrice },
-        { location_id: 'default', key: 'sandwich_classic_cost', value: sandwichPricing.classic.foodCost },
-        { location_id: 'default', key: 'sandwich_double_price', value: sandwichPricing.double.menuPrice },
-        { location_id: 'default', key: 'sandwich_double_cost', value: sandwichPricing.double.foodCost },
-        { location_id: 'default', key: 'sandwich_half_lb_price', value: sandwichPricing.half_lb.menuPrice },
-        { location_id: 'default', key: 'sandwich_half_lb_cost', value: sandwichPricing.half_lb.foodCost },
-        // Speed goals
-        { location_id: 'default', key: 'speed_goal_lunch', value: speedGoals.lunch },
-        { location_id: 'default', key: 'speed_goal_afternoon', value: speedGoals.afternoon },
-        { location_id: 'default', key: 'speed_goal_dinner', value: speedGoals.dinner },
-        { location_id: 'default', key: 'speed_goal_late_night', value: speedGoals.late_night },
+        { location_id: 'default', key: 'speed_dayparts', value: JSON.stringify(enabledSpeedDayparts) },
       ]
+
+      // Only save goals that have actual numeric values
+      SPEED_DAYPARTS.forEach(({ key }) => {
+        const val = speedGoals[key]
+        if (val !== '' && val !== null && val !== undefined) {
+          rows.push({ location_id: 'default', key: `speed_goal_${key}`, value: val })
+        }
+      })
 
       const { error } = await supabase
         .from('location_settings')
         .upsert(rows, { onConflict: 'location_id,key' })
 
       if (error) throw error
-      setSettingsMsg('Settings saved!')
+      setSpeedMsg('Speed settings saved!')
     } catch (err) {
-      console.error('Save settings failed', err)
-      setSettingsMsg(`Save failed: ${err.message || err}`)
+      console.error('Save speed settings failed', err)
+      setSpeedMsg(`Save failed: ${err.message || err}`)
     } finally {
-      setSettingsSaving(false)
+      setSpeedSaving(false)
     }
   }
 
-  // Clear settings message after timeout
+  // Save beef/food settings only
+  const saveBeefSettings = async () => {
+    setBeefSaving(true)
+    setBeefMsg(null)
+
+    try {
+      const rows = [
+        { location_id: 'default', key: 'beef_dayparts', value: JSON.stringify(enabledDayparts) },
+      ]
+
+      // Only add numeric values if they exist
+      if (avgCheck !== '') {
+        rows.push({ location_id: 'default', key: 'average_check', value: avgCheck })
+      }
+      if (beefCostPerLb !== '') {
+        rows.push({ location_id: 'default', key: 'beef_cost_per_lb', value: beefCostPerLb })
+      }
+
+      // Sandwich pricing - only save if values exist
+      SANDWICH_TYPES.forEach(({ key }) => {
+        const pricing = sandwichPricing[key]
+        if (pricing.menuPrice !== '') {
+          rows.push({ location_id: 'default', key: `sandwich_${key}_price`, value: pricing.menuPrice })
+        }
+        if (pricing.foodCost !== '') {
+          rows.push({ location_id: 'default', key: `sandwich_${key}_cost`, value: pricing.foodCost })
+        }
+      })
+
+      const { error } = await supabase
+        .from('location_settings')
+        .upsert(rows, { onConflict: 'location_id,key' })
+
+      if (error) throw error
+      setBeefMsg('Beef & pricing settings saved!')
+    } catch (err) {
+      console.error('Save beef settings failed', err)
+      setBeefMsg(`Save failed: ${err.message || err}`)
+    } finally {
+      setBeefSaving(false)
+    }
+  }
+
+  // Clear messages after timeout
   useEffect(() => {
-    if (!settingsMsg) return
-    const t = setTimeout(() => setSettingsMsg(null), 4000)
+    if (!speedMsg) return
+    const t = setTimeout(() => setSpeedMsg(null), 4000)
     return () => clearTimeout(t)
-  }, [settingsMsg])
+  }, [speedMsg])
+
+  useEffect(() => {
+    if (!beefMsg) return
+    const t = setTimeout(() => setBeefMsg(null), 4000)
+    return () => clearTimeout(t)
+  }, [beefMsg])
 
   const toggleDaypart = (daypart) => {
     setEnabledDayparts((prev) => {
       if (prev.includes(daypart)) {
-        // Don't allow removing all dayparts
+        if (prev.length === 1) return prev
+        return prev.filter((d) => d !== daypart)
+      } else {
+        return [...prev, daypart]
+      }
+    })
+  }
+
+  const toggleSpeedDaypart = (daypart) => {
+    setEnabledSpeedDayparts((prev) => {
+      if (prev.includes(daypart)) {
         if (prev.length === 1) return prev
         return prev.filter((d) => d !== daypart)
       } else {
@@ -189,7 +268,6 @@ export default function SettingsPage({ profile }) {
     }))
   }
 
-  // Calculate profit for display
   const calculateProfit = (sandwichKey) => {
     const pricing = sandwichPricing[sandwichKey]
     const menuPrice = parseFloat(pricing.menuPrice) || 0
@@ -221,36 +299,143 @@ export default function SettingsPage({ profile }) {
       {/* Settings Sections */}
       {isEditor && (
         <div className="bg-white shadow rounded p-4 sm:p-6">
-          <h2 className="text-lg font-semibold text-gray-800 mb-2">Configuration</h2>
+          <h2 className="text-lg font-semibold text-gray-800 mb-2">Location Settings</h2>
           <p className="text-sm text-gray-600 mb-4">
-            Manage location settings and preferences.
+            Configure location-specific settings and preferences.
           </p>
 
           <div className="space-y-2">
-            {/* Location Settings Accordion */}
+            {/* Speed Settings Accordion */}
             <div className="border rounded-lg overflow-hidden border-gray-200">
               <button
                 type="button"
-                onClick={() => toggleSection('location-settings')}
+                onClick={() => toggleSection('speed-settings')}
                 className="w-full flex items-center justify-between px-4 py-3 text-left bg-gray-50 hover:bg-gray-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500"
-                aria-expanded={openSection === 'location-settings'}
+                aria-expanded={openSection === 'speed-settings'}
               >
                 <div className="flex flex-col">
-                  <span className="font-medium text-gray-700">Location Settings</span>
+                  <span className="font-medium text-gray-700">Speed Settings</span>
                   <span className="text-xs text-gray-500">
-                    Configure average check, beef pricing, and daypart settings.
+                    Configure drive-thru speed dayparts and goals.
                   </span>
                 </div>
                 <span
                   className={`transform transition-transform text-gray-600 ${
-                    openSection === 'location-settings' ? 'rotate-90' : ''
+                    openSection === 'speed-settings' ? 'rotate-90' : ''
                   }`}
                 >
                   ▶
                 </span>
               </button>
 
-              {openSection === 'location-settings' && (
+              {openSection === 'speed-settings' && (
+                <div className="px-4 pb-4 pt-2 bg-white border-t space-y-4">
+                  {/* Speed Dayparts */}
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-700 mb-2">Speed Tracking Dayparts</h4>
+                    <p className="text-xs text-gray-500 mb-3">
+                      Select which dayparts your location uses for speed tracking. Enable Breakfast if your store serves a breakfast menu.
+                    </p>
+                    <div className="flex flex-wrap gap-3">
+                      {SPEED_DAYPARTS.map(({ key, label }) => (
+                        <label
+                          key={key}
+                          className="flex items-center gap-2 text-sm cursor-pointer"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={enabledSpeedDayparts.includes(key)}
+                            onChange={() => toggleSpeedDaypart(key)}
+                            className="w-4 h-4 text-red-600 border-gray-300 rounded focus:ring-red-500"
+                          />
+                          {label}
+                        </label>
+                      ))}
+                    </div>
+                    {enabledSpeedDayparts.length === 1 && (
+                      <p className="text-xs text-amber-600 mt-2">
+                        At least one daypart must be selected.
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Speed Goals */}
+                  <div className="border-t pt-4">
+                    <h4 className="text-sm font-medium text-gray-700 mb-2">Drive-Thru Speed Goals</h4>
+                    <p className="text-xs text-gray-500 mb-3">
+                      Set target speed (in seconds per order) for each enabled daypart. These goals will appear as reference lines on the Speed page charts.
+                    </p>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      {SPEED_DAYPARTS.filter(({ key }) => enabledSpeedDayparts.includes(key)).map(({ key, label }) => (
+                        <div key={key} className="bg-gray-50 rounded p-3">
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            {label}
+                          </label>
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="number"
+                              step="1"
+                              min="0"
+                              value={speedGoals[key]}
+                              onChange={(e) => setSpeedGoals(prev => ({ ...prev, [key]: e.target.value }))}
+                              placeholder="e.g. 45"
+                              className="border rounded px-3 py-2 w-24 text-sm"
+                            />
+                            <span className="text-sm text-gray-500">seconds</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Save Speed Settings Button */}
+                  <div className="border-t pt-4 flex items-center gap-3">
+                    <button
+                      onClick={saveSpeedSettings}
+                      disabled={speedSaving}
+                      className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 disabled:opacity-50 text-sm"
+                    >
+                      {speedSaving ? 'Saving…' : 'Save Speed Settings'}
+                    </button>
+                    {speedMsg && (
+                      <span
+                        className={`text-sm ${
+                          speedMsg.includes('failed') ? 'text-red-600' : 'text-green-600'
+                        }`}
+                      >
+                        {speedMsg}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Beef & Pricing Settings Accordion */}
+            <div className="border rounded-lg overflow-hidden border-gray-200">
+              <button
+                type="button"
+                onClick={() => toggleSection('beef-settings')}
+                className="w-full flex items-center justify-between px-4 py-3 text-left bg-gray-50 hover:bg-gray-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500"
+                aria-expanded={openSection === 'beef-settings'}
+              >
+                <div className="flex flex-col">
+                  <span className="font-medium text-gray-700">Beef & Pricing Settings</span>
+                  <span className="text-xs text-gray-500">
+                    Configure beef count dayparts, average check, and sandwich pricing.
+                  </span>
+                </div>
+                <span
+                  className={`transform transition-transform text-gray-600 ${
+                    openSection === 'beef-settings' ? 'rotate-90' : ''
+                  }`}
+                >
+                  ▶
+                </span>
+              </button>
+
+              {openSection === 'beef-settings' && (
                 <div className="px-4 pb-4 pt-2 bg-white border-t space-y-4">
                   {/* Beef Count Dayparts */}
                   <div>
@@ -381,52 +566,22 @@ export default function SettingsPage({ profile }) {
                     </div>
                   </div>
 
-                  {/* Speed Goals */}
-                  <div className="border-t pt-4">
-                    <h4 className="text-sm font-medium text-gray-700 mb-2">Drive-Thru Speed Goals</h4>
-                    <p className="text-xs text-gray-500 mb-3">
-                      Set target speed (in seconds per order) for each daypart. These goals will appear as reference lines on the Speed page charts.
-                    </p>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      {SPEED_DAYPARTS.map(({ key, label }) => (
-                        <div key={key} className="bg-gray-50 rounded p-3">
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            {label}
-                          </label>
-                          <div className="flex items-center gap-2">
-                            <input
-                              type="number"
-                              step="1"
-                              min="0"
-                              value={speedGoals[key]}
-                              onChange={(e) => setSpeedGoals(prev => ({ ...prev, [key]: e.target.value }))}
-                              placeholder="e.g. 45"
-                              className="border rounded px-3 py-2 w-24 text-sm"
-                            />
-                            <span className="text-sm text-gray-500">seconds</span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Save Button */}
+                  {/* Save Beef Settings Button */}
                   <div className="border-t pt-4 flex items-center gap-3">
                     <button
-                      onClick={saveLocationSettings}
-                      disabled={settingsSaving}
+                      onClick={saveBeefSettings}
+                      disabled={beefSaving}
                       className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 disabled:opacity-50 text-sm"
                     >
-                      {settingsSaving ? 'Saving…' : 'Save Settings'}
+                      {beefSaving ? 'Saving…' : 'Save Beef & Pricing Settings'}
                     </button>
-                    {settingsMsg && (
+                    {beefMsg && (
                       <span
                         className={`text-sm ${
-                          settingsMsg.includes('failed') ? 'text-red-600' : 'text-green-600'
+                          beefMsg.includes('failed') ? 'text-red-600' : 'text-green-600'
                         }`}
                       >
-                        {settingsMsg}
+                        {beefMsg}
                       </span>
                     )}
                   </div>

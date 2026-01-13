@@ -5,12 +5,17 @@ import {
   LineChart, Line, CartesianGrid, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine,
 } from 'recharts';
 
-const DAYPARTS = [
+// All possible speed dayparts
+const ALL_SPEED_DAYPARTS = [
+  { key: 'breakfast',  label: 'Breakfast (open–11a)' },
   { key: 'lunch',      label: 'Lunch (11a–2p)' },
   { key: 'afternoon',  label: 'Afternoon (2p–5p)' },
   { key: 'dinner',     label: 'Dinner (5p–8p)' },
   { key: 'late_night', label: 'Late Night (8p–close)' },
 ];
+
+// Default enabled dayparts (no breakfast)
+const DEFAULT_ENABLED_DAYPARTS = ['lunch', 'afternoon', 'dinner', 'late_night'];
 const DOW = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
 
 // --- date helpers (local, Monday-start) ---
@@ -41,6 +46,7 @@ function toSeries(rows, weekStart) {
     // Seed with zeros but mark as missing
     const seed = DOW.map(dow => ({ dow, seconds: 0, missing: true }));
     const by = {
+      breakfast: seed.map(x => ({ ...x })),
       lunch: seed.map(x => ({ ...x })), afternoon: seed.map(x => ({ ...x })),
       dinner: seed.map(x => ({ ...x })), late_night: seed.map(x => ({ ...x })),
     };
@@ -129,8 +135,12 @@ export default function SpeedPage({ profile }) {
 
   const locationId = profile?.location_id ?? 'holladay-3900s';
 
+  // Enabled speed dayparts from location_settings
+  const [enabledDayparts, setEnabledDayparts] = useState(DEFAULT_ENABLED_DAYPARTS);
+
   // Speed goals from location_settings
   const [speedGoals, setSpeedGoals] = useState({
+    breakfast: null,
     lunch: null,
     afternoon: null,
     dinner: null,
@@ -168,7 +178,7 @@ export default function SpeedPage({ profile }) {
   }, [locationId, weekStart, weekEnd]);
 
   const [allTimeBest, setAllTimeBest] = useState(() =>
-    Object.fromEntries(DAYPARTS.map(({ key }) => [key, null]))
+    Object.fromEntries(ALL_SPEED_DAYPARTS.map(({ key }) => [key, null]))
   );
  
   useEffect(() => {
@@ -179,13 +189,13 @@ export default function SpeedPage({ profile }) {
      .select('daypart, day, avg_time_seconds')
      .eq('location_id', locationId);
    if (!cancelled && !viewRes.error && Array.isArray(viewRes.data)) {
-     const next = Object.fromEntries(DAYPARTS.map(({ key }) => [key, null]));
+     const next = Object.fromEntries(ALL_SPEED_DAYPARTS.map(({ key }) => [key, null]));
      for (const r of viewRes.data) next[r.daypart] = { seconds: r.avg_time_seconds, day: r.day };
      setAllTimeBest(next);
       return;
     }
     // Fallback: 4 tiny queries (one per daypart)
-   const results = await Promise.all(DAYPARTS.map(({ key }) =>
+   const results = await Promise.all(ALL_SPEED_DAYPARTS.map(({ key }) =>
       supabase.from('speed_dayparts')
         .select('day, avg_time_seconds')
         .eq('location_id', locationId)
@@ -198,7 +208,7 @@ export default function SpeedPage({ profile }) {
     if (cancelled) return;
     const next = {};
     results.forEach((res, i) => {
-      const key = DAYPARTS[i].key;
+      const key = ALL_SPEED_DAYPARTS[i].key;
       const row = Array.isArray(res.data) ? res.data[0] : undefined;
       next[key] = row ? { seconds: row.avg_time_seconds, day: row.day } : null;
     });
@@ -210,7 +220,7 @@ export default function SpeedPage({ profile }) {
   const seriesByPart = useMemo(() => toSeries(rows, weekStart), [rows, weekStart]);
   const weeklyStats = useMemo(() => {
     // Initialize result per daypart
-    const out = Object.fromEntries(DAYPARTS.map(({ key }) => [key, { best: null, bestDay: null, worst: null, worstDay: null }]));
+    const out = Object.fromEntries(ALL_SPEED_DAYPARTS.map(({ key }) => [key, { best: null, bestDay: null, worst: null, worstDay: null }]));
     for (const r of rows) {
       if (!Number.isFinite(r?.avg_time_seconds)) continue;
       const dp = r.daypart;
@@ -223,7 +233,7 @@ export default function SpeedPage({ profile }) {
     return out;
   }, [rows]);
 
-  // ---------- Fetch Speed Goals from Settings ----------
+  // ---------- Fetch Speed Dayparts and Goals from Settings ----------
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -232,15 +242,30 @@ export default function SpeedPage({ profile }) {
         .select('key, value')
         .eq('location_id', 'default')
         .in('key', [
+          'speed_dayparts',
+          'speed_goal_breakfast',
           'speed_goal_lunch',
           'speed_goal_afternoon',
           'speed_goal_dinner',
           'speed_goal_late_night',
         ]);
       if (!cancelled && !error && data) {
-        const goals = { lunch: null, afternoon: null, dinner: null, late_night: null };
+        const goals = { breakfast: null, lunch: null, afternoon: null, dinner: null, late_night: null };
         data.forEach((row) => {
+          // Parse enabled dayparts
+          if (row.key === 'speed_dayparts') {
+            try {
+              const parsed = typeof row.value === 'string' ? JSON.parse(row.value) : row.value;
+              if (Array.isArray(parsed) && parsed.length > 0) {
+                setEnabledDayparts(parsed);
+              }
+            } catch {
+              // Keep default
+            }
+          }
+          // Parse speed goals
           const v = Number(row.value);
+          if (row.key === 'speed_goal_breakfast' && Number.isFinite(v) && v > 0) goals.breakfast = v;
           if (row.key === 'speed_goal_lunch' && Number.isFinite(v) && v > 0) goals.lunch = v;
           if (row.key === 'speed_goal_afternoon' && Number.isFinite(v) && v > 0) goals.afternoon = v;
           if (row.key === 'speed_goal_dinner' && Number.isFinite(v) && v > 0) goals.dinner = v;
@@ -327,9 +352,15 @@ export default function SpeedPage({ profile }) {
 
   // Format daypart label
   const getDaypartLabel = (key) => {
-    const dp = DAYPARTS.find(d => d.key === key);
+    const dp = ALL_SPEED_DAYPARTS.find(d => d.key === key);
     return dp ? dp.label : key;
   };
+
+  // Filter dayparts to only show enabled ones
+  const activeDayparts = useMemo(() =>
+    ALL_SPEED_DAYPARTS.filter(({ key }) => enabledDayparts.includes(key)),
+    [enabledDayparts]
+  );
 
   return (
     <div className="w-full max-w-6xl mx-auto px-4 sm:px-6 space-y-6">
@@ -426,7 +457,7 @@ export default function SpeedPage({ profile }) {
           <div className="text-sm text-gray-600">Loading…</div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
-            {DAYPARTS.map(({ key, label }) => (
+            {activeDayparts.map(({ key, label }) => (
               <DaypartCard
                 key={key}
                 title={label}
@@ -452,7 +483,7 @@ export default function SpeedPage({ profile }) {
                   </tr>
                 </thead>
             <tbody>
-              {DAYPARTS.map(({ key, label }) => {
+              {activeDayparts.map(({ key, label }) => {
                 const w = weeklyStats[key] || {};
                 const bestW = Number.isFinite(w.best) ? `${w.best}s — ${fmtDayLabel(w.bestDay)}` : '—';
                 const worstW = Number.isFinite(w.worst) ? `${w.worst}s — ${fmtDayLabel(w.worstDay)}` : '—';
