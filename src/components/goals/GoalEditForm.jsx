@@ -85,7 +85,7 @@ export default function GoalEditForm({ goal, onClose }) {
             </button>
           </div>
           <p className="text-xs text-amber-600 mt-1">
-            You can edit your goal within 3 days of creating it.
+            You can edit your goal within the first week of creating it.
           </p>
         </div>
 

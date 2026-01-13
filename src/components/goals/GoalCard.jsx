@@ -1,7 +1,7 @@
 // src/components/goals/GoalCard.jsx
 import { useState, useMemo } from 'react'
 
-const EDIT_WINDOW_DAYS = 3
+const EDIT_WINDOW_DAYS = 7
 
 export default function GoalCard({ goal, showEmployeeName = false, onViewDetail, onEdit }) {
   const [expanded, setExpanded] = useState(false)
