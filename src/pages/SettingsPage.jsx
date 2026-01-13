@@ -167,14 +167,14 @@ export default function SettingsPage({ profile }) {
       // Save each speed daypart enabled state as individual key (1 = enabled, 0 = disabled)
       SPEED_DAYPARTS.forEach(({ key }) => {
         const isEnabled = enabledSpeedDayparts.includes(key) ? 1 : 0
-        rows.push({ location_id: 'default', key: `speed_daypart_${key}`, value: isEnabled })
+        rows.push({ location_id: locationId, key: `speed_daypart_${key}`, value: isEnabled })
       })
 
       // Only save goals that have actual numeric values
       SPEED_DAYPARTS.forEach(({ key }) => {
         const val = speedGoals[key]
         if (val !== '' && val !== null && val !== undefined) {
-          rows.push({ location_id: 'default', key: `speed_goal_${key}`, value: val })
+          rows.push({ location_id: locationId, key: `speed_goal_${key}`, value: val })
         }
       })
 
@@ -199,25 +199,25 @@ export default function SettingsPage({ profile }) {
 
     try {
       const rows = [
-        { location_id: 'default', key: 'beef_dayparts', value: JSON.stringify(enabledDayparts) },
+        { location_id: locationId, key: 'beef_dayparts', value: JSON.stringify(enabledDayparts) },
       ]
 
       // Only add numeric values if they exist
       if (avgCheck !== '') {
-        rows.push({ location_id: 'default', key: 'average_check', value: avgCheck })
+        rows.push({ location_id: locationId, key: 'average_check', value: avgCheck })
       }
       if (beefCostPerLb !== '') {
-        rows.push({ location_id: 'default', key: 'beef_cost_per_lb', value: beefCostPerLb })
+        rows.push({ location_id: locationId, key: 'beef_cost_per_lb', value: beefCostPerLb })
       }
 
       // Sandwich pricing - only save if values exist
       SANDWICH_TYPES.forEach(({ key }) => {
         const pricing = sandwichPricing[key]
         if (pricing.menuPrice !== '') {
-          rows.push({ location_id: 'default', key: `sandwich_${key}_price`, value: pricing.menuPrice })
+          rows.push({ location_id: locationId, key: `sandwich_${key}_price`, value: pricing.menuPrice })
         }
         if (pricing.foodCost !== '') {
-          rows.push({ location_id: 'default', key: `sandwich_${key}_cost`, value: pricing.foodCost })
+          rows.push({ location_id: locationId, key: `sandwich_${key}_cost`, value: pricing.foodCost })
         }
       })
 
