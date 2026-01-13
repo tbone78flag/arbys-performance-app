@@ -29,6 +29,9 @@ export default function ManagerPage({ profile }) {
   })
   const [loadingDailyStatus, setLoadingDailyStatus] = useState(true)
 
+  // Week's average speed (shown when all daily items complete)
+  const [weekAvgSpeed, setWeekAvgSpeed] = useState(null)
+
   const locationId = profile?.location_id || 'holladay-3900'
 
   // Week navigation state for speed entry
@@ -127,9 +130,11 @@ export default function ManagerPage({ profile }) {
     const checkDailyStatus = async () => {
       setLoadingDailyStatus(true)
       const today = ymdLocal(new Date())
+      const currentWeekStart = ymdLocal(startOfWeekLocal(new Date()))
+      const currentWeekEnd = ymdLocal(addDays(startOfWeekLocal(new Date()), 6))
 
       // Fetch in parallel
-      const [speedRes, salesRes, beefRes] = await Promise.all([
+      const [speedRes, salesRes, beefRes, weekSpeedRes] = await Promise.all([
         // Check if speed data exists for today
         supabase
           .from('speed_dayparts')
@@ -151,13 +156,34 @@ export default function ManagerPage({ profile }) {
           .eq('location_id', locationId)
           .eq('variance_date', today)
           .limit(1),
+        // Get week's speed data for average calculation
+        supabase
+          .from('speed_dayparts')
+          .select('seconds')
+          .eq('location_id', locationId)
+          .gte('day', currentWeekStart)
+          .lte('day', currentWeekEnd),
       ])
 
-      setDailyStatus({
-        speedEntered: (speedRes.data?.length ?? 0) > 0,
-        salesEntered: (salesRes.data?.length ?? 0) > 0,
-        beefEntered: (beefRes.data?.length ?? 0) > 0,
-      })
+      const speedEntered = (speedRes.data?.length ?? 0) > 0
+      const salesEntered = (salesRes.data?.length ?? 0) > 0
+      const beefEntered = (beefRes.data?.length ?? 0) > 0
+
+      setDailyStatus({ speedEntered, salesEntered, beefEntered })
+
+      // Calculate week's average speed if we have data
+      if (weekSpeedRes.data && weekSpeedRes.data.length > 0) {
+        const validSpeeds = weekSpeedRes.data.filter(r => r.seconds != null && r.seconds > 0)
+        if (validSpeeds.length > 0) {
+          const avgSeconds = validSpeeds.reduce((sum, r) => sum + Number(r.seconds), 0) / validSpeeds.length
+          setWeekAvgSpeed(avgSeconds)
+        } else {
+          setWeekAvgSpeed(null)
+        }
+      } else {
+        setWeekAvgSpeed(null)
+      }
+
       setLoadingDailyStatus(false)
     }
 
@@ -243,6 +269,16 @@ export default function ManagerPage({ profile }) {
     return 'text-green-600'
   }
 
+  const formatSpeed = (seconds) => {
+    if (seconds == null) return '—'
+    const mins = Math.floor(seconds / 60)
+    const secs = Math.round(seconds % 60)
+    return `${mins}:${secs.toString().padStart(2, '0')}`
+  }
+
+  // Check if all daily items are complete
+  const allDailyComplete = dailyStatus.speedEntered && dailyStatus.salesEntered && dailyStatus.beefEntered
+
   return (
     <div className="w-full max-w-3xl mx-auto px-4 sm:px-6 space-y-6">
       {/* Header */}
@@ -302,47 +338,67 @@ export default function ManagerPage({ profile }) {
             </div>
           </div>
 
-          {/* Daily Data Entry Status Card */}
+          {/* Daily Data Entry Status Card / Week Avg Speed Card */}
           <div className="bg-white shadow rounded p-4">
-            <p className="text-xs text-gray-500 uppercase tracking-wide mb-2">Today's Data</p>
             {loadingDailyStatus ? (
-              <p className="text-sm text-gray-400">Loading...</p>
-            ) : (
-              <div className="space-y-1.5">
-                <button
-                  onClick={() => setOpenTool('speed-entry')}
-                  className="w-full flex items-center gap-2 text-left hover:bg-gray-50 rounded px-1 py-0.5 -mx-1"
-                >
-                  <span className={`text-sm ${dailyStatus.speedEntered ? 'text-green-600' : 'text-amber-600'}`}>
-                    {dailyStatus.speedEntered ? '✓' : '○'}
-                  </span>
-                  <span className={`text-sm ${dailyStatus.speedEntered ? 'text-gray-600' : 'text-gray-800 font-medium'}`}>
-                    Speed times
-                  </span>
-                </button>
-                <button
-                  onClick={() => setOpenTool('daily-sales')}
-                  className="w-full flex items-center gap-2 text-left hover:bg-gray-50 rounded px-1 py-0.5 -mx-1"
-                >
-                  <span className={`text-sm ${dailyStatus.salesEntered ? 'text-green-600' : 'text-amber-600'}`}>
-                    {dailyStatus.salesEntered ? '✓' : '○'}
-                  </span>
-                  <span className={`text-sm ${dailyStatus.salesEntered ? 'text-gray-600' : 'text-gray-800 font-medium'}`}>
-                    Daily sales
-                  </span>
-                </button>
-                <button
-                  onClick={() => setOpenTool('beef-variance')}
-                  className="w-full flex items-center gap-2 text-left hover:bg-gray-50 rounded px-1 py-0.5 -mx-1"
-                >
-                  <span className={`text-sm ${dailyStatus.beefEntered ? 'text-green-600' : 'text-amber-600'}`}>
-                    {dailyStatus.beefEntered ? '✓' : '○'}
-                  </span>
-                  <span className={`text-sm ${dailyStatus.beefEntered ? 'text-gray-600' : 'text-gray-800 font-medium'}`}>
-                    Beef counts
-                  </span>
-                </button>
+              <>
+                <p className="text-xs text-gray-500 uppercase tracking-wide mb-2">Today's Data</p>
+                <p className="text-sm text-gray-400">Loading...</p>
+              </>
+            ) : allDailyComplete ? (
+              /* Show Week Avg Speed when all daily items are complete */
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center text-green-600">
+                  <span className="text-lg">✓</span>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500 uppercase tracking-wide">Week Avg Speed</p>
+                  <p className="text-lg font-semibold text-gray-900">
+                    {formatSpeed(weekAvgSpeed)}
+                  </p>
+                  <p className="text-xs text-green-600">All data entered today</p>
+                </div>
               </div>
+            ) : (
+              /* Show daily checklist when items are incomplete */
+              <>
+                <p className="text-xs text-gray-500 uppercase tracking-wide mb-2">Today's Data</p>
+                <div className="space-y-1.5">
+                  <button
+                    onClick={() => setOpenTool('speed-entry')}
+                    className="w-full flex items-center gap-2 text-left hover:bg-gray-50 rounded px-1 py-0.5 -mx-1"
+                  >
+                    <span className={`text-sm ${dailyStatus.speedEntered ? 'text-green-600' : 'text-amber-600'}`}>
+                      {dailyStatus.speedEntered ? '✓' : '○'}
+                    </span>
+                    <span className={`text-sm ${dailyStatus.speedEntered ? 'text-gray-600' : 'text-gray-800 font-medium'}`}>
+                      Speed times
+                    </span>
+                  </button>
+                  <button
+                    onClick={() => setOpenTool('daily-sales')}
+                    className="w-full flex items-center gap-2 text-left hover:bg-gray-50 rounded px-1 py-0.5 -mx-1"
+                  >
+                    <span className={`text-sm ${dailyStatus.salesEntered ? 'text-green-600' : 'text-amber-600'}`}>
+                      {dailyStatus.salesEntered ? '✓' : '○'}
+                    </span>
+                    <span className={`text-sm ${dailyStatus.salesEntered ? 'text-gray-600' : 'text-gray-800 font-medium'}`}>
+                      Daily sales
+                    </span>
+                  </button>
+                  <button
+                    onClick={() => setOpenTool('beef-variance')}
+                    className="w-full flex items-center gap-2 text-left hover:bg-gray-50 rounded px-1 py-0.5 -mx-1"
+                  >
+                    <span className={`text-sm ${dailyStatus.beefEntered ? 'text-green-600' : 'text-amber-600'}`}>
+                      {dailyStatus.beefEntered ? '✓' : '○'}
+                    </span>
+                    <span className={`text-sm ${dailyStatus.beefEntered ? 'text-gray-600' : 'text-gray-800 font-medium'}`}>
+                      Beef counts
+                    </span>
+                  </button>
+                </div>
+              </>
             )}
           </div>
         </div>
