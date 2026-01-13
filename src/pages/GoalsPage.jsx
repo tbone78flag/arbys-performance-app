@@ -1,10 +1,13 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { supabase } from '../supabaseClient'
 import RewardsManager from '../components/RewardsManager'
 import PointsHistory from '../components/PointsHistory'
 import TrainingScheduleForm from '../components/TrainingScheduleForm'
 import StoreGoalsEditor from '../components/goals/StoreGoalsEditor'
 import TeamManagement from '../components/TeamManagement'
+import { useCurrentStoreGoals } from '../hooks/useStoreGoals'
+import { startOfWeekLocal, endOfWeekLocal, ymdLocal } from '../utils/dateHelpers'
 
 export default function GoalsPage({ profile }) {
   const navigate = useNavigate()
@@ -17,9 +20,48 @@ export default function GoalsPage({ profile }) {
   // Accordion state for all sections
   const [openSection, setOpenSection] = useState(null)
 
+  // Summary card data
+  const [trainingsThisWeek, setTrainingsThisWeek] = useState(null)
+  const [activeEmployeeCount, setActiveEmployeeCount] = useState(null)
+  const [loadingSummary, setLoadingSummary] = useState(true)
+
+  // Fetch store goals for this week/period
+  const { data: storeGoals, isLoading: loadingGoals } = useCurrentStoreGoals(locationId)
+
   const toggleSection = (id) => {
     setOpenSection((current) => (current === id ? null : id))
   }
+
+  // Fetch summary data
+  useEffect(() => {
+    if (!locationId) return
+
+    const fetchSummaryData = async () => {
+      setLoadingSummary(true)
+      const weekStart = startOfWeekLocal(new Date())
+      const weekEnd = endOfWeekLocal(new Date())
+
+      // Fetch trainings scheduled for this week
+      const { data: trainings } = await supabase
+        .from('training_schedule')
+        .select('id')
+        .gte('training_date', ymdLocal(weekStart))
+        .lte('training_date', ymdLocal(weekEnd))
+
+      setTrainingsThisWeek(trainings?.length ?? 0)
+
+      // Fetch active employee count
+      const { data: employees } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('location_id', locationId)
+
+      setActiveEmployeeCount(employees?.length ?? 0)
+      setLoadingSummary(false)
+    }
+
+    fetchSummaryData()
+  }, [locationId])
 
   if (!profile) return <div className="p-6">Loading…</div>
 
@@ -39,6 +81,121 @@ export default function GoalsPage({ profile }) {
         </div>
       </div>
 
+      {/* Summary Cards - Action Items */}
+      {isEditor && (
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          {/* Training Scheduler Card */}
+          <button
+            onClick={() => {
+              setOpenSection('training-scheduler')
+              setTimeout(() => {
+                document.getElementById('training-scheduler')?.scrollIntoView({ behavior: 'smooth' })
+              }, 100)
+            }}
+            className="bg-white shadow rounded p-4 text-left hover:shadow-md transition-shadow"
+          >
+            <div className="flex items-center gap-3">
+              <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                loadingSummary
+                  ? 'bg-gray-100 text-gray-400'
+                  : trainingsThisWeek > 0
+                    ? 'bg-green-100 text-green-600'
+                    : 'bg-amber-100 text-amber-600'
+              }`}>
+                <span className="text-lg">{trainingsThisWeek > 0 ? '✓' : '!'}</span>
+              </div>
+              <div>
+                <p className="text-xs text-gray-500 uppercase tracking-wide">Training</p>
+                <p className={`text-sm font-semibold ${
+                  loadingSummary
+                    ? 'text-gray-400'
+                    : trainingsThisWeek > 0
+                      ? 'text-green-700'
+                      : 'text-amber-700'
+                }`}>
+                  {loadingSummary
+                    ? 'Loading...'
+                    : trainingsThisWeek > 0
+                      ? `${trainingsThisWeek} scheduled`
+                      : 'None scheduled'}
+                </p>
+                <p className="text-xs text-gray-400">This week</p>
+              </div>
+            </div>
+          </button>
+
+          {/* Store Goals Card */}
+          <button
+            onClick={() => {
+              setOpenSection('store-goals')
+              setTimeout(() => {
+                document.getElementById('store-goals')?.scrollIntoView({ behavior: 'smooth' })
+              }, 100)
+            }}
+            className="bg-white shadow rounded p-4 text-left hover:shadow-md transition-shadow"
+          >
+            <div className="flex items-center gap-3">
+              <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                loadingGoals
+                  ? 'bg-gray-100 text-gray-400'
+                  : storeGoals?.weekGoal
+                    ? 'bg-green-100 text-green-600'
+                    : 'bg-amber-100 text-amber-600'
+              }`}>
+                <span className="text-lg">{storeGoals?.weekGoal ? '✓' : '!'}</span>
+              </div>
+              <div>
+                <p className="text-xs text-gray-500 uppercase tracking-wide">Store Goals</p>
+                <p className={`text-sm font-semibold ${
+                  loadingGoals
+                    ? 'text-gray-400'
+                    : storeGoals?.weekGoal
+                      ? 'text-green-700'
+                      : 'text-amber-700'
+                }`}>
+                  {loadingGoals
+                    ? 'Loading...'
+                    : storeGoals?.weekGoal
+                      ? 'Week goal set'
+                      : 'Week goal needed'}
+                </p>
+                <p className="text-xs text-gray-400">
+                  {loadingGoals
+                    ? ''
+                    : storeGoals?.periodGoal
+                      ? 'Period goal set'
+                      : 'Period goal needed'}
+                </p>
+              </div>
+            </div>
+          </button>
+
+          {/* Active Employees Card */}
+          <button
+            onClick={() => {
+              setOpenSection('team-management')
+              setTimeout(() => {
+                document.getElementById('team-management')?.scrollIntoView({ behavior: 'smooth' })
+              }, 100)
+            }}
+            className="bg-white shadow rounded p-4 text-left hover:shadow-md transition-shadow"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600">
+                <span className="text-lg">👥</span>
+              </div>
+              <div>
+                <p className="text-xs text-gray-500 uppercase tracking-wide">Team</p>
+                <p className="text-sm font-semibold text-gray-800">
+                  {loadingSummary ? 'Loading...' : `${activeEmployeeCount} employees`}
+                </p>
+                <p className="text-xs text-gray-400">Active members</p>
+              </div>
+            </div>
+          </button>
+        </div>
+      )}
+
       {/* Tools */}
       {isEditor && (
         <div className="bg-white shadow rounded p-4 sm:p-6">
@@ -49,7 +206,7 @@ export default function GoalsPage({ profile }) {
 
           <div className="space-y-2">
             {/* 1. Store Goals Accordion */}
-            <div className="border rounded-lg overflow-hidden border-red-200">
+            <div id="store-goals" className="border rounded-lg overflow-hidden border-red-200">
               <button
                 type="button"
                 onClick={() => toggleSection('store-goals')}
@@ -79,7 +236,7 @@ export default function GoalsPage({ profile }) {
             </div>
 
             {/* 2. Training Scheduler Accordion */}
-            <div className="border rounded-lg overflow-hidden">
+            <div id="training-scheduler" className="border rounded-lg overflow-hidden">
               <button
                 type="button"
                 onClick={() => toggleSection('training-scheduler')}
@@ -169,7 +326,7 @@ export default function GoalsPage({ profile }) {
             </div>
 
             {/* 5. Team Management Accordion */}
-            <div className="border rounded-lg overflow-hidden">
+            <div id="team-management" className="border rounded-lg overflow-hidden">
               <button
                 type="button"
                 onClick={() => toggleSection('team-management')}
