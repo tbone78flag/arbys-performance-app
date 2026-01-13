@@ -75,7 +75,7 @@ export default function SettingsPage({ profile }) {
       const { data, error } = await supabase
         .from('location_settings')
         .select('key, value')
-        .eq('location_id', 'default')
+        .eq('location_id', locationId)
         .in('key', [
           'average_check',
           'beef_cost_per_lb',
